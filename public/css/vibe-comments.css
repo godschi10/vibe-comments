@@ -1,0 +1,965 @@
+/* Vibe Comments - Theme-Agnostic Styles */
+:root {
+    --vibe-primary: #3b82f6;
+    --vibe-primary-hover: #2563eb;
+    --vibe-bg: #ffffff;
+    --vibe-surface: #f8fafc;
+    --vibe-border: #e2e8f0;
+    --vibe-text: #1e293b;
+    --vibe-text-muted: #64748b;
+    --vibe-radius: 12px;
+    --vibe-gap: 1rem;
+    --vibe-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.vibe-comments-section {
+    max-width: 800px;
+    margin: 2rem auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--vibe-text);
+}
+
+.vibe-comments-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--vibe-border);
+}
+/* Auto-hide when empty (0 comments on first render) —
+   JS populates the text after Load is clicked, making it reappear. */
+.vibe-comments-title:empty {
+    display: none;
+}
+
+/* Comment List */
+.vibe-comment-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.vibe-comment-list ul {
+    list-style: none;
+    padding-left: 2.5rem;
+    margin-top: var(--vibe-gap);
+    border-left: 2px solid var(--vibe-border);
+}
+
+.vibe-comment-body {
+    background: var(--vibe-bg);
+    border: 1px solid var(--vibe-border);
+    border-radius: var(--vibe-radius);
+    padding: 1.25rem;
+    margin-bottom: var(--vibe-gap);
+    transition: box-shadow 0.2s ease;
+}
+
+.vibe-comment-body:hover {
+    box-shadow: var(--vibe-shadow);
+}
+
+/* Comment Header */
+.vibe-comment-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.vibe-comment-avatar img {
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+}
+
+.vibe-comment-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.vibe-comment-author {
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.vibe-comment-author a {
+    color: var(--vibe-text);
+    text-decoration: none;
+}
+
+.vibe-comment-author a:hover {
+    color: var(--vibe-primary);
+}
+
+.vibe-comment-time {
+    font-size: 0.8rem;
+    color: var(--vibe-text-muted);
+}
+
+/* Badges */
+.vibe-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background: var(--vibe-primary);
+    color: white;
+}
+
+/* Comment Content */
+.vibe-comment-content {
+    line-height: 1.6;
+    margin-bottom: 0.75rem;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.vibe-comment-content p {
+    margin: 0 0 0.5rem 0;
+}
+
+.vibe-comment-content p:last-child {
+    margin-bottom: 0;
+}
+
+.vibe-awaiting {
+    display: block;
+    font-style: italic;
+    color: var(--vibe-text-muted);
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: #fef3c7;
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+/* Comment Footer */
+.vibe-comment-footer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--vibe-border);
+}
+
+/* ── Reactions — Facebook-style compact summary + expandable picker ─────── */
+
+/* Picker lives outside the footer as a block element between content and footer.
+ * This eliminates the mobile layout-blowout where picker was inside the
+ * footer flex row and pushed Reply + Pin offscreen when opened.
+ */
+
+.vibe-reactions {
+    display: flex;
+    align-items: center;
+}
+
+/* ── Summary pill — always visible in footer ─── */
+.vibe-reaction-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: none;
+    border: 1px solid var(--vibe-border, #e5e7eb);
+    border-radius: 999px;
+    padding: 0.3rem 0.65rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+}
+.vibe-reaction-summary:hover {
+    background: var(--vibe-bg-alt, #f3f4f6);
+    border-color: var(--vibe-text-muted, #888);
+}
+.vibe-reaction-summary.vibe-has-reaction {
+    border-color: var(--vibe-primary, #2563eb);
+    background: #eff6ff;
+}
+
+/* ── Default state: overlapping emoji bubble stack + aggregate total ────── */
+/*
+ * Summary is ALWAYS this format — compact, never scatters.
+ * Per-type counts appear only in the picker (below each emoji), never here.
+ */
+.vibe-rx-stack {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+}
+.vibe-rx-bubble {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--vibe-bg-alt, #f3f4f6);
+    border: 2px solid var(--vibe-bg, #fff);
+    font-size: 0.8rem;
+    line-height: 1;
+    position: relative;
+}
+.vibe-rx-bubble + .vibe-rx-bubble { margin-left: -7px; }
+.vibe-rx-stack .vibe-rx-bubble:nth-child(1) { z-index: 3; }
+.vibe-rx-stack .vibe-rx-bubble:nth-child(2) { z-index: 2; }
+.vibe-rx-stack .vibe-rx-bubble:nth-child(3) { z-index: 1; }
+.vibe-rx-total {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--vibe-text-muted, #888);
+    margin-left: 0.4rem;
+    line-height: 1;
+}
+/* zero-reactions state */
+.vibe-rx-icon  { font-size: 0.9rem; line-height: 1; }
+.vibe-rx-label { font-size: 0.78rem; color: var(--vibe-text-muted, #888); font-weight: 500; }
+
+/* spring pulse when adding a new reaction */
+@keyframes vibe-summary-pulse {
+    0%   { transform: scale(1);    }
+    30%  { transform: scale(1.12); }
+    65%  { transform: scale(0.95); }
+    100% { transform: scale(1);    }
+}
+.vibe-reaction-summary.vibe-reaction-pulse {
+    animation: vibe-summary-pulse 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ── Picker — block child of <article>, sits between content and footer ─── */
+.vibe-reaction-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.05rem;
+    background: var(--vibe-bg, #fff);
+    border: 1px solid var(--vibe-border, #e5e7eb);
+    border-radius: 999px;
+    padding: 0.2rem 0.4rem;
+    width: fit-content;
+    margin-top: 0.45rem;
+    margin-bottom: 0.45rem;
+    animation: vibe-picker-pop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.vibe-reaction-picker[hidden] { display: none; }
+@keyframes vibe-picker-pop {
+    from { transform: scale(0.75); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+}
+
+/* Individual emoji option inside the picker — emoji above, count below */
+.vibe-reaction-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.3rem 0.3rem 0.25rem;
+    border-radius: 8px;
+    min-width: 36px;
+    transition: transform 0.12s ease, background 0.1s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.vibe-reaction-option:hover {
+    transform: scale(1.35) translateY(-3px);
+    background: var(--vibe-bg-alt, #f3f4f6);
+}
+.vibe-reaction-option:active  { transform: scale(1.1); }
+.vibe-reaction-option.vibe-active-reaction { background: #eff6ff; }
+.vibe-reaction-option:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+/* Emoji part of the picker button */
+.vibe-rx-picker-emoji {
+    font-size: 1.3rem;
+    line-height: 1;
+    display: block;
+}
+
+/* Count below each emoji — always has space reserved even when empty */
+.vibe-rx-picker-n {
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: var(--vibe-text-muted, #888);
+    line-height: 1;
+    min-height: 0.75rem;
+    text-align: center;
+    display: block;
+}
+.vibe-reaction-option.vibe-active-reaction .vibe-rx-picker-n {
+    color: var(--vibe-primary, #2563eb);
+}
+
+/* Reply Link — sits beside the reaction summary in the footer row */
+.vibe-comment-footer .comment-reply-link,
+.vibe-reply-trigger {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--vibe-primary);
+    text-decoration: none;
+    background: none;
+    border: 1px solid var(--vibe-primary);
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.vibe-comment-footer .comment-reply-link:hover,
+.vibe-reply-trigger:hover {
+    background: var(--vibe-primary);
+    color: white;
+}
+
+/* Load More Button */
+.vibe-load-more-wrap {
+    text-align: center;
+    margin: 2rem 0;
+}
+
+.vibe-btn-load-more {
+    background: var(--vibe-surface);
+    color: var(--vibe-text);
+    border: 2px solid var(--vibe-border);
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: var(--vibe-radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.vibe-btn-load-more:hover {
+    background: var(--vibe-primary);
+    color: white;
+    border-color: var(--vibe-primary);
+}
+
+.vibe-btn-load-more:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Auth Bar */
+.vibe-auth-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--vibe-surface);
+    border-radius: var(--vibe-radius);
+    border: 1px solid var(--vibe-border);
+}
+
+.vibe-user-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--vibe-surface);
+    border-radius: var(--vibe-radius);
+    border: 1px solid var(--vibe-border);
+}
+
+.vibe-user-bar img {
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+}
+
+.vibe-user-bar span {
+    font-weight: 600;
+    flex: 1;
+}
+
+.vibe-logout {
+    font-size: 0.85rem;
+    color: var(--vibe-text-muted);
+    text-decoration: none;
+}
+
+.vibe-logout:hover {
+    color: #ef4444;
+}
+
+/* Buttons */
+.vibe-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.vibe-btn-primary {
+    background: var(--vibe-primary);
+    color: white;
+    border-color: var(--vibe-primary);
+}
+
+.vibe-btn-primary:hover {
+    background: var(--vibe-primary-hover);
+}
+
+.vibe-btn-wp {
+    background: #1e293b;
+    color: white;
+}
+
+.vibe-btn-wp:hover {
+    background: #0f172a;
+}
+
+.vibe-btn-google {
+    background: white;
+    color: #1e293b;
+    border-color: var(--vibe-border);
+}
+
+.vibe-btn-google:hover {
+    background: var(--vibe-surface);
+    border-color: var(--vibe-text-muted);
+}
+
+.vibe-btn-guest {
+    background: transparent;
+    color: var(--vibe-text-muted);
+    border-color: var(--vibe-border);
+}
+
+.vibe-btn-guest:hover {
+    background: var(--vibe-surface);
+    color: var(--vibe-text);
+}
+
+.vibe-btn-cancel {
+    background: transparent;
+    color: var(--vibe-text-muted);
+    border-color: var(--vibe-border);
+}
+
+.vibe-btn-cancel:hover {
+    background: #fee2e2;
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+.vibe-or {
+    font-size: 0.85rem;
+    color: var(--vibe-text-muted);
+    text-transform: uppercase;
+}
+
+/* Form */
+.vibe-comment-form-wrapper {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid var(--vibe-border);
+}
+
+.vibe-comment-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.vibe-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.vibe-field label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--vibe-text-muted);
+}
+
+.vibe-field input,
+.vibe-field textarea {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--vibe-border);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    background: var(--vibe-bg);
+    color: var(--vibe-text);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vibe-field input:focus,
+.vibe-field textarea:focus {
+    outline: none;
+    border-color: var(--vibe-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.vibe-field textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.vibe-form-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+/* Guest Fields */
+.vibe-guest-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 480px) {
+    .vibe-guest-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .vibe-auth-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .vibe-comment-list ul {
+        padding-left: 1.25rem;
+    }
+}
+
+/* Loading States */
+.vibe-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.vibe-loading::after {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--vibe-border);
+    border-top-color: var(--vibe-primary);
+    border-radius: 50%;
+    animation: vibe-spin 0.6s linear infinite;
+    margin-left: 0.5rem;
+}
+
+@keyframes vibe-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Pagination */
+.vibe-comments-nav {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 1.5rem 0;
+}
+
+.vibe-comments-nav a,
+.vibe-comments-nav span {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.vibe-comments-nav a {
+    background: var(--vibe-surface);
+    color: var(--vibe-text);
+    border: 1px solid var(--vibe-border);
+}
+
+.vibe-comments-nav a:hover {
+    background: var(--vibe-primary);
+    color: white;
+    border-color: var(--vibe-primary);
+}
+
+.vibe-comments-nav span.current {
+    background: var(--vibe-primary);
+    color: white;
+}
+
+/* Closed Message */
+.vibe-closed {
+    text-align: center;
+    color: var(--vibe-text-muted);
+    padding: 2rem;
+    font-style: italic;
+}
+
+/* Messages */
+.vibe-message {
+    animation: vibe-slide-in 0.3s ease;
+}
+
+@keyframes vibe-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =============================================
+   HONEYPOT — keep offscreen; never visible.
+   Do not remove: this is bot protection.
+   ============================================= */
+.vibe-hp-field {
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+}
+
+/* Character counter */
+.vibe-char-counter {
+    text-align: right;
+    font-size: 0.78rem;
+    color: var(--vibe-text-muted, #888);
+    margin-top: 0.3rem;
+    transition: color 0.2s ease;
+}
+.vibe-char-counter.vibe-char-warn {
+    color: #b45309;
+    font-weight: 600;
+}
+.vibe-char-counter.vibe-char-over {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+/* Draft auto-save badge */
+.vibe-draft-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.78rem;
+    color: var(--vibe-text-muted, #888);
+    margin-top: 0.3rem;
+}
+
+.vibe-draft-clear {
+    background: none;
+    border: none;
+    color: var(--vibe-primary, #2563eb);
+    font-size: 0.78rem;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    line-height: inherit;
+}
+
+/* Comments toolbar — sort icon button + search on one line */
+.vibe-comments-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+/* Compact cycling sort button */
+.vibe-sort-icon-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: none;
+    border: 1px solid var(--vibe-border, #e5e7eb);
+    border-radius: 8px;
+    padding: 0.4rem 0.65rem;
+    font-size: 0.88rem;
+    color: var(--vibe-text, #111);
+    cursor: pointer;
+    white-space: nowrap;
+    line-height: 1;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+.vibe-sort-icon-btn:hover {
+    border-color: var(--vibe-primary, #2563eb);
+    color: var(--vibe-primary, #2563eb);
+}
+
+/* Search wrap fills remaining space; min-width:0 is mandatory —
+   flex children default to min-width:auto which causes overflow on mobile */
+.vibe-search-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0;
+}
+
+/* ── New comments banner ───────────────────────────────────────────────── */
+.vibe-new-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--vibe-primary, #2563eb);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.5rem 1.25rem;
+    border-radius: 999px;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+    width: fit-content;
+}
+.vibe-new-banner:hover { background: #1d4ed8; }
+
+/* ── Collapse long comments ────────────────────────────────────────────── */
+.vibe-comment-content.vibe-content-collapsed {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+}
+.vibe-read-more {
+    display: block;
+    background: none;
+    border: none;
+    color: var(--vibe-primary, #2563eb);
+    font-size: 0.85rem;
+    padding: 0.2rem 0;
+    margin-top: 0.25rem;
+    cursor: pointer;
+}
+.vibe-read-more:hover { text-decoration: underline; }
+
+/* ── Auto-linked URLs ──────────────────────────────────────────────────── */
+.vibe-comment-content a[rel~="ugc"] {
+    color: var(--vibe-primary, #2563eb);
+    text-decoration: underline;
+    word-break: break-all;
+}
+
+/* ── Markdown ──────────────────────────────────────────────────────────── */
+.vibe-comment-content blockquote {
+    border-left: 3px solid var(--vibe-border, #e5e7eb);
+    padding-left: 0.75rem;
+    margin: 0.5rem 0;
+    color: var(--vibe-text-muted, #888);
+    font-style: italic;
+}
+.vibe-comment-content code {
+    background: var(--vibe-bg-alt, #f3f4f6);
+    border: 1px solid var(--vibe-border, #e5e7eb);
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+    font-size: 0.88em;
+    font-family: monospace;
+}
+
+/* ── Author badge ──────────────────────────────────────────────────────── */
+.vibe-author-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--vibe-primary, #2563eb);
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 4px;
+    padding: 1px 5px;
+    vertical-align: middle;
+    margin-left: 4px;
+    line-height: 1.5;
+}
+
+/* ── Pinned comment ────────────────────────────────────────────────────── */
+.vibe-pinned-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #b45309;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-bottom: 0.3rem;
+}
+.vibe-comment-pinned > article {
+    border-left: 3px solid #fbbf24;
+    padding-left: 0.75rem;
+}
+.vibe-pin-btn {
+    background: none;
+    border: 1px solid var(--vibe-border, #e5e7eb);
+    border-radius: 999px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.78rem;
+    color: var(--vibe-text-muted, #888);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.vibe-pin-btn:hover { background: #fef3c7; border-color: #fde68a; color: #b45309; }
+
+/* ── Comment search ────────────────────────────────────────────────────── */
+.vibe-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.vibe-search-input {
+    flex: 1;
+    min-width: 0;        /* prevent flex child overflowing container */
+    width: 100%;
+    padding: 0.4rem 0.65rem;
+    border: 1px solid var(--vibe-border, #e5e7eb);
+    border-radius: 8px;
+    background: var(--vibe-bg, #fff);
+    color: var(--vibe-text, #111);
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+.vibe-search-input:focus { border-color: var(--vibe-primary, #2563eb); }
+.vibe-search-status {
+    font-size: 0.8rem;
+    color: var(--vibe-text-muted, #888);
+    white-space: nowrap;
+}
+.vibe-new-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--vibe-primary, #2563eb);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.5rem 1.25rem;
+    border-radius: 999px;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+    width: fit-content;
+}
+.vibe-new-banner:hover {
+    background: #1d4ed8;
+}
+
+/* ── Collapse long comments ────────────────────────────────────────────── */
+.vibe-comment-content.vibe-content-collapsed {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+}
+.vibe-read-more {
+    background: none;
+    border: none;
+    color: var(--vibe-primary, #2563eb);
+    font-size: 0.85rem;
+    padding: 0.2rem 0;
+    cursor: pointer;
+    margin-top: 0.25rem;
+    display: block;
+}
+.vibe-read-more:hover {
+    text-decoration: underline;
+}
+
+/* ── Linkified URLs ────────────────────────────────────────────────────── */
+.vibe-comment-content a[rel~="ugc"] {
+    color: var(--vibe-primary, #2563eb);
+    text-decoration: underline;
+    word-break: break-all;
+}
+
+/* ── Empty state CTA ───────────────────────────────────────────────────── */
+.vibe-empty-state {
+    list-style: none;
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--vibe-text-muted, #888);
+}
+.vibe-empty-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.4rem;
+    color: var(--vibe-text, #111);
+}
+.vibe-empty-sub {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* ── Retry button in error state ───────────────────────────────────────── */
+.vibe-retry-btn {
+    background: none;
+    border: none;
+    color: var(--vibe-primary, #2563eb);
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: inherit;
+    padding: 0;
+}
+
+/* ── Guest identity recall ─────────────────────────────────────────────── */
+/*
+ * Appears above the guest fields when name/email are pre-filled from
+ * localStorage. Gives users an easy way to clear their saved identity.
+ */
+.vibe-guest-recall {
+    font-size: 0.82rem;
+    color: var(--vibe-text-muted, #888);
+    margin: 0 0 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    line-height: 1.4;
+}
+.vibe-guest-recall strong {
+    color: var(--vibe-text, #111);
+    font-weight: 600;
+}
+.vibe-recall-clear {
+    background: none;
+    border: none;
+    color: var(--vibe-primary, #2563eb);
+    font-size: inherit;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.vibe-recall-clear:hover {
+    color: #1d4ed8;
+}

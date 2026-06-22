@@ -1,0 +1,24 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# WordPress build artifacts
+node_modules/
+vendor/
+*.log
+
+# Compiled assets (if you use build tools)
+dist/
+build/
+*.min.css
+!assets/css/*.min.css
+
+# Environment files
+.env
+.env.local

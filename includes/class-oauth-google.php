@@ -12,54 +12,84 @@ class Vibe_Comments_OAuth_Google {
     private $option_name = 'vibe_comments_google_settings';
 
     public function __construct() {
-        add_action('init',         array($this, 'maybe_handle_oauth'));
+        // The REST route is the only callback Google ever hits.
+        // The init hook (which also processed OAuth callbacks) has been removed —
+        // it exposed the same processing logic on any front-end URL via
+        // ?vibe-google-callback=1, creating unnecessary attack surface.
         add_action('rest_api_init', array($this, 'register_callback_route'));
         add_action('wp_ajax_vibe_google_auth',        array($this, 'ajax_google_auth'));
         add_action('wp_ajax_nopriv_vibe_google_auth', array($this, 'ajax_google_auth'));
     }
 
     public function register_callback_route() {
-        register_rest_route('vibe-comments/v1', '/google-callback', array(
+        register_rest_route( 'vibe-comments/v1', '/google-callback', array(
             'methods'             => 'GET',
-            'callback'            => array($this, 'maybe_handle_oauth_rest'),
+            'callback'            => array( $this, 'handle_oauth_rest_callback' ),
             'permission_callback' => '__return_true',
-        ));
+        ) );
     }
 
-    public function maybe_handle_oauth_rest($request) {
-        $_GET['vibe-google-callback'] = '1';
-        $_GET['code']                 = $request->get_param('code')  ?? '';
-        $_GET['state']                = $request->get_param('state') ?? '';
-        $this->maybe_handle_oauth();
-        return new WP_REST_Response(array('error' => 'OAuth callback failed.'), 400);
+    /**
+     * REST callback — the only entry point for Google's OAuth redirect.
+     * Validates state against both the transient AND the browser cookie
+     * to prevent login-CSRF on anonymous-user nonces (C2 fix).
+     */
+    public function handle_oauth_rest_callback( $request ) {
+        $code  = sanitize_text_field( $request->get_param('code')  ?? '' );
+        $state = sanitize_text_field( $request->get_param('state') ?? '' );
+        $this->process_oauth_callback( $code, $state );
+        // process_oauth_callback always wp_safe_redirect()+exit or wp_die() — never reaches here.
+        return new WP_REST_Response( array( 'error' => 'OAuth callback failed.' ), 400 );
     }
 
     public function ajax_google_auth() {
-        check_ajax_referer('wp_rest', 'nonce');
+        check_ajax_referer( 'wp_rest', 'nonce' );
 
-        $settings  = get_option($this->option_name, array());
-        $client_id = isset($settings['client_id']) ? $settings['client_id'] : '';
+        $settings  = get_option( $this->option_name, array() );
+        $client_id = isset( $settings['client_id'] ) ? $settings['client_id'] : '';
 
-        if (empty($client_id)) {
-            wp_send_json_error('Google Client ID not configured.');
+        if ( empty( $client_id ) ) {
+            wp_send_json_error( 'Google Client ID not configured.' );
             return;
         }
 
         $return_url = '';
-        if (!empty($_POST['return_url'])) {
-            $candidate  = esc_url_raw(wp_unslash($_POST['return_url']));
-            $return_url = wp_validate_redirect($candidate, '') ?: '';
+        if ( ! empty( $_POST['return_url'] ) ) {
+            $candidate  = esc_url_raw( wp_unslash( $_POST['return_url'] ) );
+            $return_url = wp_validate_redirect( $candidate, '' ) ?: '';
         }
-        if (empty($return_url)) {
+        if ( empty( $return_url ) ) {
             $return_url = wp_get_referer() ?: home_url();
         }
 
-        $state = wp_create_nonce('vibe_google_oauth_state');
-        set_transient('vibe_google_state_' . md5($state), $return_url, 600);
+        // ── C2 fix: crypto-random state, browser-bound via cookie ────────
+        // wp_create_nonce() for anonymous users always produces the same value
+        // within a ~12-hour tick (uid=0, session_token=''), making all anon
+        // visitors share the same state — login-CSRF attack is trivial.
+        // Fix: generate a 32-char cryptographically random token, store the
+        // return_url in a transient keyed by its hash, and simultaneously
+        // set an HttpOnly SameSite=Lax cookie with the same token. The callback
+        // validates BOTH the transient AND the cookie, so the token is bound
+        // to the initiating browser — not just a server-side time window.
+        $state      = wp_generate_password( 32, false, false );
+        $state_hash = md5( $state );
 
-        $redirect_uri = rest_url('vibe-comments/v1/google-callback');
+        set_transient( 'vibe_oauth_state_' . $state_hash, $return_url, 600 );
 
-        $auth_url = add_query_arg(array(
+        // Secure flag only on HTTPS; SameSite=Lax prevents cross-origin use.
+        $cookie_options = array(
+            'expires'  => time() + 600,
+            'path'     => '/wp-json/vibe-comments/v1/google-callback',
+            'secure'   => is_ssl(),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        );
+        // setcookie() with options array requires PHP 7.3+ (our min is 7.4).
+        setcookie( 'vibe_oauth_state', $state, $cookie_options );
+
+        $redirect_uri = rest_url( 'vibe-comments/v1/google-callback' );
+
+        $auth_url = add_query_arg( array(
             'client_id'     => $client_id,
             'redirect_uri'  => $redirect_uri,
             'response_type' => 'code',
@@ -67,105 +97,145 @@ class Vibe_Comments_OAuth_Google {
             'state'         => $state,
             'access_type'   => 'online',
             'prompt'        => 'select_account',
-        ), 'https://accounts.google.com/o/oauth2/v2/auth');
+        ), 'https://accounts.google.com/o/oauth2/v2/auth' );
 
-        wp_send_json_success(array('auth_url' => $auth_url));
+        wp_send_json_success( array( 'auth_url' => $auth_url ) );
     }
 
-    public function maybe_handle_oauth() {
-        if (!isset($_GET['vibe-google-callback'])) return;
+    /**
+     * Process the OAuth callback from Google.
+     * Called exclusively from handle_oauth_rest_callback() (the REST route).
+     * Validates state via BOTH transient AND browser cookie to prevent login-CSRF.
+     */
+    public function process_oauth_callback( $code, $state ) {
+        $return_url = home_url();
 
-        $code  = sanitize_text_field($_GET['code']  ?? '');
-        $state = sanitize_text_field($_GET['state'] ?? '');
+        // ── State validation: transient + cookie binding ──────────────────
+        // The state token must match what we stored in the transient AND what
+        // we set in the browser cookie. An attacker who obtains a valid state
+        // from one victim cannot replay it from a different browser because
+        // the cookie won't travel with the attacker's request.
+        $state_hash   = md5( sanitize_text_field( $state ) );
+        $cookie_state = isset( $_COOKIE['vibe_oauth_state'] )
+            ? sanitize_text_field( wp_unslash( $_COOKIE['vibe_oauth_state'] ) )
+            : '';
 
-        if (empty($state) || !wp_verify_nonce($state, 'vibe_google_oauth_state')) {
-            wp_die('Invalid or expired state parameter. Please try again.');
+        $stored_url = get_transient( 'vibe_oauth_state_' . $state_hash );
+
+        if ( false === $stored_url ) {
+            $this->oauth_error( $return_url, 'OAuth state has expired. Please try signing in again.' );
+        }
+        delete_transient( 'vibe_oauth_state_' . $state_hash );
+        // Clear the cookie regardless of outcome.
+        setcookie( 'vibe_oauth_state', '', array(
+            'expires'  => time() - 3600,
+            'path'     => '/wp-json/vibe-comments/v1/google-callback',
+            'secure'   => is_ssl(),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ) );
+
+        $return_url = $stored_url;
+
+        // Cookie must match the state in the URL — proves this browser initiated the flow.
+        if ( empty( $cookie_state ) || ! hash_equals( $state, $cookie_state ) ) {
+            $this->oauth_error( $return_url, 'Invalid OAuth state. Please try signing in again.' );
         }
 
-        $return_url = get_transient('vibe_google_state_' . md5($state)) ?: home_url();
-        delete_transient('vibe_google_state_' . md5($state));
+        if ( empty( $code ) ) {
+            $this->oauth_error( $return_url, 'Missing OAuth authorization code.' );
+        }
 
-        $settings      = get_option($this->option_name, array());
+        $settings      = get_option( $this->option_name, array() );
         $client_id     = $settings['client_id']     ?? '';
         $client_secret = $settings['client_secret'] ?? '';
 
-        if (empty($client_id) || empty($client_secret) || empty($code)) {
-            wp_die('Missing OAuth configuration.');
+        if ( empty( $client_id ) || empty( $client_secret ) ) {
+            $this->oauth_error( $return_url, 'Google Sign-In is not configured. Please contact the site administrator.' );
         }
 
-        // Exchange authorisation code for tokens.
-        $response = wp_remote_post('https://oauth2.googleapis.com/token', array(
+        // Exchange authorization code for tokens.
+        $response = wp_remote_post( 'https://oauth2.googleapis.com/token', array(
             'body' => array(
                 'code'          => $code,
                 'client_id'     => $client_id,
                 'client_secret' => $client_secret,
-                'redirect_uri'  => rest_url('vibe-comments/v1/google-callback'),
+                'redirect_uri'  => rest_url( 'vibe-comments/v1/google-callback' ),
                 'grant_type'    => 'authorization_code',
             ),
-        ));
+        ) );
 
-        if (is_wp_error($response)) {
-            wp_die('Token exchange failed: ' . esc_html($response->get_error_message()));
+        if ( is_wp_error( $response ) ) {
+            $this->oauth_error( $return_url, 'Could not connect to Google. Please try again.' );
         }
 
-        $token_data = json_decode(wp_remote_retrieve_body($response), true);
+        $token_data = json_decode( wp_remote_retrieve_body( $response ), true );
 
-        if (empty($token_data['id_token'])) {
-            $error = $token_data['error'] ?? 'Unknown error';
-            wp_die('Failed to retrieve ID token: ' . esc_html($error));
+        if ( empty( $token_data['id_token'] ) ) {
+            $this->oauth_error( $return_url, 'Google sign-in failed. Please try again.' );
         }
 
-        // ── JWT verification ────────────────────────────────────────────────
-        // Verifies the RS256 signature against Google's public JWKS.
-        // Without this, any attacker who knows your client_id (it's public)
-        // can forge a JWT and log in as any user, including admins.
-        $payload = $this->verify_jwt($token_data['id_token'], $client_id);
-
-        if (null === $payload) {
-            wp_die('Token signature verification failed. Please try again.');
+        // Full RS256 signature verification against Google's live JWKS.
+        $payload = $this->verify_jwt( $token_data['id_token'], $client_id );
+        if ( null === $payload ) {
+            $this->oauth_error( $return_url, 'Token verification failed. Please try again.' );
         }
 
-        // Enforce email_verified — Google can return unverified emails
-        // (e.g. from federated identity providers). Never trust unverified emails.
-        if (empty($payload['email_verified']) || $payload['email_verified'] !== true) {
-            wp_die('Your Google email address is not verified. Please verify your Google account first.');
+        // Reject unverified emails — Google can return these from federated providers.
+        if ( empty( $payload['email_verified'] ) || $payload['email_verified'] !== true ) {
+            $this->oauth_error( $return_url, 'Your Google email address is not verified. Please verify your Google account and try again.' );
         }
 
-        if (empty($payload['email'])) {
-            wp_die('Invalid token payload: email claim missing.');
+        if ( empty( $payload['email'] ) ) {
+            $this->oauth_error( $return_url, 'Google did not return an email address. Please try again.' );
         }
 
-        $email = sanitize_email($payload['email']);
-        $name  = sanitize_text_field($payload['name'] ?? explode('@', $email)[0]);
+        $email = sanitize_email( $payload['email'] );
+        $name  = sanitize_text_field( $payload['name'] ?? explode( '@', $email )[0] );
 
-        $user = get_user_by('email', $email);
+        $user = get_user_by( 'email', $email );
 
-        if (!$user) {
-            $email_parts = explode('@', $email);
-            $base        = sanitize_user($email_parts[0]);
+        if ( ! $user ) {
+            $email_parts = explode( '@', $email );
+            $base        = sanitize_user( $email_parts[0] );
             // wp_generate_password(8, false) — cryptographically random alphanumeric.
-            // Replaces the original uniqid() which had a limited collision window.
-            $suffix      = wp_generate_password(8, false);
-            $username    = sanitize_user($base . '_' . $suffix);
+            $suffix      = wp_generate_password( 8, false );
+            $username    = sanitize_user( $base . '_' . $suffix );
 
-            $user_id = wp_insert_user(array(
+            // L3 fix: respect the site's configured default_role, not hardcoded 'subscriber'.
+            $default_role = get_option( 'default_role', 'subscriber' );
+
+            $user_id = wp_insert_user( array(
                 'user_login'   => $username,
                 'user_email'   => $email,
                 'display_name' => $name,
                 'user_pass'    => wp_generate_password(),
-                'role'         => 'subscriber',
-            ));
+                'role'         => $default_role,
+            ) );
 
-            if (is_wp_error($user_id)) {
-                wp_die('User creation failed: ' . esc_html($user_id->get_error_message()));
+            if ( is_wp_error( $user_id ) ) {
+                $this->oauth_error( $return_url, 'Could not create your account. Please try again.' );
             }
 
-            $user = get_user_by('id', $user_id);
+            $user = get_user_by( 'id', $user_id );
         }
 
-        wp_set_current_user($user->ID);
-        wp_set_auth_cookie($user->ID, true);
-        wp_safe_redirect($return_url);
+        wp_set_current_user( $user->ID );
+        wp_set_auth_cookie( $user->ID, true );
+        wp_safe_redirect( $return_url );
+        exit;
+    }
+
+    /**
+     * Redirect to the post with an inline error message rather than wp_die().
+     * The JS `showError()` infrastructure in the comment widget will display it.
+     * Uses wp_safe_redirect() so we never redirect to an external URL.
+     */
+    private function oauth_error( $return_url, $message ) {
+        $redirect = add_query_arg( array(
+            'vibe_auth_error' => urlencode( $message ),
+        ), $return_url ?: home_url() );
+        wp_safe_redirect( $redirect );
         exit;
     }
 
@@ -281,12 +351,17 @@ class Vibe_Comments_OAuth_Google {
         $rsa_key_der  = "\x30" . $this->der_length(strlen($modulus_der) + strlen($exponent_der))
                       . $modulus_der . $exponent_der;
 
-        // Wrap in SubjectPublicKeyInfo structure with RSA OID.
-        $rsa_oid      = "\x30\x0d\x06\x09\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01\x05\x00";
-        $spki_der     = "\x30" . $this->der_length(strlen($rsa_oid) + 1 + $this->der_length_size(strlen($rsa_key_der)) + strlen($rsa_key_der))
-                      . $rsa_oid
-                      . "\x03" . $this->der_length(1 + strlen($rsa_key_der)) . "\x00"
-                      . $rsa_key_der;
+        // RSA OID: 1.2.840.113549.1.1.1 — identifies this as an RSA public key.
+        $rsa_oid = "\x30\x0d\x06\x09\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01\x05\x00";
+
+        // Build the BIT STRING object first so its total length is known exactly.
+        // Constructing the outer SEQUENCE length by pre-computing parts separately
+        // was the source of the off-by-one bug (the BIT STRING leading 0x00 byte
+        // was included in the inner length but excluded from the outer, making the
+        // outer SEQUENCE 1 byte short for every real RSA key).
+        $bitstring_content = "\x00" . $rsa_key_der;
+        $bitstring          = "\x03" . $this->der_length( strlen( $bitstring_content ) ) . $bitstring_content;
+        $spki_der           = "\x30" . $this->der_length( strlen( $rsa_oid ) + strlen( $bitstring ) ) . $rsa_oid . $bitstring;
 
         return "-----BEGIN PUBLIC KEY-----\n"
              . chunk_split(base64_encode($spki_der), 64, "\n")
@@ -300,13 +375,5 @@ class Vibe_Comments_OAuth_Google {
         $tmp = $len;
         while ($tmp > 0) { $bytes = chr($tmp & 0xff) . $bytes; $tmp >>= 8; }
         return chr(0x80 | strlen($bytes)) . $bytes;
-    }
-
-    /** Return the byte size of a DER-encoded length field. */
-    private function der_length_size( $len ) {
-        if ($len < 128) return 1;
-        $bytes = 0;
-        while ($len > 0) { $bytes++; $len >>= 8; }
-        return 1 + $bytes;
     }
 }

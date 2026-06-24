@@ -19,6 +19,271 @@ Types of changes:
 
 ---
 
+## [3.2.4] — 2026-06-24
+
+### Security — Critical (from external audit)
+- **[C1] `jwk_to_pem()` DER off-by-one fixed** — The outer SEQUENCE length in the SubjectPublicKeyInfo structure was computed incorrectly: `strlen(rsa_oid) + 1 + der_length_size(len) + len` miscounts by 1 because the leading `\x00` byte of the BIT STRING is part of the inner content but was excluded from the inner length calculation. Fix: build the complete BIT STRING object first (`$bitstring_content = "\x00" . $rsa_key_der; $bitstring = "\x03" . der_length(strlen($bitstring_content)) . $bitstring_content`), then compute the outer SEQUENCE length from its actual byte size. Also removes the now-unused `der_length_size()` helper method.
+- **[C2] Login-CSRF via anonymous OAuth state** — `wp_create_nonce()` for anonymous users (uid=0, no session token) produces identical values within each ~12-hour WP tick. Any anonymous user who initiates a Google login gets the same state token as every other anonymous user in that window — a CSRF attacker can re-use anyone's state to complete their own login flow. Fix: `wp_generate_password(32, false, false)` generates a cryptographically random 32-char state token. The token is stored in a transient keyed by its MD5 hash AND simultaneously set as an HttpOnly SameSite=Lax browser cookie. The callback verifies BOTH (`hash_equals()` on cookie vs URL state). An attacker who intercepts a state token from a different browser cannot replay it — the cookie won't be present in their request.
+- **[C3] `$wpdb->insert()` bypassed WordPress spam pipeline** — Direct DB insertion skipped `preprocess_comment`, `pre_comment_approved` (Akismet, Antispam Bee), Discussion Settings approval rules (manual approval, disallowed word list, commenter whitelist). Replaced with `wp_new_comment($data, true)` which runs all filters and returns `WP_Error` on failure instead of calling `wp_die()`.
+- **[C4] Hardcoded approval status ignored Discussion Settings** — `$approved = 1` for logged-in users and `$approved = 0` for guests, regardless of site configuration. `wp_new_comment()` now determines the approval status via `wp_allow_comment()` which respects the Discussion Settings panel.
+
+### Security — High
+- **[H2] Debug endpoint gated on `WP_DEBUG`** — `WP_DEBUG` is routinely enabled on production sites for error logging. Replaced with a dedicated `VIBE_COMMENTS_DEBUG_TOOLS` constant that must be explicitly defined in `wp-config.php`. `WP_DEBUG` no longer exposes the debug endpoint.
+- **[H3] `uninstall.php` incomplete cleanup** — On plugin deletion, per-post comment count options (`vibe_comment_count_{id}`), `_vibe_pinned` commentmeta, and all plugin transients were not removed. Rewritten to clean all three via LIKE queries on `wp_options` and a direct `commentmeta` delete.
+
+### Fixed — Medium
+- **[M1] Duplicate `initPinComment` function** — Two definitions existed. JavaScript uses the last definition wins, which was the weaker version lacking `restoreChronologicalOrder()`, `.catch()`, and `fetchWithTimeout()`. The weaker duplicate removed.
+- **[M2] Dead `render_comment()` in class-template-loader.php** — Called `get_like_count()` and `user_has_liked()` which were deleted in v3.0.0. Any code path reaching this method would fatal-error. Method and its dead `wp_list_comments` registration removed.
+- **[M3] `refresh_nonce()` rate limit was decorative** — Checked the transient but always returned a fresh nonce regardless. Now returns `wp_send_json_error(..., 429)` when the rate key is active.
+- **[M4] OAuth had two entry points** — `add_action('init', 'maybe_handle_oauth')` processed callbacks on any front-end URL via `?vibe-google-callback=1`, duplicating the REST route handler. `init` hook removed. REST route is now the sole callback endpoint.
+
+### Fixed — Low
+- **[L2] `$guest_token` out of scope in `format_comment_tree()`** — Avatar hash used `md5('vibe_guest_' . $comment_id . '_' . ($guest_token ?? ''))` but `$guest_token` is only available at request time in `toggle_reaction()`, not in the comment formatting path. Simplified to `md5('vibe_' . $comment_id)` — unique per comment, deterministic, no undefined variable.
+- **[L3] Hardcoded `'subscriber'` role for OAuth users** — Replaced with `get_option('default_role', 'subscriber')`. New Google users now receive whatever role the site administrator has configured.
+- **[L4] `wp_die()` on OAuth errors replaced** — All OAuth failure paths now call `oauth_error($return_url, $message)` which redirects to the post URL with `?vibe_auth_error=message`. The JS reads this query param on `DOMContentLoaded`, displays it via `showError()`, and removes it from the URL via `history.replaceState()`.
+- **[L5] `wpdb` write return values unchecked in `toggle_reaction()`** — All three branches (`delete`, `update`, `insert`) now check `=== false` and return `WP_Error` on DB failure.
+- **[L6] `register_setting()` missing `sanitize_callback`** — Any string including HTML/JS could be saved to `vibe_comments_google_settings`. Added `sanitize_settings()` callback. `client_secret` field changed from `type="text"` to `type="password"` with `autocomplete="new-password"`. Empty submission preserves the existing secret rather than blanking it.
+
+### Added
+- **`oauth_error()` private method** — Single redirect-based error handler for all OAuth failure paths.
+- **`process_oauth_callback()` method** — Replaces `maybe_handle_oauth()`. Single REST entry point with cookie+transient state validation.
+- **`vibe_auth_error` URL param handling in JS** — `showError()` called on `DOMContentLoaded` if `?vibe_auth_error` present in URL. Param removed from URL via `history.replaceState()` so refresh doesn't re-show the error.
+- **`sanitize_settings()` in class-admin.php** — Sanitizes client_id (text), client_secret (text, preserves existing on empty), enable_google_login (bool).
+
+---
+
+## [3.2.3] — 2026-06-23
+
+### Security — Critical
+- **Google JWT signature now fully verified (RS256)** — `class-oauth-google.php` completely rewritten. The original `decode_jwt_payload()` only base64-decoded the JWT payload and checked the `aud` claim — it never verified the RS256 signature. An attacker who knew your public Google Client ID (it's embedded in the JS config, so always visible) could forge a JWT, set any email in the payload, and the plugin would accept it — creating a WordPress session for any account including admins. Fix: `verify_jwt()` fetches Google's JWKS from `googleapis.com/oauth2/v3/certs`, caches the keys for 1 hour, matches the token's `kid` to the correct key, and calls `openssl_verify()` against the RS256 signature. No match = null return = authentication rejected. `jwk_to_pem()` converts Google's JWK format to PEM in-process — no external library needed.
+- **`email_verified === true` now enforced** — Google can return accounts with unverified email addresses (e.g. federated identity providers). These are now rejected before any user lookup or creation.
+- **Dead REST endpoints removed** — `class-rest-api.php` registered 6 endpoints (`/like`, `/likes/{id}`, `/comment`, `/comments/{id}`, `/likes-batch`, `/test`) that the frontend stopped calling in v2.0.0 when operations moved to admin-ajax. These endpoints still called DB methods (`toggle_like`, `user_has_liked`, `get_like_count`, `get_like_counts_batch`, `get_user_liked_batch`) that were deleted in v3.0.0 when the reactions system was introduced. Any direct HTTP request to those endpoints would have caused a PHP fatal error. All 6 removed. Only the debug endpoint (admin + WP_DEBUG only) and REST-based OAuth callback remain.
+- **REST rate limiters used worker-local cache** — `class-rest-api.php` `check_rate_limit()` used `wp_cache_get/set` which is per-process. On a multi-worker PHP-FPM server (any VPS), attackers could bypass rate limits by distributing requests across workers. Moot now that the endpoints are removed, but the REST class is clean.
+- **`uniqid()` replaced with `wp_generate_password(8, false)` for OAuth usernames** — `uniqid()` generates time-based values with limited entropy. `wp_generate_password(8, false)` is cryptographically random alphanumeric — 36^8 ≈ 2.8 trillion possibilities.
+
+### Fixed
+- **Comment count stale on trash/spam/delete** — `on_comment_approved()` only fired on `transition_comment_status` (approval direction). Trashing, spamming, or permanently deleting an approved comment left the `wp_options` count and all cache layers stale until the next approval event. Added `on_comment_deleted()` (hooks `delete_comment`) and `on_comment_status_set()` (hooks `wp_set_comment_status`) — both funnel through the new `sync_and_purge()` method which recalculates from DB, writes to `wp_options`, and busts all cache layers.
+- **`anonymous@example.com` Gravatar collision** — all guest comments with no email address resolved to the same Gravatar (the identicon for `anonymous@example.com`). Every guest comment now gets a unique deterministic avatar via `md5('vibe_guest_' . $comment_id)@comments.local`. Different comment = different identicon = no collision.
+
+### Added
+- **`sync_and_purge()` private method** — single source of truth for count persistence and cache invalidation. All three comment status hooks call this instead of duplicating logic. Writes live count to `wp_options` before purging edge caches so cache rebuilds always read the fresh value.
+- **`README.md`** — replaces `readme.txt`. Full documentation: feature list, caching architecture table, Cloudflare setup, security scorecard, DB schema, Google OAuth setup. Renders properly on GitHub.
+
+### Removed
+- **`readme.txt`** — replaced by `README.md`.
+
+---
+
+## [3.2.2] — 2026-06-21
+
+### Changed
+- **Comment count stored in `wp_options`, zero live DB queries on page render** — `get_option('vibe_comment_count_{post_id}')` is read by PHP on every page request. The option is written by `on_comment_approved()` immediately before the page cache is purged, so the cache rebuild always reads the accurate value. First render (option not yet seeded) falls back to `get_comments_number()` and seeds the option. `get_option()` reads from WP's in-memory options cache (or Redis/Memcached) — zero live DB queries on any subsequent page render.
+- **Comment form hidden until "Load Comments" is clicked** — form moved inside `#vibe-comments-container` which starts `display:none`. No AJAX, no DB, no PHP overhead until the user explicitly requests the comment section. Keeps the page fully static for the majority of visitors who don't comment.
+- **Heading auto-hides at zero comments via CSS `:empty`** — when count is 0, PHP renders an empty `<h2>`. The `:empty` CSS rule hides it automatically — no `display:none` attribute, no JS. When JS populates the text after Load, the `:empty` rule stops matching and the heading appears.
+
+### Fixed
+- **`fetchCommentCount()` causing "No Comments Yet" bug** — AJAX count call on page load was hitting a stale transient (`0` from before any comments existed) and overwriting the correct PHP-rendered heading. `fetchCommentCount()` function and its call site removed entirely. Count is now PHP-rendered from `wp_options` (zero AJAX needed).
+- **Heading field name mismatch** — JS was reading `data.total` but `load_comments` refactor renamed the PHP response field to `data.total_count`. JS now reads `data.total_count || data.total` for backward compatibility.
+- **IntersectionObserver auto-loading comments** — `rootMargin: '200px'` was triggering on mobile immediately because the comments section was within 200px of the initial viewport, making "Load Comments" click-to-load useless. `IntersectionObserver` removed entirely. `initCommentsTrigger` is now pure click-to-load.
+
+### Added
+- **Cloudflare API purge (all plans including Free)** — `purge_page_cache()` now calls the CF URL purge API directly when `VIBE_CF_ZONE_ID` and `VIBE_CF_API_TOKEN` constants (or `wp_options`) are set. Works on CF Free — purges by URL, not Cache-Tag. Fire-and-forget (`blocking: false`) — never slows comment approval.
+
+---
+
+## [3.2.1] — 2026-06-21
+
+### Fixed
+- **Comments auto-loading on mobile** — IntersectionObserver `rootMargin: 200px` fired immediately on mobile because the comments section is always within 200px of the bottom of the visible content. Removed. `initCommentsTrigger` is click-only.
+- **"No Comments Yet" heading bug** — `fetchCommentCount()` was AJAX-calling the count endpoint on every page load and overwriting the correct PHP-rendered heading with a stale cached `0`. Removed the function and its call entirely.
+- **`data.total` field mismatch** — JS read `data.total` but `load_comments` PHP response uses `data.total_count`. Fixed to `data.total_count || data.total`.
+
+---
+
+## [3.2.0] — 2026-06-21
+
+### Added — Edge Caching Architecture
+- **`Cache-Control: public, max-age=120, s-maxage=120`** — `load_comments` AJAX endpoint now sends public cache headers instead of `no-cache, no-store`. Cloudflare and LiteSpeed cache the comment JSON at the edge. A post with 10,000 visitors in 2 minutes costs 1 PHP boot, not 10,000.
+- **LiteSpeed tag-based caching** — `do_action('litespeed_control_set_maxage', 120)` and `do_action('litespeed_tag_add', 'vibe-comments')` instruct LiteSpeed to cache and tag-purge comment responses.
+- **Server-side transient cache** — comment JSON cached via `set_transient('vc_load_{post_id}_{page}_{per_page}', $result, 120)`. PHP requests that miss the edge cache still skip all DB queries. Polling requests (`since > 0`) excluded.
+- **Polling early-exit** — when polling detects zero new comments and no reaction IDs to refresh, returns immediately with a single integer COUNT query. No comment tree built, no reactions fetched.
+- **Reaction counts in polling response** — polling now accepts `comment_ids[]` from JS and returns fresh `reaction_counts` in the same response. Eliminates the separate `syncReactions()` call on every poll interval.
+- **`getUserReactionFromDOM(commentId)` helper** — reads the user's active reaction from the DOM, used by polling to preserve user state when refreshing counts without closing open pickers.
+- **`purge_comments_data_cache($post_id)` method** — invalidates transients for pages 1–5 at standard `per_page` values, plus LiteSpeed tag purge and Cloudflare Cache-Tag purge. Called on every comment status change.
+- **Skip `syncReactions()` for guest users** — guests' reactions are embedded in the comment response. Skipping the separate sync call saves one HTTP request per page load for the majority of visitors.
+
+### Changed
+- **All rate limits migrated from `wp_cache_*` to `set_transient/get_transient`** — `wp_cache_set()` is worker-local. On a multi-worker PHP-FPM server (any VPS), a user can bypass rate limits by distributing requests across workers. Transients write to DB or Redis — shared globally. Affects: reaction rate limit, comment submission rate limit, nonce refresh rate limit.
+- **`get_comment_count` endpoint migrated to transients** — same reason. `wp_cache_get/set` → `get_transient/set_transient`.
+- **`update_meta_cache('comment', $all_ids)` before format loop** — primes the WP comment meta cache for all comment IDs in one query before the `format_comment_tree` loop. Without this, `get_comment_meta($id, '_vibe_pinned')` fires one DB query per comment. After this call, all subsequent meta reads hit the in-memory cache.
+
+---
+
+## [3.1.4] — 2026-06-20
+
+### Fixed
+- **Rate limiting bypassed on multi-worker servers** — both `vibe_toggle_like` and `vibe_submit_comment` rate limits used `wp_cache_set()` which is per-PHP-worker. Migrated to `set_transient()`.
+- **N+1 on `_vibe_pinned` comment meta** — `get_comment_meta($id, '_vibe_pinned')` was called once per comment inside `format_comment_tree`, firing one DB query per comment. Fixed with `update_meta_cache('comment', $all_ids)` before the loop.
+
+### Added
+- **`IntersectionObserver` pre-fetch** — comments start loading when the trigger button enters the viewport with a 200px margin, so they're ready before the user reaches them. Falls back to click-only on browsers without IO support.
+
+---
+
+## [3.1.3] — 2026-06-20
+
+### Fixed
+- **Reaction summary scattered on react** — `buildSummaryInner()` had a two-state branch that switched to per-type counts after the user reacted. This caused layout changes and visual inconsistency. Summary is now always: stacked emoji bubbles + one aggregate total. Per-type counts live exclusively inside the picker (below each emoji, `flex-direction: column`).
+- **Picker counts not updating** — `updateReactionDisplay()` was not patching `.vibe-rx-picker-n` elements after a reaction toggle. Fixed.
+
+### Changed
+- **Picker buttons redesigned** — each emoji option now renders as a column (emoji above, count below). `min-height` on the count span reserves space even when count is zero so the picker never jumps in height.
+
+---
+
+## [3.1.2] — 2026-06-20
+
+### Fixed
+- **Reaction picker causing layout blowout** — picker was inside `.vibe-reactions` which was a flex child of the footer row alongside Reply and Pin. On mobile, opening the picker pushed all footer buttons off screen. Fix: `buildReactionBar()` now returns two separate HTML strings. `pickerHtml` renders as a direct child of `<article>`, between the comment content and footer. Footer never sees the picker. Zero overflow possible regardless of screen width.
+- **Unpin doesn't restore position** — clicking "Unpin" removed the class but left the comment at the top of the list. `restoreChronologicalOrder()` now sorts all top-level `<li>` elements by their `<time datetime="">` ISO value, then `hoistPinnedComments()` re-hoists any still-pinned comments. Comment snaps back to its date-based position instantly, no page refresh.
+- **`initPinComment` missing `.catch()`** — silently swallowed network errors on pin/unpin.
+
+### Added
+- **`getSortedReactions(reactions)` helper** — sorts reactions by count descending. Highest-count reaction always appears first in the summary.
+- **`buildSummaryInner(sorted, userReaction)` helper** — builds summary HTML from sorted reactions. User's own reaction count gets primary-colour accent via `.vibe-rx-mine`.
+- **`restoreChronologicalOrder(list)` helper** — sorts `<li>` elements by `datetime` attribute, falls back to comment ID for ties.
+- **Overlapping emoji bubble stack** — up to 3 emoji rendered as overlapping circles (7px negative margin, z-index stacking) + aggregate total. Mirrors Facebook's reaction pile.
+
+---
+
+## [3.1.1] — 2026-06-20
+
+### Fixed
+- **Reaction picker layout blowout on mobile** — picker was a flex sibling of Reply and Pin in the footer row. Opening it pushed other buttons offscreen. Picker moved outside the footer.
+- **Summary sort order** — reactions now sorted highest count first in the summary display.
+- **Per-reaction counts in summary** — summary was showing only total. Now shows per-type counts sorted by count descending.
+
+### Changed  
+- **Plugin header** — Author changed from "Vibe Coder" to "G-will Chijioke" with Author URI `https://gwillchijioke.com`. Added Plugin URI, License URI, Requires at least, Requires PHP fields.
+
+---
+
+## [3.1.0] — 2026-06-19
+
+### Added — Reactions redesign
+- **Facebook-style compact summary + expandable picker** — replaced the 2×2 grid of pill buttons. Each comment now has one compact summary pill (stacked emoji + aggregate count). Tapping opens a picker row with 4 large emoji options. After reacting, picker closes and summary updates.
+- **One reaction per user per comment, three-state toggle** — same reaction = DELETE (toggle off), different reaction = UPDATE in place, no reaction = INSERT. Single row in DB per user per comment.
+- **Spring animations** — summary pulse uses `cubic-bezier(0.34, 1.56, 0.64, 1)`. Picker entry uses the same curve. Emoji hover lifts 3px at 1.45× scale. All compositor-only.
+- **Outside-click close** — any click outside `.vibe-reaction-picker` or `.vibe-reaction-summary` closes all open pickers.
+- **Guest identity "Not you?" notice** — when `restoreGuestIdentity()` pre-fills the form from localStorage, a notice appears: "Commenting as [Name]. [Not you?]". Clicking "Not you?" clears localStorage and wipes the fields. Name is `escapeHtml()`-sanitized before injection.
+
+### Changed
+- **`buildReactionBar()` returns split object** — `{ summaryHtml, pickerHtml }` instead of a single string. Enables placing picker and summary in separate DOM positions.
+- **`updateReactionDisplay()` scoped to article** — all DOM lookups use `getElementById('div-comment-N')` as root, not document-wide `querySelector`. Eliminates ambiguity when multiple comments share the page.
+- **`initReactions()` scoped to article** — picker found via `closest('article.vibe-comment-body')`, not via `.vibe-reactions` parent (which no longer contains the picker).
+
+---
+
+## [3.0.0] — 2026-06-19
+
+### Added — Reactions System
+- **4 emoji reactions: 👍 ❤️ 🔥 😂** — replaces the binary like/unlike system.
+- **`reaction_type VARCHAR(20) DEFAULT 'like'` column** — added to `wp_vibe_comment_likes` via `ALTER TABLE` in `maybe_upgrade()`. Existing likes become `reaction_type = 'like'` via the DEFAULT clause. No data migration, no new table.
+- **`get_reaction_counts_batch()` method** — fetches reaction counts for all 4 types across N comments in a single `GROUP BY comment_id, reaction_type` query. Uses WP object cache per-comment; only queries DB for uncached IDs.
+- **`get_user_reactions_batch()` method** — fetches each user's active reaction type for N comments in one query. Stores `''` for "no reaction" to distinguish cache miss (`false`) from confirmed absence.
+- **`toggle_reaction($comment_id, $user_id, $guest_token, $reaction_type)` method** — same/different/none logic: DELETE, UPDATE, or INSERT. Returns `{ action, user_reaction, reactions }`.
+- **`REACTION_TYPES` constant** — server-side whitelist `['like', 'heart', 'fire', 'laugh']`. Client can never inject arbitrary types.
+- **`REACTION_DEFAULTS` constant** — `{ like:0, heart:0, fire:0, laugh:0 }` returned for comments with no reactions.
+- **`invalidate_reaction_cache()` private method** — deletes per-comment and per-user reaction cache keys after every toggle.
+
+### Changed
+- **`vibe_toggle_like` AJAX handler** — now accepts `reaction_type` POST param, validated against `REACTION_TYPES` whitelist. Returns `{ reactions, user_reaction }` instead of `{ like_count, user_liked }`.
+- **`vibe_sync_likes` AJAX handler** — returns `{ reactions, user_reaction }` per comment instead of `{ like_count, user_liked }`.
+- **`format_comment_tree()` return value** — `likes` field replaced by `reactions` (full type map) and `user_reaction` (current user's type or null).
+- **`REACTION_DEFAULTS` used as fallback** — throughout PHP where `0` was previously used.
+- **`syncReactions()` JS function** — replaces `syncLikeCounts()`. POSTs to `vibe_sync_likes`, receives `{ reactions, user_reaction }` per ID.
+- **Sort by most liked** — reads `bar.dataset.totalReactions` (kept in sync by `updateReactionDisplay`) instead of `.vibe-like-count` text content.
+
+### Removed
+- **Like/heart binary system** — `vibe-like-btn`, `vibe-like-count`, `liked` CSS class, `vibe-heart` SVG, `vibe-liked-animate`, `vibe-like-pulse` animation all removed.
+- **`get_like_counts_batch()` DB method** — replaced by `get_reaction_counts_batch()`.
+- **`get_user_liked_batch()` DB method** — replaced by `get_user_reactions_batch()`.
+- **`user_has_liked()` DB method** — replaced by reaction system.
+- **`toggle_like()` DB method** — replaced by `toggle_reaction()`.
+- **`initLikes()` JS function** — replaced by `initReactions()`.
+- **`syncLikeCounts()` JS function** — replaced by `syncReactions()`.
+- **`updateLikeDisplay()` JS function** — replaced by `updateReactionDisplay()`.
+- **Live preview (Write/Preview tabs)** — removed. No value for a comment box on mobile.
+- **Share/copy link button** — removed as requested.
+
+### Security
+- **Reaction type whitelisted server-side** — `in_array($reaction_type, self::REACTION_TYPES, true)` before any DB write. Client can never inject arbitrary values.
+- **DB version bumped to `1.3.0`** — `maybe_upgrade()` checks and runs `ALTER TABLE` only if `reaction_type` column is absent.
+
+---
+
+## [2.7.0] — 2026-06-17
+
+### Added
+- **`incrementCommentHeading()`** — heading count increments immediately after a successful comment submission. No page refresh needed.
+- **Warm personalised success message** — "Thanks Oluchi! Your comment is now live." / "Thanks Oluchi! Your comment is pending review." Name pulled from form field. Replaces generic "Comment submitted" text.
+- **Empty state CTA** — replaces the previous "Be the first to leave a comment." with a styled card containing "No comments yet" and "Be the first to share your thoughts ✨".
+
+### Security (Audit — 8 fixes)
+- **`X-Forwarded-For` removed from IP resolution** — `resolve_client_ip()` previously trusted `X-Forwarded-For` which any client can forge, allowing rate limit bypass and guest like-token manipulation. Now only trusts `CF-Connecting-IP` (validated with `filter_var(FILTER_VALIDATE_IP)`) and `REMOTE_ADDR`.
+- **Content length now enforces configured max** — server previously checked against 65,535 (DB column limit). Now checks against `apply_filters('vibe_comments_max_length', 2000)` — the UX limit. Direct API calls can no longer bypass the JS limit.
+- **Author name length capped** — `mb_strlen($author) > 255` check added. MySQL `tinytext` column limit is 255 bytes; without this, truncation was silent.
+- **`comment_approved` format string fixed** — was `%s`, now `%d`. Correct type for integer column in `$wpdb->insert()`.
+- **`escapeHtml()` now encodes `"`** — `.replace(/"/g, '&quot;')` added. Without this, user-supplied strings in HTML attributes could break out of double quotes.
+- **`comment.id` coerced to integer** — `const cid = parseInt(comment.id, 10)` in `createCommentElement()`. Belt-and-suspenders against any future data-path changes.
+- **`javascript:` URIs replaced** — "Try again" links replaced with `<button class="vibe-retry-btn">` elements handled by delegated listener. CSP-safe.
+- **IP validated with `filter_var(FILTER_VALIDATE_IP)`** — after `preg_replace` sanitisation, result is now verified to be a valid IP address with `'0.0.0.0'` fallback.
+
+---
+
+## [2.6.3] — 2026-06-16
+
+### Fixed
+- **Pinned comment lost on sort change** — every sort mode (oldest, newest, liked) now calls `hoistPinnedComments()` after reordering via a shared `applySort()` function.
+- **Toolbar layout blowout on mobile** — sort `<select>` replaced with a compact cycling icon button (↑ / ↓ / ♥, ~42px fixed width). Search wrap gets `flex: 1; min-width: 0` — mandatory on flex children to prevent overflow. Search input gets `min-width: 0; width: 100%`.
+- **Old `<select>` CSS removed** — `.vibe-sort-select`, `.vibe-sort-btn` dead CSS stripped.
+
+---
+
+## [2.6.2] — 2026-06-16
+
+### Fixed
+- **Pinned comment lost on page refresh** — `hoistPinnedComments()` called after initial comment render and after banner flush. `is_pinned` field comes from server so it's always accurate on reload.
+- **Toolbar layout** — search injected into toolbar div (beside sort select) instead of as a separate block below. `display: flex; align-items: center` on toolbar. `min-width: 0` on search wrap.
+
+---
+
+## [2.6.1] — 2026-06-16
+
+### Fixed
+- **Pin button no-op** — nonce check used `'vibe_comments_nonce'` but JS sends `'wp_rest'` nonce. Fixed to `check_ajax_referer('wp_rest', 'nonce', false)`.
+- **Share/copy link button removed** — per user request. `initShare`, `fallbackCopy`, `showShareToast` functions removed. CSS stripped.
+- **Sort replaced with `<select>` dropdown** — three options: ↑ Ascending, ↓ Descending, ♡ Most liked. Driven by `change` event.
+
+---
+
+## [2.6.0] — 2026-06-16
+
+### Added
+- **Ctrl+Enter / Cmd+Enter to submit** — fires on textarea `keydown` in both main form and inline reply form.
+- **Basic Markdown** — `**bold**`, `*italic*`, `` `code` ``, `> blockquote`. HTML-escaped before parsing (XSS-safe). Server stores raw text; rendering is client-only.
+- **Auto-link bare URLs** — `/(https?:\/\/[^\s<>"&]+)/gi` → `<a rel="noopener noreferrer ugc">`. Applied after escaping so no XSS surface.
+- **Collapse long comments** — comments >300 chars get `-webkit-line-clamp: 4` with "Read more" / "Show less" toggle button.
+- **Sort by most liked** — sort toggle extends to three states: oldest / newest / most liked. "Most liked" sorts by `.vibe-like-count` text content in the DOM.
+- **Comment search** — search input above the list. Filters visible comments on `input` event with 200ms debounce. Shows "N found" status. Zero server requests.
+- **Author badge** — "Author" pill on comments where `comment.user_id === post_author_id`. Determined server-side.
+- **Pinned comment** — admin-only "Pin" / "Unpin" button per comment. Stored in `commentmeta` as `_vibe_pinned`. Pinned comment appears at top of list. `is_pinned` and `is_author` fields added to PHP response.
+- **`date_gmt` field** — returned by PHP, used to set `<time datetime="">` attribute for semantic timestamp and JS relative-time refresh.
+- **Relative timestamp refresh** — `initRelativeTime()` recalculates every 60 seconds via `timeAgo()`. Full date shown in `title` attribute on hover.
+- **`isAdmin` in localized config** — passed to JS to conditionally render pin buttons.
+
+---
+
 ## [2.0.5] — 2026-06-12
 
 ### Added — Features
@@ -266,8 +531,28 @@ Types of changes:
 
 ---
 
-[Unreleased]: https://github.com/your-username/vibe-comments/compare/v2.0.0...HEAD
-[2.0.0]: https://github.com/your-username/vibe-comments/compare/v1.3.0...v2.0.0
-[1.3.0]: https://github.com/your-username/vibe-comments/compare/v1.2.0...v1.3.0
-[1.2.0]: https://github.com/your-username/vibe-comments/compare/v1.1.3...v1.2.0
-[1.1.3]: https://github.com/your-username/vibe-comments/releases/tag/v1.1.3
+[Unreleased]: https://github.com/godschi10/vibe-comments/compare/v3.2.3...HEAD
+[3.2.3]: https://github.com/godschi10/vibe-comments/compare/v3.2.2...v3.2.3
+[3.2.2]: https://github.com/godschi10/vibe-comments/compare/v3.2.1...v3.2.2
+[3.2.1]: https://github.com/godschi10/vibe-comments/compare/v3.2.0...v3.2.1
+[3.2.0]: https://github.com/godschi10/vibe-comments/compare/v3.1.4...v3.2.0
+[3.1.4]: https://github.com/godschi10/vibe-comments/compare/v3.1.3...v3.1.4
+[3.1.3]: https://github.com/godschi10/vibe-comments/compare/v3.1.2...v3.1.3
+[3.1.2]: https://github.com/godschi10/vibe-comments/compare/v3.1.1...v3.1.2
+[3.1.1]: https://github.com/godschi10/vibe-comments/compare/v3.1.0...v3.1.1
+[3.1.0]: https://github.com/godschi10/vibe-comments/compare/v3.0.0...v3.1.0
+[3.0.0]: https://github.com/godschi10/vibe-comments/compare/v2.7.0...v3.0.0
+[2.7.0]: https://github.com/godschi10/vibe-comments/compare/v2.6.3...v2.7.0
+[2.6.3]: https://github.com/godschi10/vibe-comments/compare/v2.6.2...v2.6.3
+[2.6.2]: https://github.com/godschi10/vibe-comments/compare/v2.6.1...v2.6.2
+[2.6.1]: https://github.com/godschi10/vibe-comments/compare/v2.6.0...v2.6.1
+[2.6.0]: https://github.com/godschi10/vibe-comments/compare/v2.0.5...v2.6.0
+[2.0.5]: https://github.com/godschi10/vibe-comments/compare/v2.0.4...v2.0.5
+[2.0.4]: https://github.com/godschi10/vibe-comments/compare/v2.0.3...v2.0.4
+[2.0.3]: https://github.com/godschi10/vibe-comments/compare/v2.0.2...v2.0.3
+[2.0.2]: https://github.com/godschi10/vibe-comments/compare/v2.0.1...v2.0.2
+[2.0.1]: https://github.com/godschi10/vibe-comments/compare/v2.0.0...v2.0.1
+[2.0.0]: https://github.com/godschi10/vibe-comments/compare/v1.3.0...v2.0.0
+[1.3.0]: https://github.com/godschi10/vibe-comments/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/godschi10/vibe-comments/compare/v1.1.3...v1.2.0
+[1.1.3]: https://github.com/godschi10/vibe-comments/releases/tag/v1.1.3

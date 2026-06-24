@@ -91,24 +91,30 @@ class Vibe_Comments_Database {
         if ( $existing ) {
             if ( $existing->reaction_type === $reaction_type ) {
                 // Same reaction — toggle off.
-                $wpdb->delete( $this->table_name, [ 'id' => (int) $existing->id ], [ '%d' ] );
+                $result = $wpdb->delete( $this->table_name, [ 'id' => (int) $existing->id ], [ '%d' ] );
+                if ( $result === false ) {
+                    return new WP_Error( 'db_error', 'Failed to remove reaction.', [ 'status' => 500 ] );
+                }
                 $action        = 'removed';
                 $user_reaction = null;
             } else {
                 // Different reaction — switch type in place.
-                $wpdb->update(
+                $result = $wpdb->update(
                     $this->table_name,
                     [ 'reaction_type' => $reaction_type ],
                     [ 'id'            => (int) $existing->id ],
                     [ '%s' ],
                     [ '%d' ]
                 );
+                if ( $result === false ) {
+                    return new WP_Error( 'db_error', 'Failed to update reaction.', [ 'status' => 500 ] );
+                }
                 $action        = 'switched';
                 $user_reaction = $reaction_type;
             }
         } else {
             // No existing reaction — insert.
-            $wpdb->insert(
+            $result = $wpdb->insert(
                 $this->table_name,
                 [
                     'comment_id'    => $comment_id,
@@ -118,6 +124,9 @@ class Vibe_Comments_Database {
                 ],
                 [ '%d', '%d', '%s', '%s' ]
             );
+            if ( $result === false ) {
+                return new WP_Error( 'db_error', 'Failed to save reaction.', [ 'status' => 500 ] );
+            }
             $action        = 'added';
             $user_reaction = $reaction_type;
         }

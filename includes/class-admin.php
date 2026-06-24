@@ -3,8 +3,8 @@ class Vibe_Comments_Admin {
     private $option_name = 'vibe_comments_google_settings';
 
     public function __construct() {
-        add_action('admin_menu', array($this, 'add_menu_page'));
-        add_action('admin_init', array($this, 'register_settings'));
+        add_action( 'admin_menu', array( $this, 'add_menu_page' ) );
+        add_action( 'admin_init', array( $this, 'register_settings' ) );
     }
 
     public function add_menu_page() {
@@ -13,24 +13,27 @@ class Vibe_Comments_Admin {
             'Vibe Comments',
             'manage_options',
             'vibe-comments',
-            array($this, 'render_page')
+            array( $this, 'render_page' )
         );
     }
 
     public function register_settings() {
-        register_setting('vibe_comments', $this->option_name);
+        // L6 fix: add sanitize_callback so the option is never saved raw.
+        register_setting( 'vibe_comments', $this->option_name, array(
+            'sanitize_callback' => array( $this, 'sanitize_settings' ),
+        ) );
 
         add_settings_section(
             'vibe_google_section',
             'Google OAuth Settings',
-            array($this, 'render_section'),
+            array( $this, 'render_section' ),
             'vibe-comments'
         );
 
         add_settings_field(
             'enable_google_login',
             'Enable Google Login',
-            array($this, 'render_field'),
+            array( $this, 'render_field' ),
             'vibe-comments',
             'vibe_google_section',
             array(
@@ -43,64 +46,106 @@ class Vibe_Comments_Admin {
         add_settings_field(
             'client_id',
             'Google Client ID',
-            array($this, 'render_field'),
+            array( $this, 'render_field' ),
             'vibe-comments',
             'vibe_google_section',
-            array('field' => 'client_id', 'type' => 'text')
+            array( 'field' => 'client_id', 'type' => 'text' )
         );
 
         add_settings_field(
             'client_secret',
             'Google Client Secret',
-            array($this, 'render_field'),
+            array( $this, 'render_field' ),
             'vibe-comments',
             'vibe_google_section',
-            array('field' => 'client_secret', 'type' => 'text')
+            // L6 fix: password input so the secret is not visible in the browser
+            // DOM, not stored in browser autofill, and not captured by screen recorders.
+            array( 'field' => 'client_secret', 'type' => 'password' )
         );
     }
 
-    public function render_section() {
-        echo '<p>Enter your Google OAuth credentials. Create them at <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>.</p>';
-        echo '<p><strong>Authorized redirect URI:</strong> <code>' . esc_url(rest_url('vibe-comments/v1/google-callback')) . '</code></p>';
+    /**
+     * Sanitize each field before it is saved to wp_options.
+     * Without this, any string — including HTML and JS — can be stored.
+     */
+    public function sanitize_settings( $input ) {
+        $clean = array();
+
+        if ( isset( $input['enable_google_login'] ) ) {
+            $clean['enable_google_login'] = (bool) $input['enable_google_login'];
+        }
+        if ( isset( $input['client_id'] ) ) {
+            // Client IDs are alphanumeric + hyphens + dots. Strip anything else.
+            $clean['client_id'] = sanitize_text_field( $input['client_id'] );
+        }
+        if ( isset( $input['client_secret'] ) ) {
+            // Preserve an existing secret if the field was submitted empty
+            // (password inputs are never pre-filled for security).
+            $existing = get_option( $this->option_name, array() );
+            if ( '' === trim( $input['client_secret'] ) ) {
+                $clean['client_secret'] = $existing['client_secret'] ?? '';
+            } else {
+                $clean['client_secret'] = sanitize_text_field( $input['client_secret'] );
+            }
+        }
+
+        return $clean;
     }
 
-    public function render_field($args) {
-        $settings = get_option($this->option_name, array());
-        $field    = $args['field'];
-        $type     = isset($args['type']) ? $args['type'] : 'text';
+    public function render_section() {
+        echo '<p>Enter your Google OAuth credentials. Create them at <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a>.</p>';
+        echo '<p><strong>Authorized redirect URI:</strong> <code>' . esc_url( rest_url( 'vibe-comments/v1/google-callback' ) ) . '</code></p>';
+    }
 
-        if ($type === 'checkbox') {
-            // Smart default: enabled if credentials already exist (upgrade path),
-            // disabled on fresh installs where no client_id has been set yet.
-            $default = !empty($settings['client_id']);
-            $value   = isset($settings[$field]) ? (bool) $settings[$field] : $default;
+    public function render_field( $args ) {
+        $settings = get_option( $this->option_name, array() );
+        $field    = $args['field'];
+        $type     = isset( $args['type'] ) ? $args['type'] : 'text';
+
+        if ( $type === 'checkbox' ) {
+            $default = ! empty( $settings['client_id'] );
+            $value   = isset( $settings[ $field ] ) ? (bool) $settings[ $field ] : $default;
             printf(
                 '<label><input type="checkbox" name="%s[%s]" value="1"%s> %s</label>',
-                esc_attr($this->option_name),
-                esc_attr($field),
-                checked($value, true, false),
-                esc_html(isset($args['description']) ? $args['description'] : '')
+                esc_attr( $this->option_name ),
+                esc_attr( $field ),
+                checked( $value, true, false ),
+                esc_html( $args['description'] ?? '' )
             );
             return;
         }
 
-        $value = isset($settings[$field]) ? $settings[$field] : '';
+        if ( $type === 'password' ) {
+            // Never pre-fill the secret — password inputs should not be populated
+            // from storage. If the admin wants to change it, they type a new value;
+            // if they leave it blank, sanitize_settings() preserves the existing one.
+            printf(
+                '<input type="password" name="%s[%s]" value="" class="regular-text" autocomplete="new-password" placeholder="%s">',
+                esc_attr( $this->option_name ),
+                esc_attr( $field ),
+                esc_attr( isset( $settings[ $field ] ) && $settings[ $field ] ? '(saved — leave blank to keep)' : 'Paste secret here' )
+            );
+            return;
+        }
+
+        $value = isset( $settings[ $field ] ) ? $settings[ $field ] : '';
         printf(
             '<input type="text" name="%s[%s]" value="%s" class="regular-text">',
-            esc_attr($this->option_name),
-            esc_attr($field),
-            esc_attr($value)
+            esc_attr( $this->option_name ),
+            esc_attr( $field ),
+            esc_attr( $value )
         );
     }
 
     public function render_page() {
+        if ( ! current_user_can( 'manage_options' ) ) return;
         ?>
         <div class="wrap">
             <h1>Vibe Comments Settings</h1>
             <form method="post" action="options.php">
                 <?php
-                settings_fields('vibe_comments');
-                do_settings_sections('vibe-comments');
+                settings_fields( 'vibe_comments' );
+                do_settings_sections( 'vibe-comments' );
                 submit_button();
                 ?>
             </form>

@@ -91,9 +91,18 @@ class Vibe_Comments_Ajax_Handler {
     public function refresh_nonce() {
         $ip       = Vibe_Comments_Database::resolve_client_ip();
         $rate_key = 'vn_' . substr( md5( $ip ), 0, 16 );
-        if ( ! get_transient( $rate_key ) ) {
-            set_transient( $rate_key, 1, 2 ); // 2-second cooldown per IP
+
+        // Enforce a 2-second cooldown. The original code checked the transient
+        // but always sent a new nonce regardless — the rate limit was decorative.
+        // Now: if the key exists (request within last 2s), return the error.
+        // The frontend catches a failed nonce refresh gracefully — the old cached
+        // nonce remains valid for up to 24 hours, so this is safe to reject.
+        if ( get_transient( $rate_key ) ) {
+            wp_send_json_error( array( 'message' => 'Too many requests. Please wait a moment.' ), 429 );
+            return;
         }
+
+        set_transient( $rate_key, 1, 2 );
         wp_send_json_success( array( 'nonce' => wp_create_nonce( 'wp_rest' ) ) );
     }
 
@@ -497,9 +506,14 @@ class Vibe_Comments_Ajax_Handler {
             }
         }
 
+        // Use comment_author_email when present; otherwise derive a deterministic
+        // per-comment email for Gravatar so each guest gets a unique identicon.
+        // $guest_token is NOT in scope here (it's only available at request time
+        // in toggle_reaction) — using $comment_id alone is sufficient since it's
+        // unique per row and never reused.
         $email = !empty($comment->comment_author_email)
             ? $comment->comment_author_email
-            : 'vibe.guest.' . md5('vibe_guest_' . $comment_id . '_' . ($guest_token ?? '')) . '@comments.local';
+            : 'vibe.guest.' . md5( 'vibe_' . $comment_id ) . '@comments.local';
 
         return array(
             'id'        => $comment_id,
@@ -622,9 +636,8 @@ class Vibe_Comments_Ajax_Handler {
                 $user         = wp_get_current_user();
                 $author_name  = !empty($user->display_name) ? $user->display_name : $user->user_login;
                 $author_email = $user->user_email;
-                $author_url   = esc_url_raw($user->user_url); // sanitize — user_url could be javascript: URI
+                $author_url   = esc_url_raw($user->user_url);
                 $user_id      = $user->ID;
-                $approved     = 1;
             } else {
                 if (empty($author) || empty($email)) {
                     wp_send_json_error(array('message' => 'Name and email are required for guest comments.'));
@@ -638,66 +651,64 @@ class Vibe_Comments_Ajax_Handler {
                 $author_email = $email;
                 $author_url   = '';
                 $user_id      = 0;
-                $approved     = 0;
+                // wp_new_comment() + pre_comment_approved filters now determine approval.
+                // The old hardcoded $approved = 0 for guests bypassed Akismet and
+                // Discussion Settings ("all new comments must be manually approved").
             }
 
-            $inserted = $wpdb->insert(
-                $wpdb->comments,
-                array(
-                    'comment_post_ID'      => $post_id,
-                    'comment_author'       => $author_name,
-                    'comment_author_email' => $author_email,
-                    'comment_author_url'   => $author_url,
-                    'comment_author_IP'    => $ip,
-                    'comment_date'         => $now,
-                    'comment_date_gmt'     => $now_gmt,
-                    'comment_content'      => $content,
-                    'comment_karma'        => 0,
-                    'comment_approved'     => $approved,
-                    'comment_agent'        => $agent,
-                    'comment_type'         => 'comment',
-                    'comment_parent'       => $parent,
-                    'user_id'              => $user_id,
-                ),
-                array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%d', '%d')
-            );
+            // ── wp_new_comment() — the correct insertion path ─────────────
+            // Using $wpdb->insert() directly bypasses every filter WordPress
+            // and anti-spam plugins hook into:
+            //   - preprocess_comment    (content normalization)
+            //   - pre_comment_approved  (Akismet, Antispam Bee, CleanTalk)
+            //   - comment_moderation    (Discussion Settings: manual approval, word lists)
+            //   - comment_whitelist     ("must have a previously approved comment")
+            //
+            // wp_new_comment($data, true) runs all of these AND returns a
+            // WP_Error on failure instead of calling wp_die() (the 2nd arg).
+            // We keep our Throwable wrapper so third-party hooks that throw
+            // don't crash the AJAX response even after the comment is saved.
+            $comment_data = wp_slash( array(
+                'comment_post_ID'      => $post_id,
+                'comment_author'       => $author_name,
+                'comment_author_email' => $author_email,
+                'comment_author_url'   => $author_url,
+                'comment_author_IP'    => $ip,
+                'comment_date'         => $now,
+                'comment_date_gmt'     => $now_gmt,
+                'comment_content'      => $content,
+                'comment_karma'        => 0,
+                'comment_agent'        => $agent,
+                'comment_type'         => 'comment',
+                'comment_parent'       => $parent,
+                'user_id'              => $user_id,
+            ) );
 
-            if ($inserted === false) {
-                error_log('Vibe Comments AJAX: DB insert failed. Error: ' . $wpdb->last_error);
-                wp_send_json_error(array('message' => 'Failed to post comment. Please try again.'));
+            $comment_id = wp_new_comment( $comment_data, true );
+
+            if ( is_wp_error( $comment_id ) ) {
+                wp_send_json_error( array( 'message' => $comment_id->get_error_message() ) );
                 return;
             }
 
-            $comment_id = $wpdb->insert_id;
-
-            // Clear WP object caches (bypassed by direct $wpdb->insert)
-            clean_comment_cache($comment_id);
-            clean_post_cache($post_id);
-            wp_update_comment_count($post_id);
-
-            $comment = get_comment($comment_id);
-            if (!$comment || !is_object($comment)) {
-                wp_send_json_error(array('message' => 'Comment created but could not be retrieved.'));
+            if ( ! $comment_id ) {
+                wp_send_json_error( array( 'message' => 'Failed to post comment. Please try again.' ) );
                 return;
             }
 
-            // Fire comment_post so notification plugins still receive the event.
-            // Wrapped in Throwable: if another plugin crashes here, the comment is
-            // already saved — we log and continue rather than failing the response.
-            try {
-                do_action('comment_post', $comment_id, $approved, array(
-                    'comment_post_ID'      => $post_id,
-                    'comment_author'       => $author_name,
-                    'comment_author_email' => $author_email,
-                    'comment_parent'       => $parent,
-                    'user_id'              => $user_id,
-                    'comment_approved'     => $approved,
-                ));
-            } catch (Throwable $e) {
-                error_log('Vibe Comments: comment_post hook threw: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            $comment  = get_comment( $comment_id );
+            if ( ! $comment || ! is_object( $comment ) ) {
+                wp_send_json_error( array( 'message' => 'Comment created but could not be retrieved.' ) );
+                return;
             }
 
-            // Clear plugin's own comment list cache
+            // wp_new_comment() determines the approved value from Discussion Settings,
+            // Akismet verdict, and whitelist rules. Read the actual stored value.
+            $approved = $comment->comment_approved;
+
+            // wp_new_comment() already fires comment_post, clean_comment_cache,
+            // and wp_update_comment_count internally. No need to repeat them.
+            // Only clear our own plugin-level JSON cache.
             if (class_exists('Vibe_Comments_Database')) {
                 try {
                     $db = new Vibe_Comments_Database();
@@ -708,11 +719,10 @@ class Vibe_Comments_Ajax_Handler {
             }
 
             // Only purge the page cache when the comment is immediately public.
-            // Pending guest comments don't change the visible page — cache purge
+            // Pending / spam comments don't change the visible page — cache purge
             // for those happens via on_comment_approved() when admin approves them.
             if ($approved == 1) {
-                delete_transient('vibe_count_' . $post_id);
-                $this->purge_page_cache($post_id);
+                $this->sync_and_purge($post_id);
             }
 
             wp_send_json_success(array(
@@ -720,7 +730,9 @@ class Vibe_Comments_Ajax_Handler {
                     'id'        => intval($comment->comment_ID),
                     'author'    => $comment->comment_author,
                     'avatar'    => get_avatar_url(
-                        !empty($comment->comment_author_email) ? $comment->comment_author_email : ('vibe.guest.' . md5('vibe_guest_' . $comment->comment_ID) . '@comments.local'),
+                        !empty($comment->comment_author_email)
+                            ? $comment->comment_author_email
+                            : ('vibe.guest.' . md5('vibe_guest_' . $comment->comment_ID) . '@comments.local'),
                         array('size' => 48)
                     ),
                     'date'      => human_time_diff(strtotime($comment->comment_date_gmt), current_time('timestamp', true)) . ' ago',
@@ -732,7 +744,7 @@ class Vibe_Comments_Ajax_Handler {
                     'is_author' => (is_user_logged_in() && intval(get_current_user_id()) === intval(get_post_field('post_author', $post_id))),
                     'is_pinned' => false,
                 ),
-                'awaiting_moderation' => ($approved == 0),
+                'awaiting_moderation' => ($approved != 1),
             ));
 
         } catch (Throwable $e) {

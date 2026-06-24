@@ -24,7 +24,12 @@ class Vibe_Comments_REST_API {
 
     public function register_routes() {
         // ── Debug only ──────────────────────────────────────────────────
-        if (defined('WP_DEBUG') && WP_DEBUG) {
+        // Gated behind VIBE_COMMENTS_DEBUG_TOOLS (not WP_DEBUG).
+        // WP_DEBUG is often enabled on production sites for error logging
+        // — that should not silently expose a comment insertion endpoint.
+        // Add to wp-config.php to enable:
+        //   define('VIBE_COMMENTS_DEBUG_TOOLS', true);
+        if (defined('VIBE_COMMENTS_DEBUG_TOOLS') && VIBE_COMMENTS_DEBUG_TOOLS) {
             register_rest_route($this->namespace, '/test', array(
                 'methods'             => 'GET',
                 'callback'            => function() {

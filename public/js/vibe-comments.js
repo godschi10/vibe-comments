@@ -127,6 +127,17 @@
     let isLoadingMore = false;
 
     document.addEventListener('DOMContentLoaded', function() {
+        // Display OAuth redirect-back errors (L4 fix — oauth_error() redirects
+        // here with ?vibe_auth_error=message instead of calling wp_die()).
+        var urlParams = new URLSearchParams(window.location.search);
+        var authError = urlParams.get('vibe_auth_error');
+        if (authError) {
+            showError(decodeURIComponent(authError));
+            // Remove the query param from the URL without a page reload.
+            var cleanUrl = window.location.pathname +
+                window.location.search.replace(/([?&])vibe_auth_error=[^&]*/g, '').replace(/^&/, '?');
+            history.replaceState(null, '', cleanUrl || window.location.pathname);
+        }
         // Count is rendered statically by PHP (get_comments_number()).
         // No AJAX needed on page load — zero requests until user clicks Load.
         initCommentsTrigger();
@@ -1550,51 +1561,6 @@
     }
 
     /** Admin-only: pin/unpin a comment to the top of the list. */
-    function initPinComment() {
-        if (!config.isAdmin) return;
-        document.addEventListener('click', function(e) {
-            var btn = e.target.closest('.vibe-pin-btn');
-            if (!btn) return;
-            var id     = btn.dataset.commentId;
-            var pinned = btn.dataset.pinned === '1';
-            fetch(config.ajaxUrl, {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body:    new URLSearchParams({
-                    action:     'vibe_pin_comment',
-                    nonce:      config.nonce,
-                    comment_id: id,
-                    pin:        pinned ? '0' : '1',
-                }),
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(res) {
-                if (!res.success) return;
-                var nowPinned = res.data.pinned;
-                btn.dataset.pinned = nowPinned ? '1' : '0';
-                btn.textContent    = nowPinned ? 'Unpin' : 'Pin';
-
-                var li = btn.closest('li.comment');
-                if (!li) return;
-                li.classList.toggle('vibe-comment-pinned', nowPinned);
-
-                var meta   = li.querySelector('.vibe-comment-meta');
-                var badge  = li.querySelector('.vibe-pinned-badge');
-                if (nowPinned && !badge && meta) {
-                    var b = document.createElement('span');
-                    b.className   = 'vibe-pinned-badge';
-                    b.textContent = '\uD83D\uDCCC Pinned';
-                    meta.prepend(b);
-                } else if (!nowPinned && badge) {
-                    badge.remove();
-                }
-
-                var cmtList = document.getElementById('vibe-comment-list');
-                if (cmtList && nowPinned) cmtList.prepend(li);
-            });
-        });
-    }
-
     /** Bump the "N Comments" heading by 1 after a successful submission. */
     function incrementCommentHeading() {
         var titleEl = document.getElementById('vibe-comments-title');

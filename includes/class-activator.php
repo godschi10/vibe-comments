@@ -1,6 +1,6 @@
 <?php
 class Vibe_Comments_Activator {
-    const DB_VERSION = '1.3.0';
+    const DB_VERSION = '1.3.1';
 
     public static function activate() {
         global $wpdb;
@@ -31,8 +31,10 @@ class Vibe_Comments_Activator {
     }
 
     /**
-     * Run on plugins_loaded — migrates existing installs without needing
+     * Run on init — migrates existing installs without needing
      * the user to deactivate/reactivate the plugin.
+     * Also flushes vc_load_* transients on any version change so stale
+     * cached comment JSON never survives an upgrade.
      */
     public static function maybe_upgrade() {
         $installed = get_option('vibe_comments_db_version', '0');
@@ -61,6 +63,15 @@ class Vibe_Comments_Activator {
             $wpdb->query("ALTER TABLE `{$table_name}` DROP INDEX `unique_like`");
             $wpdb->query("ALTER TABLE `{$table_name}` ADD UNIQUE KEY `unique_like` (`comment_id`, `user_id`, `guest_token`)");
         }
+
+        // Flush all vc_load_* transients so the first request after upgrade
+        // always re-runs the query against the live DB rather than serving
+        // cached JSON that pre-dates the schema or code change.
+        $wpdb->query(
+            "DELETE FROM {$wpdb->options}
+             WHERE option_name LIKE '\_transient\_vc\_%'
+                OR option_name LIKE '\_transient\_timeout\_vc\_%'"
+        );
 
         update_option('vibe_comments_db_version', self::DB_VERSION);
     }

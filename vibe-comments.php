@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.2.4
+ * Version:           3.2.9
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.2.4');
+define('VIBE_COMMENTS_VERSION', '3.2.9');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -53,6 +53,7 @@ require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-ajax-handler.php';
 vibe_log('AJAX handler loaded');
 
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-admin.php';
+require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-schema.php';
 vibe_log('Admin class loaded');
 
 class Vibe_Comments {
@@ -67,6 +68,9 @@ class Vibe_Comments {
 
         // Run DB migration if needed (adds guest_token column for guest likes)
         Vibe_Comments_Activator::maybe_upgrade();
+
+        // JSON-LD structured data for comments (SEO).
+        Vibe_Comments_Schema::init();
 
         try {
             new Vibe_Comments_REST_API();

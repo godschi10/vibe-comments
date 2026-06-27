@@ -19,6 +19,64 @@ Types of changes:
 
 ---
 
+## [3.2.9] — 2026-06-27
+
+### Fixed
+- **Sort button and search input now share a unified design token** — both controls now have identical `height: 38px` (via `box-sizing: border-box`), `padding: 0 0.75rem`, `border-radius: 8px`, `background: var(--vibe-bg)`, `font-size: 0.875rem`, and `line-height: 1`. Previously the sort button used `background: none`, a slightly different font-size (0.88rem vs 0.85rem on the input), and no explicit height, so despite sharing the same border style the two controls never looked like siblings.
+- **Duplicate CSS blocks removed** — `.vibe-search-wrap`, `.vibe-search-input`, and `.vibe-search-status` were each defined twice. The second block (further down the file) was a stale copy from before the toolbar was introduced; its `margin-bottom: 1rem` was overriding the correct `margin-bottom: 0` from the first block, adding unwanted space below the search row.
+
+---
+
+## [3.2.8] — 2026-06-26
+
+### Added
+- **JSON-LD comment schema (`includes/class-schema.php`)** — Outputs a `Schema.org` `@graph` block in `<head>` on all singular posts. Includes `commentCount` on a `WebPage` entity (direct engagement quality signal for Google) and individual `Comment` entities for each approved comment (up to 100), with `parentItem` links for threaded replies and `author.url` for logged-in commenters with a website set. Necessary because comments load via AJAX — Googlebot does not click the "Load Comments" button, so without JSON-LD the entire discussion is invisible to search crawlers. Compatible with Yoast SEO, Rank Math, and no SEO plugin: the `WebPage` entity uses the plain post URL as `@id`, which Google merges with any existing page entity from the theme or SEO plugin rather than creating a duplicate.
+
+### Fixed
+- **`uninstall.php` — data-loss guard added** — Without this, deleting any plugin entry whose `uninstall.php` shares the table name (e.g. an off-slug copy like `vibe-comments-v3_2_5` installed alongside the main `vibe-comments`) immediately ran `DROP TABLE wp_vibe_comment_likes`, destroying all reaction data with no warning. The guard reads `active_plugins` (and `active_sitewide_plugins` for multisite) and exits without touching any data if `vibe-comments/vibe-comments.php` is still active. This was the confirmed cause of the production reaction data loss on 2026-06-26.
+
+---
+
+## [3.2.7] — 2026-06-26
+
+### Fixed
+- **Reactions disappear after upgrade — stale transient cache** — On any version change, `maybe_upgrade()` now deletes all `vc_load_*` transients (and their timeout entries) before returning. Without this, cached `load_comments` JSON from a previous version could persist indefinitely — either serving zero reaction counts from a bad warm-up request, or serving pre-upgrade data that never reflected new DB state. `DB_VERSION` bumped from `1.3.0` → `1.3.1` to force `maybe_upgrade()` to run on existing installs upgrading from v3.2.6 and earlier.
+
+### Note — reactions on your current install
+The table was not touched. Reactions are still in `wp_vibe_comment_likes`. Installing this version triggers the transient flush on first `init` call, which forces `load_comments` to re-query the DB on next page load. If reactions are still not visible after the upgrade, go to **LiteSpeed → Toolbox → Purge All** (or equivalent for your cache stack) to ensure no edge or server cache is serving the stale response.
+
+---
+
+## [3.2.6] — 2026-06-26
+
+### Fixed
+- **Reaction summary pill — blue border and background removed from user's own reaction** — `.vibe-has-reaction` applied `border-color: primary` and `background: #eff6ff` to the entire pill button. Only the count number (`.vibe-rx-total`) now turns blue (`color: var(--vibe-primary); font-weight: 700`) to signal ownership. Button border and background remain at their default neutral state.
+
+---
+
+## [3.2.5] — 2026-06-25
+
+### Security
+- **[H1] Guest token NAT collision — closed** — `get_guest_token()` was `md5(IP + AUTH_KEY + date)`, so all users behind the same NAT/CGNAT on the same UTC day shared one guest identity and could toggle off each other's reactions. Fix: the JS now generates a `crypto.randomUUID()` (falling back through `crypto.getRandomValues()` then `Math.random()`) on first use, persists it in `localStorage` as `vibe_gid`, and sends it as `vibe_guest_id` in every guest POST. PHP hashes it with `AUTH_KEY` (`md5(AUTH_KEY . uuid)`) so the raw UUID is never stored. Identity is now stable per-browser until localStorage is cleared — no more daily rotation needed. IP-based fallback preserved for direct API calls and browsers without localStorage.
+- **[H1] Comment submission rate limit scoped to IP + post** — The 5-second cooldown key was `md5(IP)`, so users behind the same NAT could block each other from commenting on entirely different posts. Key is now `md5(IP . post_id)` — per-post rate limiting, no cross-post interference.
+
+### Changed
+- **`toggle_reaction()` now SELECT-free and atomic** — Old code did SELECT → DELETE or UPDATE or INSERT (three separate operations, one open race window). New code: attempt `DELETE WHERE reaction_type = clicked_type` (1 row deleted = toggle off; 0 rows = fall through); if 0 deleted, execute `INSERT ... ON DUPLICATE KEY UPDATE reaction_type = VALUES(reaction_type)` (covers both "no prior reaction" and "different prior reaction" in one atomic statement). No race condition between the two steps because delete-with-no-match is not an error — it's just a clean pass-through to the upsert.
+- **`get_reaction_counts_batch()` and `get_user_reactions_batch()` use `$wpdb->prepare()` for IN() clauses** — IDs were already `absint()`-sanitised at every call site (not injectable today), but using `$wpdb->prepare()` with `%d` placeholders removes the dependency on call-site discipline remaining correct across future refactors.
+
+### Fixed
+- **[L2] Guest avatar hash inconsistency** — `format_comment_tree()` hashed guest avatars as `md5('vibe_' . $comment_id)` but `submit_comment()`'s success response used `md5('vibe_guest_' . $comment_id)` — different prefix, different MD5, different identicon. A guest comment showed one avatar immediately after posting and a different one after page reload. Both now use `md5('vibe_' . $comment_id)`.
+- **`vibe_log()` wrapped in `function_exists()` guard** — Without this, uploading v3.2.5 as a zip with a wrong internal directory slug caused WordPress to install it as a second separate plugin. Activating it while any other version of the plugin was already active produced `Cannot redeclare vibe_log()` — a fatal that prevented activation. `if (!function_exists('vibe_log'))` wraps the definition permanently.
+- **JS syntax error from orphaned comment tail** — The `/**` comment block above `saveGuestIdentity()` had more content than the single line matched by the `getGuestId()` insertion. After the insertion, the tail of that comment (`* saveGuestIdentity() — ...`, `*/`) was left outside any comment context. The JavaScript parser rejected the entire file — no click handlers attached, no comments loaded, no reactions worked. Orphaned fragment removed.
+
+### Documentation
+- **`debug-logger.php`** now gates file writes on `VIBE_COMMENTS_DEBUG_TOOLS` instead of `WP_DEBUG`. `WP_DEBUG` is frequently enabled on production sites for error capture; using it as the log gate left `wp-content/logs/vibe-comments-debug.log` at a predictable URL on servers that don't honour `.htaccess` (Nginx, LiteSpeed depending on config). `VIBE_COMMENTS_DEBUG_TOOLS` is a deliberate opt-in. Also updated `.htaccess` content to modern Apache 2.4 syntax (`Require all denied` instead of `Deny from all`).
+- **[L7] README** corrected: `maybe_upgrade()` runs on `init`, not `plugins_loaded` as the previous README stated.
+- **README security table** updated: OAuth CSRF entry now describes the actual mechanism (crypto-random token + HttpOnly SameSite=Lax cookie binding) instead of the old "Transient-stored nonce" description. Debug endpoints entry corrected to `VIBE_COMMENTS_DEBUG_TOOLS`.
+- **`refresh_nonce()` docblock** corrected: old comment said "Always returns a valid nonce (even when rate-limited)" — the opposite of what M3 fixed in v3.2.4.
+
+---
+
 ## [3.2.4] — 2026-06-24
 
 ### Security — Critical (from external audit)

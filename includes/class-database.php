@@ -36,10 +36,35 @@ class Vibe_Comments_Database {
     }
 
     /**
-     * Daily guest token: IP + auth key + UTC date.
-     * Rotates at midnight so a guest can react again the next day.
+     * Derive a 32-char guest token for DB storage.
+     *
+     * Preferred path (H1 fix): accept the client-supplied UUID from localStorage
+     * (sent as `vibe_guest_id` in POST/GET by the JS). Hash it with AUTH_KEY so
+     * the raw UUID is never stored, and so the same UUID produces a different
+     * token on different sites. Stable across page loads for that browser until
+     * the user clears localStorage — no daily rotation needed.
+     *
+     * Fallback path (legacy / no UUID): derive from IP + AUTH_KEY + UTC date,
+     * same as before. This path still collides for users behind the same NAT
+     * (the original H1 problem) but is preserved for direct API calls or very
+     * old browsers.
+     *
+     * @param  string $client_id  UUID from localStorage, passed by caller after
+     *                            reading from $_POST['vibe_guest_id'].
+     * @return string             32 hex chars.
      */
-    public static function get_guest_token() {
+    public static function get_guest_token( $client_id = '' ) {
+        if ( ! empty( $client_id ) ) {
+            // Allow UUID format chars only: hex digits and hyphens.
+            $clean = preg_replace( '/[^a-zA-Z0-9\-]/', '', $client_id );
+            // Plausible UUID range: 32 chars (no hyphens) to 36 chars (with hyphens).
+            // Accept up to 40 to be tolerant of minor format variations.
+            if ( strlen( $clean ) >= 32 && strlen( $clean ) <= 40 ) {
+                $salt = defined( 'AUTH_KEY' ) ? AUTH_KEY : 'vibe-salt';
+                return substr( md5( $salt . $clean ), 0, 32 );
+            }
+        }
+        // Fallback: IP-based. Retains NAT-collision risk (H1) when no UUID is present.
         $ip   = self::resolve_client_ip();
         $salt = defined( 'AUTH_KEY' ) ? AUTH_KEY : 'vibe-salt';
         return substr( md5( $ip . $salt . gmdate( 'Y-m-d' ) ), 0, 32 );
@@ -52,10 +77,25 @@ class Vibe_Comments_Database {
     /**
      * Toggle or switch a reaction on a comment.
      *
-     * Logic:
-     *   - Same type already stored  → DELETE   (toggle off)
-     *   - Different type stored     → UPDATE    (switch reaction)
-     *   - No reaction stored        → INSERT
+     * Race-safe without a SELECT:
+     *
+     *   Step 1 — DELETE WHERE reaction_type matches the requested type.
+     *     • 1 row deleted  → user had this exact reaction → toggle off.
+     *     • 0 rows deleted → either they have a different reaction, or none at all
+     *                        → fall through to the upsert.
+     *
+     *   Step 2 (if step 1 deleted nothing) — INSERT ... ON DUPLICATE KEY UPDATE.
+     *     • No row exists  → inserts a new reaction (INSERT path).
+     *     • Different type → triggers ON DUPLICATE KEY UPDATE; sets the new type
+     *                        atomically in a single statement (no separate UPDATE).
+     *     Both are handled by one atomic SQL statement — no window for a duplicate.
+     *
+     * The UNIQUE KEY (comment_id, user_id, guest_token) in the schema is the DB-level
+     * invariant that makes ON DUPLICATE KEY UPDATE target the right row.
+     *
+     * JS consumer note: `action` is kept in the response for potential debugging,
+     * but the frontend never reads it — it only consumes `reactions` and `user_reaction`.
+     * 'switched' is folded into 'added' since the distinction is meaningless to JS.
      *
      * @param  int    $comment_id
      * @param  int    $user_id       0 for guests
@@ -81,61 +121,55 @@ class Vibe_Comments_Database {
             return new WP_Error( 'invalid_data', 'Guest token required.', [ 'status' => 400 ] );
         }
 
-        // Check for an existing reaction from this user on this comment.
-        $existing = $wpdb->get_row( $wpdb->prepare(
-            "SELECT id, reaction_type FROM {$this->table_name}
-             WHERE comment_id = %d AND user_id = %d AND guest_token = %s",
-            $comment_id, $user_id, $guest_token
+        // ── Step 1: attempt toggle-off ────────────────────────────────────────
+        // Delete only if the stored reaction_type is the SAME as what was clicked.
+        // $wpdb->delete() returns int (rows affected) or false (DB error).
+        // 0 rows affected is not an error here — it means "no match for this type."
+        $deleted = $wpdb->delete(
+            $this->table_name,
+            [
+                'comment_id'    => $comment_id,
+                'user_id'       => $user_id,
+                'guest_token'   => $guest_token,
+                'reaction_type' => $reaction_type,
+            ],
+            [ '%d', '%d', '%s', '%s' ]
+        );
+
+        if ( $deleted === false ) {
+            return new WP_Error( 'db_error', 'Failed to remove reaction.', [ 'status' => 500 ] );
+        }
+
+        if ( $deleted > 0 ) {
+            // Successfully toggled off.
+            $this->invalidate_reaction_cache( $comment_id, $user_id, $guest_token );
+            return [
+                'action'        => 'removed',
+                'user_reaction' => null,
+                'reactions'     => $this->get_reaction_counts( $comment_id ),
+            ];
+        }
+
+        // ── Step 2: insert-or-switch (atomic) ────────────────────────────────
+        // INSERT ... ON DUPLICATE KEY UPDATE collapses both "no prior reaction"
+        // (INSERT) and "different prior reaction" (switch via UPDATE) into one
+        // atomic statement. No separate SELECT or UPDATE needed.
+        $result = $wpdb->query( $wpdb->prepare(
+            "INSERT INTO {$this->table_name} (comment_id, user_id, guest_token, reaction_type)
+             VALUES (%d, %d, %s, %s)
+             ON DUPLICATE KEY UPDATE reaction_type = VALUES(reaction_type)",
+            $comment_id, $user_id, $guest_token, $reaction_type
         ) );
 
-        if ( $existing ) {
-            if ( $existing->reaction_type === $reaction_type ) {
-                // Same reaction — toggle off.
-                $result = $wpdb->delete( $this->table_name, [ 'id' => (int) $existing->id ], [ '%d' ] );
-                if ( $result === false ) {
-                    return new WP_Error( 'db_error', 'Failed to remove reaction.', [ 'status' => 500 ] );
-                }
-                $action        = 'removed';
-                $user_reaction = null;
-            } else {
-                // Different reaction — switch type in place.
-                $result = $wpdb->update(
-                    $this->table_name,
-                    [ 'reaction_type' => $reaction_type ],
-                    [ 'id'            => (int) $existing->id ],
-                    [ '%s' ],
-                    [ '%d' ]
-                );
-                if ( $result === false ) {
-                    return new WP_Error( 'db_error', 'Failed to update reaction.', [ 'status' => 500 ] );
-                }
-                $action        = 'switched';
-                $user_reaction = $reaction_type;
-            }
-        } else {
-            // No existing reaction — insert.
-            $result = $wpdb->insert(
-                $this->table_name,
-                [
-                    'comment_id'    => $comment_id,
-                    'user_id'       => $user_id,
-                    'guest_token'   => $guest_token,
-                    'reaction_type' => $reaction_type,
-                ],
-                [ '%d', '%d', '%s', '%s' ]
-            );
-            if ( $result === false ) {
-                return new WP_Error( 'db_error', 'Failed to save reaction.', [ 'status' => 500 ] );
-            }
-            $action        = 'added';
-            $user_reaction = $reaction_type;
+        if ( $result === false ) {
+            return new WP_Error( 'db_error', 'Failed to save reaction.', [ 'status' => 500 ] );
         }
 
         $this->invalidate_reaction_cache( $comment_id, $user_id, $guest_token );
 
         return [
-            'action'        => $action,
-            'user_reaction' => $user_reaction,
+            'action'        => 'added',
+            'user_reaction' => $reaction_type,
             'reactions'     => $this->get_reaction_counts( $comment_id ),
         ];
     }
@@ -207,7 +241,9 @@ class Vibe_Comments_Database {
         }
 
         if ( ! empty( $uncached ) ) {
-            // IDs are absint-sanitised — safe for direct interpolation.
+            // IDs are absint()-guaranteed PHP integers at this point — no injection
+            // vector. Direct interpolation is safe and avoids variadic-spread
+            // incompatibilities across WordPress versions.
             $id_list = implode( ',', $uncached );
             $rows    = $wpdb->get_results(
                 "SELECT comment_id, reaction_type, COUNT(*) AS cnt
@@ -265,6 +301,9 @@ class Vibe_Comments_Database {
         }
 
         if ( ! empty( $uncached ) ) {
+            // IDs are absint()-guaranteed integers — safe to interpolate directly.
+            // The WHERE predicates (user_id, guest_token) use prepare() because
+            // those values come from external sources and ARE user-controlled.
             $id_list = implode( ',', $uncached );
             $rows    = $wpdb->get_results( $wpdb->prepare(
                 "SELECT comment_id, reaction_type

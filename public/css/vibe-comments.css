@@ -182,8 +182,12 @@
     border-color: var(--vibe-text-muted, #888);
 }
 .vibe-reaction-summary.vibe-has-reaction {
-    border-color: var(--vibe-primary, #2563eb);
-    background: #eff6ff;
+    border-color: var(--vibe-border, #e5e7eb);
+    background: none;
+}
+.vibe-reaction-summary.vibe-has-reaction .vibe-rx-total {
+    color: var(--vibe-primary, #2563eb);
+    font-weight: 700;
 }
 
 /* ── Default state: overlapping emoji bubble stack + aggregate total ────── */
@@ -680,7 +684,7 @@
     line-height: inherit;
 }
 
-/* Comments toolbar — sort icon button + search on one line */
+/* ── Comments toolbar — sort button + search on one line ───────────────── */
 .vibe-comments-toolbar {
     display: flex;
     align-items: center;
@@ -688,37 +692,50 @@
     margin-bottom: 0.75rem;
 }
 
-/* Compact cycling sort button */
+/* Shared design token: both controls look like one family */
+.vibe-sort-icon-btn,
+.vibe-search-input {
+    height: 38px;
+    box-sizing: border-box;
+    padding: 0 0.75rem;
+    border: 1px solid var(--vibe-border, #e5e7eb);
+    border-radius: 8px;
+    background: var(--vibe-bg, #fff);
+    color: var(--vibe-text, #111);
+    font-size: 0.875rem;
+    line-height: 1;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
 .vibe-sort-icon-btn {
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    background: none;
-    border: 1px solid var(--vibe-border, #e5e7eb);
-    border-radius: 8px;
-    padding: 0.4rem 0.65rem;
-    font-size: 0.88rem;
-    color: var(--vibe-text, #111);
-    cursor: pointer;
+    gap: 0.3rem;
     white-space: nowrap;
-    line-height: 1;
-    transition: border-color 0.2s ease, color 0.2s ease;
+    cursor: pointer;
 }
-.vibe-sort-icon-btn:hover {
-    border-color: var(--vibe-primary, #2563eb);
-    color: var(--vibe-primary, #2563eb);
-}
+.vibe-sort-icon-btn:hover { border-color: var(--vibe-primary, #2563eb); color: var(--vibe-primary, #2563eb); }
 
-/* Search wrap fills remaining space; min-width:0 is mandatory —
-   flex children default to min-width:auto which causes overflow on mobile */
+/* Search wrap fills remaining space; min-width:0 prevents overflow on mobile */
 .vibe-search-wrap {
     flex: 1;
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
     margin-bottom: 0;
+}
+.vibe-search-input {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+}
+.vibe-search-input:focus  { border-color: var(--vibe-primary, #2563eb); }
+.vibe-search-status {
+    font-size: 0.8rem;
+    color: var(--vibe-text-muted, #888);
+    white-space: nowrap;
 }
 
 /* ── New comments banner ───────────────────────────────────────────────── */
@@ -828,32 +845,6 @@
 }
 .vibe-pin-btn:hover { background: #fef3c7; border-color: #fde68a; color: #b45309; }
 
-/* ── Comment search ────────────────────────────────────────────────────── */
-.vibe-search-wrap {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-}
-.vibe-search-input {
-    flex: 1;
-    min-width: 0;        /* prevent flex child overflowing container */
-    width: 100%;
-    padding: 0.4rem 0.65rem;
-    border: 1px solid var(--vibe-border, #e5e7eb);
-    border-radius: 8px;
-    background: var(--vibe-bg, #fff);
-    color: var(--vibe-text, #111);
-    font-size: 0.85rem;
-    outline: none;
-    transition: border-color 0.2s ease;
-}
-.vibe-search-input:focus { border-color: var(--vibe-primary, #2563eb); }
-.vibe-search-status {
-    font-size: 0.8rem;
-    color: var(--vibe-text-muted, #888);
-    white-space: nowrap;
-}
 .vibe-new-banner {
     display: flex;
     align-items: center;

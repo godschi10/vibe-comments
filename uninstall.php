@@ -9,6 +9,12 @@
  *   - _vibe_pinned commentmeta on all comments
  *   - Plugin settings and DB version option
  *   - All plugin transients
+ *
+ * GUARD: if the canonical vibe-comments plugin is still active (possible when
+ * an off-slug copy such as vibe-comments-v3_2_5 is being deleted), bail
+ * immediately — the shared table and options must not be destroyed while the
+ * main plugin is still using them. This was the exact scenario that caused
+ * production reaction data loss in June 2026.
  */
 
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
@@ -16,6 +22,19 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 global $wpdb;
+
+// ── Active-plugin guard ───────────────────────────────────────────────────
+// Check both single-site and (if multisite) network-active plugins.
+$canonical       = 'vibe-comments/vibe-comments.php';
+$active          = (array) get_option( 'active_plugins', [] );
+$network_active  = is_multisite()
+    ? array_keys( (array) get_site_option( 'active_sitewide_plugins', [] ) )
+    : [];
+
+if ( in_array( $canonical, $active, true ) || in_array( $canonical, $network_active, true ) ) {
+    // The main plugin is still active — preserve all shared data.
+    exit;
+}
 
 // ── 1. Drop the custom reactions table ────────────────────────────────────
 $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'vibe_comment_likes' );

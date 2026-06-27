@@ -1,16 +1,27 @@
 <?php
 /**
- * Debug logger — only writes when WP_DEBUG is true.
- * Function name kept as vibe_log() for compatibility.
- * Log file moved to wp-content/logs/ (out of webroot's direct reach).
+ * Debug logger — only writes when VIBE_COMMENTS_DEBUG_TOOLS is explicitly enabled.
+ *
+ * Gate: define('VIBE_COMMENTS_DEBUG_TOOLS', true) in wp-config.php.
+ *
+ * Deliberately does NOT gate on WP_DEBUG because WP_DEBUG is frequently enabled
+ * on production sites for error capture — leaving a predictable log file at a
+ * guessable URL on any server that doesn't enforce .htaccess (Nginx, LiteSpeed
+ * in some configs). VIBE_COMMENTS_DEBUG_TOOLS is a deliberate opt-in by a
+ * developer, not an ambient configuration flag.
+ *
+ * Log file: wp-content/logs/vibe-comments-debug.log
+ * Directory is created on first write; .htaccess blocks direct Apache access.
+ * On Nginx/LiteSpeed, add a server-level deny for /wp-content/logs/ if needed.
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
+if ( ! function_exists( 'vibe_log' ) ) {
 function vibe_log($message) {
-    if (!defined('WP_DEBUG') || !WP_DEBUG) {
+    if (!defined('VIBE_COMMENTS_DEBUG_TOOLS') || !VIBE_COMMENTS_DEBUG_TOOLS) {
         return;
     }
 
@@ -19,14 +30,16 @@ function vibe_log($message) {
 
     if (!is_dir($log_dir)) {
         wp_mkdir_p($log_dir);
-        @file_put_contents($log_dir . '/.htaccess', "Deny from all\n");
+        // Apache only. For Nginx/LiteSpeed, add a server-level block for /wp-content/logs/.
+        @file_put_contents($log_dir . '/.htaccess', "Require all denied\n");
     }
 
     $line = gmdate('Y-m-d H:i:s') . ' UTC - ' . $message . PHP_EOL;
     @file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX);
 }
+} // end function_exists vibe_log
 
-if (defined('WP_DEBUG') && WP_DEBUG) {
+if (defined('VIBE_COMMENTS_DEBUG_TOOLS') && VIBE_COMMENTS_DEBUG_TOOLS) {
     vibe_log('=== Plugin loading started ===');
 
     register_shutdown_function(function() {

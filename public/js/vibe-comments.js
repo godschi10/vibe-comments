@@ -360,6 +360,11 @@
         if (commentIds.length === 0) return;
 
         var params = new URLSearchParams({ action: 'vibe_sync_likes', nonce: config.nonce });
+        // Send vibe_guest_id so guest reaction state is correct even when a
+        // non-logged-in user somehow triggers this path. Ignored server-side
+        // for logged-in users (user_id > 0 takes precedence).
+        var gid = getGuestId();
+        if (gid) params.append('vibe_guest_id', gid);
         commentIds.forEach(function(id) { params.append('comment_ids[]', id); });
 
         fetchWithTimeout(config.ajaxUrl, {
@@ -606,12 +611,12 @@
                 fetchWithTimeout(config.ajaxUrl, {
                     method:  'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body:    new URLSearchParams({
+                    body:    new URLSearchParams(Object.assign({
                         action:        'vibe_toggle_like',
                         nonce:         config.nonce,
                         comment_id:    parseInt(commentId, 10),
                         reaction_type: reactionType,
-                    }),
+                    }, config.isLoggedIn ? {} : { vibe_guest_id: getGuestId() })),
                 }, 10000)
                 .then(function(res) { return res.json(); })
                 .then(function(result) {
@@ -899,7 +904,7 @@
                 body: new URLSearchParams(Object.assign({
                     action: 'vibe_submit_comment',
                     nonce: config.nonce,
-                }, data)),
+                }, data, config.isLoggedIn ? {} : { vibe_guest_id: getGuestId() })),
             }, 15000)
             .then(function(res) {
                 const contentType = res.headers.get('content-type');
@@ -1239,9 +1244,72 @@
      */
     /**
      * Guest identity persistence via localStorage.
-     * saveGuestIdentity() — called after successful submission.
-     * restoreGuestIdentity() + initGuestAutoSave() — called on DOMContentLoaded.
+     * ─────────────────────────────────────────────
+     * Three independent pieces of guest state are stored:
+     *
+     *   vibe_guest_name   — display name, pre-filled in the comment form.
+     *   vibe_guest_email  — email, pre-filled in the comment form.
+     *   vibe_gid          — stable random UUID used as the reaction identity
+     *                       (H1 fix). Sent to the server as vibe_guest_id and
+     *                       hashed with AUTH_KEY to produce the guest_token
+     *                       stored in the DB. Eliminates the NAT-collision
+     *                       problem where all users behind the same IP shared
+     *                       an identity and could toggle off each other's reactions.
      */
+
+    /**
+     * Get (or generate) a stable random UUID for this browser.
+     *
+     * Prefers crypto.randomUUID() (Chrome 92+, Firefox 95+, Safari 15.4+).
+     * Falls back to a manual crypto.getRandomValues() construction for older
+     * browsers, and to Math.random() as a last resort (extremely old browsers
+     * only — entropy is lower but still functionally unique).
+     *
+     * Returns an empty string if localStorage is unavailable (private browsing,
+     * storage-full errors). The server falls back to IP-based guest token in
+     * that case, preserving the pre-H1 behavior.
+     *
+     * @return {string}  UUID v4 string (36 chars) or '' on failure.
+     */
+    function getGuestId() {
+        var STORAGE_KEY = 'vibe_gid';
+        try {
+            var existing = localStorage.getItem(STORAGE_KEY);
+            if (existing && existing.length >= 32) return existing;
+
+            var uuid;
+            if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                // Preferred: cryptographically secure, built-in UUID v4.
+                uuid = crypto.randomUUID();
+            } else if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+                // Fallback: build UUID v4 manually from 16 random bytes.
+                var bytes = new Uint8Array(16);
+                crypto.getRandomValues(bytes);
+                // Set version (4) and variant (RFC 4122) bits.
+                bytes[6] = (bytes[6] & 0x0f) | 0x40;
+                bytes[8] = (bytes[8] & 0x3f) | 0x80;
+                var hex = Array.from(bytes).map(function(b) {
+                    return ('0' + b.toString(16)).slice(-2);
+                }).join('');
+                uuid = hex.slice(0,8) + '-' + hex.slice(8,12) + '-' + hex.slice(12,16) + '-' +
+                       hex.slice(16,20) + '-' + hex.slice(20);
+            } else {
+                // Last resort: Math.random() (low entropy, but practically unique
+                // enough for this purpose on very old browsers).
+                uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    var r = (Math.random() * 16) | 0;
+                    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+                });
+            }
+            localStorage.setItem(STORAGE_KEY, uuid);
+            return uuid;
+        } catch (e) {
+            // localStorage unavailable (private browsing, quota exceeded, etc.).
+            // Return '' — server will fall back to IP-based guest token.
+            return '';
+        }
+    }
+
     function saveGuestIdentity() {
         var author = document.getElementById('vibe-author');
         var email  = document.getElementById('vibe-email');

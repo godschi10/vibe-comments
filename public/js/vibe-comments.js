@@ -12,21 +12,13 @@
      * The four supported reactions, in display order.
      * These must match the PHP whitelist (Vibe_Comments_Database::REACTION_TYPES).
      */
-    var REACTION_DEFS = [
+    const REACTION_DEFS = [
         { type: 'like',  emoji: '👍', label: 'Like'  },
         { type: 'heart', emoji: '❤️', label: 'Love'  },
         { type: 'fire',  emoji: '🔥', label: 'Fire'  },
         { type: 'laugh', emoji: '😂', label: 'Haha'  },
     ];
 
-    /**
-     * Build the reaction bar HTML string for a comment.
-     *
-     * @param  {number}      cid           Integer comment ID.
-     * @param  {Object}      reactions     { like:N, heart:N, fire:N, laugh:N }
-     * @param  {string|null} userReaction  The current user's active reaction type, or null.
-     * @return {string}      HTML string — safe to assign to innerHTML.
-     */
     /**
      * Build the reaction component HTML for a comment.
      *
@@ -154,7 +146,9 @@
         initForm();
         initGoogleAuth();
         initGuestToggle();
-        initLivePolling();
+        // initLivePolling() intentionally NOT here — it starts inside
+        // initCommentsTrigger's onLoaded callback so polling only fires
+        // after the user explicitly loads comments. See B1 fix.
         initLoadMore();
         restoreGuestIdentity();
         initGuestAutoSave();
@@ -216,10 +210,16 @@
         return text;
     }
 
-    /** Convert bare https?:// URLs in processed HTML to clickable links. XSS-safe. */
+    /** Convert bare https?:// URLs in processed HTML to clickable links. XSS-safe.
+     *
+     * Runs AFTER escapeHtml(), so & in URLs becomes &amp;. Removing & from the
+     * exclusion set lets the regex capture full query strings — the browser correctly
+     * decodes &amp; in href attributes as &, producing the correct URL. Link text
+     * will display &amp; literally, which is a minor cosmetic issue but the link works.
+     */
     function linkify(html) {
         return html.replace(
-            /(https?:\/\/[^\s<>"&]+)/gi,
+            /(https?:\/\/[^\s<>"]+)/gi,
             '<a href="$1" target="_blank" rel="noopener noreferrer ugc">$1</a>'
         );
     }
@@ -464,7 +464,7 @@
         var url = config.ajaxUrl + '?action=vibe_load_comments&post_id=' + config.postId
                 + '&page=' + nextPage + '&per_page=10&_=' + Date.now();
 
-        fetch(url)
+        fetchWithTimeout(url, {}, 15000)
         .then(function(res) { return res.json(); })
         .then(function(result) {
             if (result.success && result.data && result.data.comments) {
@@ -1052,15 +1052,14 @@
             initComments(function onLoaded() {
                 if (triggerWrap) triggerWrap.style.display = 'none';
                 container.style.display = 'block';
+                // B1 fix: only start polling after comments are actually loaded.
+                // Previously initLivePolling() ran on DOMContentLoaded, firing an
+                // HTTP request every 30 seconds from every visitor regardless of
+                // whether they had clicked Load Comments. On a 50k/month post that
+                // is 50k+ wasted AJAX requests from readers who never engaged.
+                initLivePolling();
             });
         });
-
-        // Note: deliberately no IntersectionObserver.
-        // This page is served from Cloudflare / LiteSpeed cache — completely
-        // static until the user explicitly clicks Load. Auto-loading on scroll
-        // would fire DB queries for every visitor, defeating the caching strategy.
-        // Most users on a blog post scroll past comments without engaging.
-        // Only explicit intent (click) should trigger the 3 DB calls.
     }
 
     /**
@@ -1628,7 +1627,6 @@
         return Math.floor(days / 365) + ' yr ago';
     }
 
-    /** Admin-only: pin/unpin a comment to the top of the list. */
     /** Bump the "N Comments" heading by 1 after a successful submission. */
     function incrementCommentHeading() {
         var titleEl = document.getElementById('vibe-comments-title');

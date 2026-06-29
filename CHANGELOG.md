@@ -19,6 +19,23 @@ Types of changes:
 
 ---
 
+## [3.3.0] — 2026-06-28
+
+### Fixed
+- **[B2 — HIGH] `maybe_upgrade()` migration order reversed** — v1.2→v1.3 (`reaction_type`) ran before v1.1→v1.2 (`guest_token`). MySQL's `ADD COLUMN reaction_type ... AFTER guest_token` fails silently if `guest_token` doesn't exist yet. Any install still on schema v1.1 upgrading directly to current would end up permanently missing `reaction_type` with no visible error. Migrations now run in strict ascending version order.
+- **[B1 — HIGH] Live polling started before comments were loaded** — `initLivePolling()` was called in `DOMContentLoaded`, firing an HTTP request to `admin-ajax.php` every 30 seconds from every visitor on the page regardless of whether they clicked "Load Comments." On a 50k/month post that is 50k+ wasted AJAX requests from readers who never engaged. Polling now starts inside `initCommentsTrigger()`'s `onLoaded` callback — only after the user explicitly loads comments.
+- **[S7 — MEDIUM] `linkify()` truncated URLs with query parameters** — The regex `[^\s<>"&]+` excluded `&`. After `escapeHtml()` runs, `&` in URLs becomes `&amp;` (e.g. `?a=1&b=2` → `?a=1&amp;b=2`). The regex stopped at the `&` in `&amp;`, truncating every URL at the first query param boundary. Removed `&` from the exclusion set — the browser correctly decodes `&amp;` in `href` attributes as `&`, producing the correct URL.
+- **[B3 — LOW] `loadMoreComments()` used bare `fetch()` without a timeout** — Every other network call uses `fetchWithTimeout()`. Changed to `fetchWithTimeout(url, {}, 15000)` for consistency.
+- **[C2 — LOW] Schema skipped posts where `comments_open()` is false** — A post with commenting closed but 50 approved comments still has SEO-valuable discussion. Schema now outputs when `$count > 0` even when new comments can't be posted.
+
+### Changed
+- **Dead `vibe_get_comment_count` AJAX endpoint removed** — Count comes from `wp_options` (PHP-rendered) and the `load_comments` response. Two `add_action` hooks registering this handler on every page load were pure overhead.
+- **Global-scope `vibe_log()` scaffolding removed** — Seven `vibe_log()` calls at plugin file scope (`'Database class loaded'`, `'REST API class loaded'`, etc.) executed a function call on every PHP request. `vibe_log()` returns immediately when `VIBE_COMMENTS_DEBUG_TOOLS` is off, but the call overhead still existed. Debug-level scaffolding removed; error-path logs inside `Throwable` catch blocks are preserved.
+- **`REACTION_DEFS` changed from `var` to `const`** — It is never reassigned. All module-level immutable values should be `const`.
+- **Stale docblocks removed from `vibe-comments.js`** — Duplicate `/**` block above `buildReactionBar()`, orphaned `/** Admin-only: pin/unpin... */` above `incrementCommentHeading()`.
+
+---
+
 ## [3.2.9] — 2026-06-27
 
 ### Fixed

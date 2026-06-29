@@ -45,23 +45,26 @@ class Vibe_Comments_Activator {
         global $wpdb;
         $table_name = $wpdb->prefix . 'vibe_comment_likes';
 
-        // v1.2 → v1.3: add reaction_type column.
-        // Existing likes become reaction_type = 'like' via the DEFAULT clause.
-        $col = $wpdb->get_results("SHOW COLUMNS FROM `{$table_name}` LIKE 'reaction_type'");
-        if (empty($col)) {
+        // ── v1.1 → v1.2: guest_token ─────────────────────────────────────
+        // MUST run BEFORE v1.2→v1.3. reaction_type is added AFTER guest_token,
+        // so if guest_token doesn't exist yet, MySQL silently fails the ALTER
+        // and reaction_type is never created. Running in ascending order fixes this.
+        $col = $wpdb->get_results( "SHOW COLUMNS FROM `{$table_name}` LIKE 'guest_token'" );
+        if ( empty( $col ) ) {
+            $wpdb->query( "ALTER TABLE `{$table_name}` ADD COLUMN `guest_token` VARCHAR(64) NOT NULL DEFAULT ''" );
+            $wpdb->query( "ALTER TABLE `{$table_name}` DROP INDEX `unique_like`" );
+            $wpdb->query( "ALTER TABLE `{$table_name}` ADD UNIQUE KEY `unique_like` (`comment_id`, `user_id`, `guest_token`)" );
+        }
+
+        // ── v1.2 → v1.3: reaction_type ───────────────────────────────────
+        // Existing rows get reaction_type = 'like' via the DEFAULT clause.
+        $col = $wpdb->get_results( "SHOW COLUMNS FROM `{$table_name}` LIKE 'reaction_type'" );
+        if ( empty( $col ) ) {
             $wpdb->query(
                 "ALTER TABLE `{$table_name}`
                  ADD COLUMN `reaction_type` VARCHAR(20) NOT NULL DEFAULT 'like'
                  AFTER `guest_token`"
             );
-        }
-
-        // v1.1 → v1.2: add guest_token column (kept for installs still on v1.1).
-        $col = $wpdb->get_results("SHOW COLUMNS FROM `{$table_name}` LIKE 'guest_token'");
-        if (empty($col)) {
-            $wpdb->query("ALTER TABLE `{$table_name}` ADD COLUMN `guest_token` VARCHAR(64) NOT NULL DEFAULT ''");
-            $wpdb->query("ALTER TABLE `{$table_name}` DROP INDEX `unique_like`");
-            $wpdb->query("ALTER TABLE `{$table_name}` ADD UNIQUE KEY `unique_like` (`comment_id`, `user_id`, `guest_token`)");
         }
 
         // Flush all vc_load_* transients so the first request after upgrade

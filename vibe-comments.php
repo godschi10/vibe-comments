@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.2.9
+ * Version:           3.3.0
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,14 +17,16 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.2.9');
+define('VIBE_COMMENTS_VERSION', '3.3.0');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 // Include debug logger FIRST
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/debug-logger.php';
 
-vibe_log('Main plugin file loaded');
+if ( defined( 'VIBE_COMMENTS_DEBUG_TOOLS' ) && VIBE_COMMENTS_DEBUG_TOOLS ) {
+    vibe_log( 'Main plugin file loaded' );
+}
 
 // Activation
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-activator.php';
@@ -34,27 +36,22 @@ register_activation_hook(__FILE__, array('Vibe_Comments_Activator', 'activate'))
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-deactivator.php';
 register_deactivation_hook(__FILE__, array('Vibe_Comments_Deactivator', 'deactivate'));
 
-// Core classes
-vibe_log('Loading core classes...');
+if ( defined( 'VIBE_COMMENTS_DEBUG_TOOLS' ) && VIBE_COMMENTS_DEBUG_TOOLS ) {
+    vibe_log( 'Loading core classes...' );
+}
 
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-database.php';
-vibe_log('Database class loaded');
 
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-rest-api.php';
-vibe_log('REST API class loaded');
 
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-oauth-google.php';
-vibe_log('OAuth class loaded');
 
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-template-loader.php';
-vibe_log('Template loader class loaded');
 
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-ajax-handler.php';
-vibe_log('AJAX handler loaded');
 
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-admin.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-schema.php';
-vibe_log('Admin class loaded');
 
 class Vibe_Comments {
     public function __construct() {
@@ -172,7 +169,6 @@ class Vibe_Comments {
     }
 }
 
-vibe_log('Instantiating main class...');
 try {
     new Vibe_Comments();
     vibe_log('Main class instantiated successfully');
@@ -180,4 +176,3 @@ try {
     vibe_log('Main class ERROR: ' . $e->getMessage());
 }
 
-vibe_log('=== Plugin loading complete ===');

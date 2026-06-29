@@ -11,8 +11,8 @@ class Vibe_Comments_Ajax_Handler {
         add_action('wp_ajax_nopriv_vibe_sync_likes',        array($this, 'sync_likes'));
         add_action('wp_ajax_vibe_toggle_like',              array($this, 'toggle_like'));
         add_action('wp_ajax_nopriv_vibe_toggle_like',       array($this, 'toggle_like'));
-        add_action('wp_ajax_vibe_get_comment_count',        array($this, 'get_comment_count'));
-        add_action('wp_ajax_nopriv_vibe_get_comment_count', array($this, 'get_comment_count'));
+        // vibe_get_comment_count removed: count is now PHP-rendered from wp_options
+        // and confirmed via the load_comments response. The AJAX endpoint was dead code.
         add_action('wp_ajax_vibe_pin_comment',              array($this, 'pin_comment')); // admin-only
 
         // Purge page cache when a pending comment is approved in WP admin.
@@ -107,38 +107,6 @@ class Vibe_Comments_Ajax_Handler {
 
         set_transient( $rate_key, 1, 2 );
         wp_send_json_success( array( 'nonce' => wp_create_nonce( 'wp_rest' ) ) );
-    }
-
-    /**
-     * Return live comment count — cached 2 minutes to reduce DB load.
-     * Cache is invalidated whenever a new approved comment is added.
-     */
-    public function get_comment_count() {
-        $post_id = isset($_GET['post_id']) ? absint($_GET['post_id']) : 0;
-
-        if (!$post_id || !get_post($post_id)) {
-            wp_send_json_error(array('message' => 'Invalid post.'));
-            return;
-        }
-
-        header('Cache-Control: no-cache, no-store, must-revalidate');
-        header('Pragma: no-cache');
-        do_action('litespeed_control_set_nocache', 'vibe-comment-count');
-
-        // Transient — shared across all PHP workers, unlike wp_cache_set().
-        $cache_key = 'vibe_count_' . $post_id;
-        $count     = get_transient($cache_key);
-
-        if (false === $count) {
-            $count = (int) get_comments(array(
-                'post_id' => $post_id,
-                'status'  => 'approve',
-                'count'   => true,
-            ));
-            set_transient($cache_key, $count, 120);
-        }
-
-        wp_send_json_success(array('count' => $count));
     }
 
     /**

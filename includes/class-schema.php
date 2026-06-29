@@ -35,13 +35,20 @@ class Vibe_Comments_Schema {
         }
 
         $post_id = get_the_ID();
-        if ( ! $post_id || ! comments_open( $post_id ) ) {
+        if ( ! $post_id ) {
             return;
         }
 
         // Stored count is updated on every comment approval/deletion —
         // no extra COUNT(*) query needed here.
         $count = (int) get_option( 'vibe_comment_count_' . $post_id, 0 );
+
+        // Output schema if comments are open OR existing approved comments exist.
+        // A post with commenting closed but 50 existing comments still has
+        // discussion data Google should index — skipping schema wastes the SEO signal.
+        if ( ! comments_open( $post_id ) && $count === 0 ) {
+            return;
+        }
 
         // Fetch approved comments (cap at 100 to keep JSON-LD compact).
         // WordPress internally caches get_comments() for the request lifetime.

@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.3.0
+ * Version:           3.4.0
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.3.0');
+define('VIBE_COMMENTS_VERSION', '3.4.0');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -55,13 +55,31 @@ require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-schema.php';
 
 class Vibe_Comments {
     public function __construct() {
-        vibe_log('Vibe_Comments constructor called');
+        if (defined('VIBE_COMMENTS_DEBUG_TOOLS') && VIBE_COMMENTS_DEBUG_TOOLS) {
+            vibe_log('Vibe_Comments constructor called');
+        }
+        add_action('init', array($this, 'load_textdomain'));
         add_action('init', array($this, 'init'));
         add_action('rest_api_init', array($this, 'add_cache_headers'));
     }
 
+    /**
+     * Load translation files from /languages. Without this call, __()/_e()
+     * always fall back to the English source string even if .mo files exist —
+     * the "Text Domain" plugin header alone does not wire up translations.
+     */
+    public function load_textdomain() {
+        load_plugin_textdomain(
+            'vibe-comments',
+            false,
+            dirname( plugin_basename( __FILE__ ) ) . '/languages'
+        );
+    }
+
     public function init() {
-        vibe_log('init hook fired');
+        if (defined('VIBE_COMMENTS_DEBUG_TOOLS') && VIBE_COMMENTS_DEBUG_TOOLS) {
+            vibe_log('init hook fired');
+        }
 
         // Run DB migration if needed (adds guest_token column for guest likes)
         Vibe_Comments_Activator::maybe_upgrade();
@@ -69,11 +87,16 @@ class Vibe_Comments {
         // JSON-LD structured data for comments (SEO).
         Vibe_Comments_Schema::init();
 
+        $debug = defined('VIBE_COMMENTS_DEBUG_TOOLS') && VIBE_COMMENTS_DEBUG_TOOLS;
+
         try {
             new Vibe_Comments_REST_API();
-            vibe_log('REST API instantiated');
+            if ($debug) { vibe_log('REST API instantiated'); }
         } catch (Throwable $e) {
-            vibe_log('REST API ERROR: ' . $e->getMessage());
+            // Always hit PHP's native log regardless of the debug flag — a fatal
+            // subsystem failure must never go completely unrecorded.
+            error_log('[Vibe Comments] REST API failed to load: ' . $e->getMessage());
+            if ($debug) { vibe_log('REST API ERROR: ' . $e->getMessage()); }
         }
 
         // Only register OAuth hooks if Google login is enabled in settings.
@@ -86,35 +109,39 @@ class Vibe_Comments {
         if ($vibe_google_enabled) {
             try {
                 new Vibe_Comments_OAuth_Google();
-                vibe_log('OAuth instantiated');
+                if ($debug) { vibe_log('OAuth instantiated'); }
             } catch (Throwable $e) {
-                vibe_log('OAuth ERROR: ' . $e->getMessage());
+                error_log('[Vibe Comments] OAuth failed to load: ' . $e->getMessage());
+                if ($debug) { vibe_log('OAuth ERROR: ' . $e->getMessage()); }
             }
         }
 
         try {
             new Vibe_Comments_Template_Loader();
-            vibe_log('Template loader instantiated');
+            if ($debug) { vibe_log('Template loader instantiated'); }
         } catch (Throwable $e) {
-            vibe_log('Template loader ERROR: ' . $e->getMessage());
+            error_log('[Vibe Comments] Template loader failed to load: ' . $e->getMessage());
+            if ($debug) { vibe_log('Template loader ERROR: ' . $e->getMessage()); }
         }
 
         try {
             new Vibe_Comments_Ajax_Handler();
-            vibe_log('AJAX handler instantiated');
+            if ($debug) { vibe_log('AJAX handler instantiated'); }
         } catch (Throwable $e) {
-            vibe_log('AJAX handler ERROR: ' . $e->getMessage());
+            error_log('[Vibe Comments] AJAX handler failed to load: ' . $e->getMessage());
+            if ($debug) { vibe_log('AJAX handler ERROR: ' . $e->getMessage()); }
         }
 
         try {
             new Vibe_Comments_Admin();
-            vibe_log('Admin instantiated');
+            if ($debug) { vibe_log('Admin instantiated'); }
         } catch (Throwable $e) {
-            vibe_log('Admin ERROR: ' . $e->getMessage());
+            error_log('[Vibe Comments] Admin failed to load: ' . $e->getMessage());
+            if ($debug) { vibe_log('Admin ERROR: ' . $e->getMessage()); }
         }
 
         add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'));
-        vibe_log('Assets enqueue registered');
+        if ($debug) { vibe_log('Assets enqueue registered'); }
     }
 
     public function add_cache_headers() {
@@ -164,6 +191,14 @@ class Vibe_Comments {
                 'googleAuth'       => esc_url_raw(rest_url('vibe-comments/v1/google-auth')),
                 'googleEnabled'    => $google_on,
                 'maxCommentLength' => (int) apply_filters('vibe_comments_max_length', 2000),
+                // Mirrors templates/comments.php's exact 3-way branch (0/1/many) so the
+                // client-side heading refresh produces byte-identical grammar to the
+                // server-rendered version — same simplification (2 plural forms, not a
+                // full _n_noop() set), kept consistent rather than "more correct" in JS
+                // only, which would make the two diverge for non-English locales.
+                'oneCommentText'      => esc_html__('1 Comment', 'vibe-comments'),
+                /* translators: %s = formatted number, e.g. "12 Comments" */
+                'manyCommentsTemplate' => esc_html__('%s Comments', 'vibe-comments'),
             ));
         }
     }
@@ -171,8 +206,16 @@ class Vibe_Comments {
 
 try {
     new Vibe_Comments();
-    vibe_log('Main class instantiated successfully');
+    if (defined('VIBE_COMMENTS_DEBUG_TOOLS') && VIBE_COMMENTS_DEBUG_TOOLS) {
+        vibe_log('Main class instantiated successfully');
+    }
 } catch (Throwable $e) {
-    vibe_log('Main class ERROR: ' . $e->getMessage());
+    // This is the single point of total plugin failure — always record it
+    // regardless of the debug flag. Without this, the entire plugin can die
+    // silently with zero trace anywhere on the server.
+    error_log('[Vibe Comments] FATAL — plugin failed to initialize: ' . $e->getMessage());
+    if (defined('VIBE_COMMENTS_DEBUG_TOOLS') && VIBE_COMMENTS_DEBUG_TOOLS) {
+        vibe_log('Main class ERROR: ' . $e->getMessage());
+    }
 }
 

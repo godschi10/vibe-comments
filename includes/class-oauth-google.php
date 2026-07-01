@@ -43,7 +43,7 @@ class Vibe_Comments_OAuth_Google {
     }
 
     public function ajax_google_auth() {
-        check_ajax_referer( 'wp_rest', 'nonce' );
+        check_ajax_referer( 'wp_rest', 'nonce', false );
 
         $settings  = get_option( $this->option_name, array() );
         $client_id = isset( $settings['client_id'] ) ? $settings['client_id'] : '';
@@ -76,10 +76,18 @@ class Vibe_Comments_OAuth_Google {
 
         set_transient( 'vibe_oauth_state_' . $state_hash, $return_url, 600 );
 
+        // Derive the cookie path from the actual REST URL so the cookie is
+        // sent to the callback route even on subdirectory WordPress installs
+        // (e.g. /blog/wp-json/... instead of /wp-json/...).
+        $callback_path = wp_parse_url(
+            rest_url( 'vibe-comments/v1/google-callback' ),
+            PHP_URL_PATH
+        );
+
         // Secure flag only on HTTPS; SameSite=Lax prevents cross-origin use.
         $cookie_options = array(
             'expires'  => time() + 600,
-            'path'     => '/wp-json/vibe-comments/v1/google-callback',
+            'path'     => $callback_path,
             'secure'   => is_ssl(),
             'httponly' => true,
             'samesite' => 'Lax',
@@ -123,13 +131,13 @@ class Vibe_Comments_OAuth_Google {
         $stored_url = get_transient( 'vibe_oauth_state_' . $state_hash );
 
         if ( false === $stored_url ) {
-            $this->oauth_error( $return_url, 'OAuth state has expired. Please try signing in again.' );
+            $this->oauth_error( $return_url, __('OAuth state has expired. Please try signing in again.', 'vibe-comments') );
         }
         delete_transient( 'vibe_oauth_state_' . $state_hash );
         // Clear the cookie regardless of outcome.
         setcookie( 'vibe_oauth_state', '', array(
             'expires'  => time() - 3600,
-            'path'     => '/wp-json/vibe-comments/v1/google-callback',
+            'path'     => wp_parse_url( rest_url( 'vibe-comments/v1/google-callback' ), PHP_URL_PATH ),
             'secure'   => is_ssl(),
             'httponly' => true,
             'samesite' => 'Lax',
@@ -139,11 +147,11 @@ class Vibe_Comments_OAuth_Google {
 
         // Cookie must match the state in the URL — proves this browser initiated the flow.
         if ( empty( $cookie_state ) || ! hash_equals( $state, $cookie_state ) ) {
-            $this->oauth_error( $return_url, 'Invalid OAuth state. Please try signing in again.' );
+            $this->oauth_error( $return_url, __('Invalid OAuth state. Please try signing in again.', 'vibe-comments') );
         }
 
         if ( empty( $code ) ) {
-            $this->oauth_error( $return_url, 'Missing OAuth authorization code.' );
+            $this->oauth_error( $return_url, __('Missing OAuth authorization code.', 'vibe-comments') );
         }
 
         $settings      = get_option( $this->option_name, array() );
@@ -151,7 +159,7 @@ class Vibe_Comments_OAuth_Google {
         $client_secret = $settings['client_secret'] ?? '';
 
         if ( empty( $client_id ) || empty( $client_secret ) ) {
-            $this->oauth_error( $return_url, 'Google Sign-In is not configured. Please contact the site administrator.' );
+            $this->oauth_error( $return_url, __('Google Sign-In is not configured. Please contact the site administrator.', 'vibe-comments') );
         }
 
         // Exchange authorization code for tokens.
@@ -166,28 +174,28 @@ class Vibe_Comments_OAuth_Google {
         ) );
 
         if ( is_wp_error( $response ) ) {
-            $this->oauth_error( $return_url, 'Could not connect to Google. Please try again.' );
+            $this->oauth_error( $return_url, __('Could not connect to Google. Please try again.', 'vibe-comments') );
         }
 
         $token_data = json_decode( wp_remote_retrieve_body( $response ), true );
 
         if ( empty( $token_data['id_token'] ) ) {
-            $this->oauth_error( $return_url, 'Google sign-in failed. Please try again.' );
+            $this->oauth_error( $return_url, __('Google sign-in failed. Please try again.', 'vibe-comments') );
         }
 
         // Full RS256 signature verification against Google's live JWKS.
         $payload = $this->verify_jwt( $token_data['id_token'], $client_id );
         if ( null === $payload ) {
-            $this->oauth_error( $return_url, 'Token verification failed. Please try again.' );
+            $this->oauth_error( $return_url, __('Token verification failed. Please try again.', 'vibe-comments') );
         }
 
         // Reject unverified emails — Google can return these from federated providers.
         if ( empty( $payload['email_verified'] ) || $payload['email_verified'] !== true ) {
-            $this->oauth_error( $return_url, 'Your Google email address is not verified. Please verify your Google account and try again.' );
+            $this->oauth_error( $return_url, __('Your Google email address is not verified. Please verify your Google account and try again.', 'vibe-comments') );
         }
 
         if ( empty( $payload['email'] ) ) {
-            $this->oauth_error( $return_url, 'Google did not return an email address. Please try again.' );
+            $this->oauth_error( $return_url, __('Google did not return an email address. Please try again.', 'vibe-comments') );
         }
 
         $email = sanitize_email( $payload['email'] );
@@ -214,7 +222,7 @@ class Vibe_Comments_OAuth_Google {
             ) );
 
             if ( is_wp_error( $user_id ) ) {
-                $this->oauth_error( $return_url, 'Could not create your account. Please try again.' );
+                $this->oauth_error( $return_url, __('Could not create your account. Please try again.', 'vibe-comments') );
             }
 
             $user = get_user_by( 'id', $user_id );

@@ -11,9 +11,11 @@ class Vibe_Comments_Ajax_Handler {
         add_action('wp_ajax_nopriv_vibe_sync_likes',        array($this, 'sync_likes'));
         add_action('wp_ajax_vibe_toggle_like',              array($this, 'toggle_like'));
         add_action('wp_ajax_nopriv_vibe_toggle_like',       array($this, 'toggle_like'));
-        // vibe_get_comment_count removed: count is now PHP-rendered from wp_options
-        // and confirmed via the load_comments response. The AJAX endpoint was dead code.
         add_action('wp_ajax_vibe_pin_comment',              array($this, 'pin_comment')); // admin-only
+        add_action('wp_ajax_vibe_get_comment_count',        array($this, 'get_comment_count'));
+        add_action('wp_ajax_nopriv_vibe_get_comment_count', array($this, 'get_comment_count'));
+        add_action('wp_ajax_vibe_load_replies',              array($this, 'load_replies'));
+        add_action('wp_ajax_nopriv_vibe_load_replies',       array($this, 'load_replies'));
 
         // Purge page cache when a pending comment is approved in WP admin.
         // This covers the case where a guest comment goes to moderation and an
@@ -41,6 +43,7 @@ class Vibe_Comments_Ajax_Handler {
         // Nothing changed from the public's perspective — bail early.
         if ($was_public === $is_public || $new_status === $old_status) return;
         $this->sync_and_purge(intval($comment->comment_post_ID));
+        $this->purge_reply_cache_if_needed($comment);
     }
 
     /**
@@ -52,6 +55,7 @@ class Vibe_Comments_Ajax_Handler {
         // Only bust if the deleted comment was publicly visible.
         if ($comment->comment_approved !== '1') return;
         $this->sync_and_purge(intval($comment->comment_post_ID));
+        $this->purge_reply_cache_if_needed($comment);
     }
 
     /**
@@ -62,6 +66,24 @@ class Vibe_Comments_Ajax_Handler {
         $comment = get_comment($comment_id);
         if (!$comment) return;
         $this->sync_and_purge(intval($comment->comment_post_ID));
+        $this->purge_reply_cache_if_needed($comment);
+    }
+
+    /**
+     * v3.4.0: if $comment is a reply (comment_parent > 0), bust its specific
+     * parent's cached subtree (vc_replies_{parent}) so the change — new
+     * reply, deleted reply, approved reply — is visible the next time
+     * someone expands that exact thread, rather than waiting out the 120s
+     * transient TTL. Scoped to the one known parent; no enumeration needed.
+     * Top-level comments (parent=0) have nothing to purge here — their
+     * reply_count is recomputed fresh on every load_comments() call already.
+     */
+    private function purge_reply_cache_if_needed($comment) {
+        if (!$comment || !is_object($comment)) return;
+        $parent = intval($comment->comment_parent);
+        if ($parent > 0) {
+            delete_transient('vc_replies_' . $parent);
+        }
     }
 
     /**
@@ -79,8 +101,20 @@ class Vibe_Comments_Ajax_Handler {
         ));
         // autoload=false keeps this out of WP's global options preload on every page.
         update_option('vibe_comment_count_' . $post_id, $count, false);
+        // Primary purpose now: bust get_comment_count()'s short-TTL cache so the
+        // next heading-refresh request (fired on every page load, see vibe-comments.js)
+        // picks up the new count immediately instead of waiting out the TTL.
         delete_transient('vibe_count_' . $post_id);
-        $this->purge_page_cache($post_id);
+        // NOTE: purge_page_cache() (full LiteSpeed/Cloudflare/W3TC/etc. page purge)
+        // is intentionally NOT called here as of v3.3.3. It existed solely to keep
+        // the comment-count heading fresh in the cached page HTML — that job is now
+        // handled by the decoupled get_comment_count() endpoint below, which updates
+        // just the heading text on page load without evicting the whole cached page.
+        // A full page purge on every single comment was the actual scalability cost:
+        // it evicted images/body/everything for one number, and still didn't deliver
+        // instant freshness (the NEXT visitor paid the regeneration cost, not this one).
+        // purge_page_cache() remains available below for direct/manual use if a future
+        // need calls for a real full-page purge on comment events.
         $this->purge_comments_data_cache($post_id);
     }
 
@@ -101,7 +135,7 @@ class Vibe_Comments_Ajax_Handler {
         // The frontend catches a failed nonce refresh gracefully — the old cached
         // nonce remains valid for up to 24 hours, so this is safe to reject.
         if ( get_transient( $rate_key ) ) {
-            wp_send_json_error( array( 'message' => 'Too many requests. Please wait a moment.' ), 429 );
+            wp_send_json_error( array( 'message' => __('Too many requests. Please wait a moment.', 'vibe-comments') ), 429 );
             return;
         }
 
@@ -110,9 +144,16 @@ class Vibe_Comments_Ajax_Handler {
     }
 
     /**
-     * Purge the cached version of a post across all major cache plugins.
-     * Called after a comment is successfully submitted so the next visitor
-     * sees the updated comment count in the PHP-rendered heading.
+     * Full page cache purge across all major cache plugins (LiteSpeed,
+     * Cloudflare API, WP Rocket, W3 Total Cache, WP Super Cache, Comet Cache).
+     *
+     * As of v3.3.3, no longer called automatically on new comments — its only
+     * comment-related job (keeping the comment-count heading fresh) is now
+     * handled by get_comment_count(), a decoupled lightweight endpoint that
+     * updates just the heading text without evicting the entire cached page.
+     * Kept available for direct/manual use — e.g. wire this back into
+     * sync_and_purge() if some future feature needs a genuine full-page purge
+     * on comment events, not just a count refresh.
      */
     private function purge_page_cache( $post_id ) {
         // Bust the comment count transient so the next count request hits the DB.
@@ -169,6 +210,55 @@ class Vibe_Comments_Ajax_Handler {
     }
 
     /**
+     * Lightweight, decoupled comment-count endpoint (v3.3.3).
+     *
+     * Lets the "N Comments" heading self-correct to the live count on every
+     * page load WITHOUT a full-page cache purge on every comment event. The
+     * static cached page renders with whatever count was accurate at
+     * cache-build time; this endpoint patches just the heading text
+     * client-side (see fetchCommentCount() in vibe-comments.js).
+     *
+     * Scalability design:
+     *   - Reads vibe_comment_count_{id}, an option already kept synchronously
+     *     correct by sync_and_purge() on every comment event — zero live
+     *     get_comments() COUNT query needed here, just an options read.
+     *   - Wrapped in a short (20s) transient so concurrent requests across many
+     *     simultaneous visitors collapse into a single DB read per TTL window,
+     *     not one per visitor. sync_and_purge() busts this transient
+     *     immediately on every comment event, so the window between "comment
+     *     posted" and "endpoint reflects it" is at most the time until the
+     *     next request after that, not the full 20s.
+     *   - Sends a public, short-TTL Cache-Control header. [Likely, not
+     *     guaranteed] some LiteSpeed/Cloudflare configurations cache this at
+     *     the edge too, in which case most requests never reach PHP at all —
+     *     but many cache-plugin defaults blanket-exclude admin-ajax.php
+     *     regardless of response headers, so don't treat edge caching as a
+     *     given. The transient layer above is the part that reliably protects
+     *     the DB regardless of edge config.
+     *   - No nonce required: read-only, zero side effects, same threat model
+     *     as the public load_comments GET endpoint.
+     */
+    public function get_comment_count() {
+        $post_id = isset($_GET['post_id']) ? absint($_GET['post_id']) : 0;
+
+        if (!$post_id || !get_post($post_id)) {
+            wp_send_json_error(array('message' => __('Invalid post.', 'vibe-comments')));
+            return;
+        }
+
+        $cache_key = 'vibe_count_' . $post_id;
+        $count     = get_transient($cache_key);
+
+        if (false === $count) {
+            $count = (int) get_option('vibe_comment_count_' . $post_id, 0);
+            set_transient($cache_key, $count, 20);
+        }
+
+        header('Cache-Control: public, max-age=20');
+        wp_send_json_success(array('count' => (int) $count));
+    }
+
+    /**
      * Load comments for a post — paginated, with children nested.
      *
      * CACHING STRATEGY (two layers):
@@ -190,13 +280,14 @@ class Vibe_Comments_Ajax_Handler {
      * syncReactions() fetches that separately and is never cached.
      */
     public function load_comments() {
+        global $wpdb; // declared once here — used in both polling and non-polling branches
         $post_id  = isset($_GET['post_id'])  ? absint($_GET['post_id'])                    : 0;
         $page     = isset($_GET['page'])     ? max(1, absint($_GET['page']))               : 1;
         $per_page = isset($_GET['per_page']) ? min(50, max(1, absint($_GET['per_page']))) : 10;
         $since    = isset($_GET['since'])    ? absint($_GET['since'])                      : 0;
 
         if (!$post_id) {
-            wp_send_json_error(array('message' => 'Invalid post.'));
+            wp_send_json_error(array('message' => __('Invalid post.', 'vibe-comments')));
             return;
         }
 
@@ -229,7 +320,6 @@ class Vibe_Comments_Ajax_Handler {
             // Fast check: one integer query to see if anything is new.
             // If nothing is new AND no reaction IDs to refresh, return immediately
             // without running the heavier comment-list query.
-            global $wpdb;
             $new_count = (int) $wpdb->get_var($wpdb->prepare(
                 "SELECT COUNT(*) FROM {$wpdb->comments}
                  WHERE comment_post_ID = %d
@@ -264,7 +354,11 @@ class Vibe_Comments_Ajax_Handler {
             'post_id' => $post_id,
             'status'  => 'approve',
             'orderby' => 'comment_date_gmt',
-            'order'   => 'ASC',
+            // v3.4.0: newest top-level comments first by default (was ASC).
+            // See vibe-comments.js initSortToggle() — the client-side toggle's
+            // "restore original order" behavior now means "newest first",
+            // since that's what this query sends as the default load order.
+            'order'   => 'DESC',
             'number'  => $per_page,
             'offset'  => ($page - 1) * $per_page,
             'parent'  => 0,
@@ -279,7 +373,6 @@ class Vibe_Comments_Ajax_Handler {
 
         $comments = get_comments($args);
 
-        global $wpdb;
         $count_row = $wpdb->get_row($wpdb->prepare(
             "SELECT COUNT(*) AS total, SUM(comment_parent = 0) AS top_level
              FROM {$wpdb->comments}
@@ -293,17 +386,29 @@ class Vibe_Comments_Ajax_Handler {
         $now            = current_time('timestamp', true);
         $post_author_id = intval(get_post_field('post_author', $post_id));
 
-        $children_map  = $db->get_children_map($post_id);
-        $all_ids       = $this->collect_all_ids($comments, $children_map);
-        $reactions_map = $db->get_reaction_counts_batch($all_ids);
+        // v3.4.0: replies are no longer embedded in the initial payload — only
+        // a reply_count per thread. Actual reply content is fetched on demand
+        // via vibe_load_replies when the user clicks "View N replies" (see
+        // load_replies() below). get_replies_map() is scoped to just THIS
+        // page's top-level IDs via IN(), not a whole-post scan like the old
+        // get_children_map() — cheap even when computing counts for many threads.
+        $top_level_ids = array_map(function($c) { return (int) $c->comment_ID; }, $comments);
+        $replies_map   = $db->get_replies_map($post_id, $top_level_ids, 4);
+        $reactions_map = $db->get_reaction_counts_batch($top_level_ids);
 
-        if (!empty($all_ids)) {
-            update_meta_cache('comment', $all_ids);
+        if (!empty($top_level_ids)) {
+            update_meta_cache('comment', $top_level_ids);
         }
 
         $formatted = array();
         foreach ($comments as $comment) {
-            $formatted[] = $this->format_comment_tree($comment, 3, $now, $children_map, $reactions_map, $post_author_id);
+            $cid = (int) $comment->comment_ID;
+            // depth=0: format_comment_tree() will not recurse into $replies_map
+            // at all — children always come back empty. reply_count is added
+            // separately so the client can render a "View N replies" link.
+            $row = $this->format_comment_tree($comment, 0, $now, array(), $reactions_map, $post_author_id);
+            $row['reply_count'] = $db->count_descendants($cid, $replies_map);
+            $formatted[] = $row;
         }
 
         $result = array(
@@ -321,14 +426,87 @@ class Vibe_Comments_Ajax_Handler {
             set_transient($cache_key, $result, 120);
             $this->set_public_cache_headers();
         } else {
-            // Polling with new comments: also return reaction counts for visible IDs.
+            // Polling with new comments: return fresh reaction counts for visible IDs.
             if (!empty($reaction_ids)) {
-                $db = new Vibe_Comments_Database();
                 $result['reaction_counts'] = $db->get_reaction_counts_batch($reaction_ids);
             }
             header('Cache-Control: no-store, private');
         }
 
+        wp_send_json_success($result);
+    }
+
+    /**
+     * On-demand reply fetch (v3.4.0) — fired when the user clicks
+     * "View N replies" on a top-level comment. Returns that comment's
+     * COMPLETE nested subtree (all levels) in one request, fully formatted
+     * and ready to render via the same buildCommentTree() the client already
+     * uses — so expanding a thread reveals the whole conversation in one
+     * click, not one click per nesting level.
+     *
+     * Public, no nonce required: read-only, zero side effects, same threat
+     * model as load_comments(). Cached for 120s per comment_id so a popular
+     * thread being expanded by many concurrent visitors collapses to one
+     * DB round-trip per cache window, not one per visitor.
+     */
+    public function load_replies() {
+        $post_id    = isset($_GET['post_id'])    ? absint($_GET['post_id'])    : 0;
+        $comment_id = isset($_GET['comment_id']) ? absint($_GET['comment_id']) : 0;
+
+        if (!$post_id || !$comment_id) {
+            wp_send_json_error(array('message' => __('Invalid request.', 'vibe-comments')));
+            return;
+        }
+
+        $root = get_comment($comment_id);
+        if (!$root || intval($root->comment_post_ID) !== $post_id || $root->comment_approved !== '1') {
+            wp_send_json_error(array('message' => __('Comment not found.', 'vibe-comments')));
+            return;
+        }
+
+        $cache_key = 'vc_replies_' . $comment_id;
+        $cached    = get_transient($cache_key);
+        if (false !== $cached) {
+            $this->set_public_cache_headers();
+            wp_send_json_success($cached);
+            return;
+        }
+
+        $db             = new Vibe_Comments_Database();
+        $now            = current_time('timestamp', true);
+        $post_author_id = intval(get_post_field('post_author', $post_id));
+
+        // Fetch the entire subtree below $comment_id in one scoped call —
+        // not the whole post's replies, only this thread's descendants.
+        $replies_map = $db->get_replies_map($post_id, array($comment_id), 4);
+
+        if (empty($replies_map[$comment_id])) {
+            // Reply count said >0 but nothing's there now (e.g. all replies
+            // were deleted/unapproved since the count was last cached).
+            $result = array('replies' => array());
+            set_transient($cache_key, $result, 120);
+            $this->set_public_cache_headers();
+            wp_send_json_success($result);
+            return;
+        }
+
+        $all_ids = $this->collect_all_ids(array($root), $replies_map);
+        $reactions_map = $db->get_reaction_counts_batch($all_ids);
+
+        if (!empty($all_ids)) {
+            update_meta_cache('comment', $all_ids);
+        }
+
+        // depth=3: recurse through the full fetched subtree — grandchildren
+        // and deeper render immediately too, no further clicks needed.
+        $replies = array();
+        foreach ($replies_map[$comment_id] as $child) {
+            $replies[] = $this->format_comment_tree($child, 3, $now, $replies_map, $reactions_map, $post_author_id);
+        }
+
+        $result = array('replies' => $replies);
+        set_transient($cache_key, $result, 120);
+        $this->set_public_cache_headers();
         wp_send_json_success($result);
     }
 
@@ -376,7 +554,7 @@ class Vibe_Comments_Ajax_Handler {
      */
     public function toggle_like() {
         if (!check_ajax_referer('wp_rest', 'nonce', false)) {
-            wp_send_json_error(array('message' => 'Security check failed.'), 403);
+            wp_send_json_error(array('message' => __('Security check failed.', 'vibe-comments')), 403);
             return;
         }
 
@@ -390,20 +568,20 @@ class Vibe_Comments_Ajax_Handler {
         $guest_token = ($user_id > 0) ? '' : Vibe_Comments_Database::get_guest_token($client_id);
 
         if (!$comment_id) {
-            wp_send_json_error(array('message' => 'Invalid comment.'));
+            wp_send_json_error(array('message' => __('Invalid comment.', 'vibe-comments')));
             return;
         }
 
         // Server-side whitelist — never trust client-supplied reaction types.
         if (!in_array($reaction_type, Vibe_Comments_Database::REACTION_TYPES, true)) {
-            wp_send_json_error(array('message' => 'Invalid reaction type.'));
+            wp_send_json_error(array('message' => __('Invalid reaction type.', 'vibe-comments')));
             return;
         }
 
         // Verify the comment exists and is approved.
         $comment_obj = get_comment($comment_id);
         if (!$comment_obj || $comment_obj->comment_approved !== '1') {
-            wp_send_json_error(array('message' => 'Comment not found.'));
+            wp_send_json_error(array('message' => __('Comment not found.', 'vibe-comments')));
             return;
         }
 
@@ -413,7 +591,7 @@ class Vibe_Comments_Ajax_Handler {
         // worker process and can be bypassed under concurrent load.
         $rate_key = 'vr_' . substr( md5( ( $user_id ?: $guest_token ) . $comment_id ), 0, 16 );
         if ( get_transient( $rate_key ) ) {
-            wp_send_json_error( array( 'message' => 'Please wait before reacting again.' ) );
+            wp_send_json_error( array( 'message' => __('Please wait before reacting again.', 'vibe-comments') ) );
             return;
         }
         set_transient( $rate_key, 1, 5 );
@@ -426,6 +604,18 @@ class Vibe_Comments_Ajax_Handler {
             return;
         }
 
+        // Purge the load_comments response cache for this post. Without this,
+        // load_comments() keeps serving its 120-second-TTL vc_load_* snapshot,
+        // which embeds reaction counts as they were at the time comments were
+        // last loaded — predating this reaction. The toggle_like response above
+        // shows the correct new count immediately (it's read fresh from the DB
+        // right above), which is why the count appears to "work" — but a page
+        // refresh within that 120-second window re-triggers load_comments(),
+        // which then serves the stale cached snapshot instead of querying again,
+        // making the reaction look like it never saved. Reusing the same purge
+        // already proven correct for comment post/delete/status-change events.
+        $this->purge_comments_data_cache((int) $comment_obj->comment_post_ID);
+
         wp_send_json_success(array(
             'reactions'     => $result['reactions'],
             'user_reaction' => $result['user_reaction'],
@@ -434,9 +624,20 @@ class Vibe_Comments_Ajax_Handler {
 
     public function sync_likes() {
         if (!check_ajax_referer('wp_rest', 'nonce', false)) {
-            wp_send_json_error(array('message' => 'Security check failed.'), 403);
+            wp_send_json_error(array('message' => __('Security check failed.', 'vibe-comments')), 403);
             return;
         }
+
+        // Rate limit: 1 sync per 3 seconds per IP. Without this, a client with
+        // a valid nonce can fire unlimited batches of 100 IDs each, triggering
+        // 2 DB queries per call — a simple amplification DoS against the DB.
+        $ip       = $this->get_remote_ip();
+        $sync_key = 'vs_sync_' . substr(md5($ip), 0, 16);
+        if (get_transient($sync_key)) {
+            wp_send_json_error(array('message' => __('Too many requests.', 'vibe-comments')), 429);
+            return;
+        }
+        set_transient($sync_key, 1, 3);
 
         $comment_ids = isset($_POST['comment_ids']) ? (array) $_POST['comment_ids'] : array();
         $comment_ids = array_values(array_filter(array_map('absint', array_slice($comment_ids, 0, 100))));
@@ -538,7 +739,7 @@ class Vibe_Comments_Ajax_Handler {
 
         // CSRF check — must match nonce passed in JS (config.nonce from wp_localize_script)
         if (!check_ajax_referer('wp_rest', 'nonce', false)) {
-            wp_send_json_error(array('message' => 'Security check failed.'), 403);
+            wp_send_json_error(array('message' => __('Security check failed.', 'vibe-comments')), 403);
             return;
         }
 
@@ -551,7 +752,7 @@ class Vibe_Comments_Ajax_Handler {
         $pre_post  = isset($_POST['post_id']) ? absint($_POST['post_id']) : 0;
         $rate_key  = 'vs_' . substr( md5( $ip . $pre_post ), 0, 16 );
         if ( get_transient( $rate_key ) ) {
-            wp_send_json_error( array( 'message' => 'Please wait a moment before posting again.' ), 429 );
+            wp_send_json_error( array( 'message' => __('Please wait a moment before posting again.', 'vibe-comments') ), 429 );
             return;
         }
         set_transient( $rate_key, 1, 5 );
@@ -568,40 +769,41 @@ class Vibe_Comments_Ajax_Handler {
             // the UX limit — both must be checked so a direct API call can't bypass JS.
             $max_length = (int) apply_filters('vibe_comments_max_length', 2000);
             if (mb_strlen(trim($content)) < 1) {
-                wp_send_json_error(array('message' => 'Comment cannot be empty.'));
+                wp_send_json_error(array('message' => __('Comment cannot be empty.', 'vibe-comments')));
                 return;
             }
             if (mb_strlen($content) > $max_length) {
-                wp_send_json_error(array('message' => sprintf('Comment exceeds the %d character limit.', $max_length)));
+                /* translators: %d: maximum allowed comment length in characters. */
+                wp_send_json_error(array('message' => sprintf(__('Comment exceeds the %d character limit.', 'vibe-comments'), $max_length)));
                 return;
             }
 
             // Author name length: tinytext column cap is 255 bytes.
             if (mb_strlen($author) > 255) {
-                wp_send_json_error(array('message' => 'Name is too long (max 255 characters).'));
+                wp_send_json_error(array('message' => __('Name is too long (max 255 characters).', 'vibe-comments')));
                 return;
             }
 
             if (!$post_id) {
-                wp_send_json_error(array('message' => 'Invalid post.'));
+                wp_send_json_error(array('message' => __('Invalid post.', 'vibe-comments')));
                 return;
             }
 
             if (!comments_open($post_id)) {
-                wp_send_json_error(array('message' => 'Comments are closed for this post.'));
+                wp_send_json_error(array('message' => __('Comments are closed for this post.', 'vibe-comments')));
                 return;
             }
 
             $post = get_post($post_id);
             if (!$post) {
-                wp_send_json_error(array('message' => 'Invalid post.'));
+                wp_send_json_error(array('message' => __('Invalid post.', 'vibe-comments')));
                 return;
             }
 
             if ($parent > 0) {
                 $parent_comment = get_comment($parent);
                 if (!$parent_comment || intval($parent_comment->comment_post_ID) !== $post_id) {
-                    wp_send_json_error(array('message' => 'Invalid parent comment.'));
+                    wp_send_json_error(array('message' => __('Invalid parent comment.', 'vibe-comments')));
                     return;
                 }
             }
@@ -619,11 +821,11 @@ class Vibe_Comments_Ajax_Handler {
                 $user_id      = $user->ID;
             } else {
                 if (empty($author) || empty($email)) {
-                    wp_send_json_error(array('message' => 'Name and email are required for guest comments.'));
+                    wp_send_json_error(array('message' => __('Name and email are required for guest comments.', 'vibe-comments')));
                     return;
                 }
                 if (!is_email($email)) {
-                    wp_send_json_error(array('message' => 'Please enter a valid email address.'));
+                    wp_send_json_error(array('message' => __('Please enter a valid email address.', 'vibe-comments')));
                     return;
                 }
                 $author_name  = $author;
@@ -671,13 +873,13 @@ class Vibe_Comments_Ajax_Handler {
             }
 
             if ( ! $comment_id ) {
-                wp_send_json_error( array( 'message' => 'Failed to post comment. Please try again.' ) );
+                wp_send_json_error( array( 'message' => __('Failed to post comment. Please try again.', 'vibe-comments') ) );
                 return;
             }
 
             $comment  = get_comment( $comment_id );
             if ( ! $comment || ! is_object( $comment ) ) {
-                wp_send_json_error( array( 'message' => 'Comment created but could not be retrieved.' ) );
+                wp_send_json_error( array( 'message' => __('Comment created but could not be retrieved.', 'vibe-comments') ) );
                 return;
             }
 
@@ -702,6 +904,7 @@ class Vibe_Comments_Ajax_Handler {
             // for those happens via on_comment_approved() when admin approves them.
             if ($approved == 1) {
                 $this->sync_and_purge($post_id);
+                $this->purge_reply_cache_if_needed($comment);
             }
 
             wp_send_json_success(array(
@@ -732,7 +935,7 @@ class Vibe_Comments_Ajax_Handler {
 
         } catch (Throwable $e) {
             error_log('Vibe Comments AJAX Error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
-            wp_send_json_error(array('message' => 'An error occurred. Please try again.'));
+            wp_send_json_error(array('message' => __('An error occurred. Please try again.', 'vibe-comments')));
         }
     }
 
@@ -753,13 +956,13 @@ class Vibe_Comments_Ajax_Handler {
      */
     public function pin_comment() {
         if (!check_ajax_referer('wp_rest', 'nonce', false) || !current_user_can('moderate_comments')) {
-            wp_send_json_error(array('message' => 'Permission denied.'));
+            wp_send_json_error(array('message' => __('Permission denied.', 'vibe-comments')));
             return;
         }
 
         $comment_id = absint($_POST['comment_id'] ?? 0);
         if (!$comment_id || !get_comment($comment_id)) {
-            wp_send_json_error(array('message' => 'Invalid comment.'));
+            wp_send_json_error(array('message' => __('Invalid comment.', 'vibe-comments')));
             return;
         }
 

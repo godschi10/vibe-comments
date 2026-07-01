@@ -130,12 +130,18 @@
                 window.location.search.replace(/([?&])vibe_auth_error=[^&]*/g, '').replace(/^&/, '?');
             history.replaceState(null, '', cleanUrl || window.location.pathname);
         }
-        // Count is rendered statically by PHP (get_comments_number()).
-        // No AJAX needed on page load — zero requests until user clicks Load.
+        // Count is rendered statically by PHP from the vibe_comment_count_{id}
+        // option (may be stale by up to one comment if a new one landed since
+        // the page was last cached). fetchCommentCount() below patches the
+        // heading to the live value, decoupled from the page cache entirely —
+        // see get_comment_count() in class-ajax-handler.php (v3.3.3) for why
+        // this replaced a full-page purge on every comment.
+        fetchCommentCount();
         initCommentsTrigger();
         if (!config.isLoggedIn) { refreshNonce(); }
         initReactions();
         initReplies();
+        initViewReplies();
         initPinComment();
         initRelativeTime();
 
@@ -156,12 +162,50 @@
     });
 
     /**
-     * Simple wpautop equivalent for JS-rendered comments
-     * Converts double newlines to paragraphs, single to <br>
+     * Decoupled comment-count refresh (v3.3.3).
+     *
+     * Fires on every page load, independent of the "Load Comments" click.
+     * Fetches the live count from get_comment_count() — a tiny, cache-backed
+     * read (see its PHP docblock for the full scalability design) — and
+     * patches the heading text if it differs from what PHP baked into the
+     * cached page. Mirrors the PHP template's exact 3-way pluralization
+     * branch (0/1/many) using the pre-translated strings supplied via
+     * config, so server and client never disagree on grammar across locales.
+     *
+     * Setting .textContent on the heading also auto-reveals it via the
+     * `.vibe-comments-title:empty { display:none }` CSS rule — no separate
+     * visibility toggle needed for the very-first-comment case (0 → 1).
      */
-    function wpautop(text) {
-        // Kept for backward compat — callers should prefer renderMarkdown().
-        return renderMarkdown(text);
+    function fetchCommentCount() {
+        var heading = document.getElementById('vibe-comments-title');
+        if (!heading || !config.postId) return;
+
+        var url = config.ajaxUrl + '?action=vibe_get_comment_count&post_id=' + config.postId;
+
+        fetchWithTimeout(url, {}, 8000)
+        .then(function(res) { return res.json(); })
+        .then(function(result) {
+            if (!result.success || typeof result.data.count !== 'number') return;
+            var count = result.data.count;
+            var text;
+
+            if (count === 0) {
+                text = '';
+            } else if (count === 1) {
+                text = config.oneCommentText || '1 Comment';
+            } else {
+                var tpl = config.manyCommentsTemplate || '%s Comments';
+                text = tpl.replace('%s', count.toLocaleString());
+            }
+
+            if (heading.textContent !== text) {
+                heading.textContent = text;
+            }
+        })
+        .catch(function() {
+            // Silent failure — the PHP-rendered count stays visible, just
+            // possibly stale by one comment. Not worth surfacing an error for.
+        });
     }
 
     /**
@@ -470,11 +514,21 @@
             if (result.success && result.data && result.data.comments) {
                 currentPage = nextPage;
                 var comments = result.data.comments;
+                var firstNewLi = null;
                 comments.forEach(function(comment) {
                     if (!knownCommentIds.has(comment.id)) {
-                        appendCommentWithChildren(comment);
+                        var li = appendCommentWithChildren(comment);
+                        if (li && !firstNewLi) firstNewLi = li;
                     }
                 });
+                // B1 fix: scroll ONCE to the first new comment after the whole
+                // batch has rendered. The previous version called scrollIntoView()
+                // inside the loop — once per comment — so a 10-comment batch fired
+                // 10 competing smooth-scroll animations that visibly jittered the
+                // page instead of landing cleanly on the new content.
+                if (firstNewLi) {
+                    firstNewLi.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
                 hasMorePages = !!result.data.has_more;
                 if (!hasMorePages && btn) { btn.style.display = 'none'; }
             }
@@ -490,12 +544,12 @@
 
     function appendCommentWithChildren(comment, parentList) {
         const list = parentList || document.querySelector('.vibe-comment-list');
-        if (!list) return;
+        if (!list) return null;
 
         // Use buildCommentTree so all depths are rendered correctly (the manual
         // version only handled 2 levels and silently dropped depth-3 children).
         const li = buildCommentTree(comment);
-        if (!li) return;
+        if (!li) return null;
 
         list.appendChild(li);
 
@@ -506,7 +560,9 @@
             if (id) knownCommentIds.add(id);
         });
 
-        li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Scrolling intentionally removed from here — caller decides when/whether
+        // to scroll (e.g. once after a whole batch, not once per item). See B1 fix.
+        return li;
     }
 
     function createCommentElement(comment) {
@@ -518,6 +574,20 @@
 
         const rxBar     = buildReactionBar(cid, comment.reactions, comment.user_reaction || null);
         const replyHtml = '<button type="button" class="comment-reply-link vibe-reply-trigger" data-comment-id="' + cid + '">Reply</button>';
+
+        // v3.4.0: top-level comments arrive with children always empty and a
+        // reply_count instead — replies are fetched on demand when this is
+        // clicked (see initViewReplies()). A comment already carrying actual
+        // children (only true for content returned BY vibe_load_replies
+        // itself, which fully expands its subtree in one response) never
+        // shows this button — there's nothing left to fetch for it.
+        const hasReplyCount = typeof comment.reply_count === 'number' && comment.reply_count > 0;
+        const alreadyExpanded = comment.children && comment.children.length > 0;
+        const viewRepliesHtml = (hasReplyCount && !alreadyExpanded)
+            ? '<button type="button" class="vibe-view-replies-btn" data-comment-id="' + cid + '" data-post-id="' + (config.postId || '') + '" data-state="collapsed">'
+                + 'View ' + comment.reply_count + (comment.reply_count === 1 ? ' reply' : ' replies')
+              + '</button>'
+            : '';
 
         const pinHtml = config.isAdmin
             ? '<button type="button" class="vibe-pin-btn" data-comment-id="' + cid + '" data-pinned="' + (comment.is_pinned ? '1' : '0') + '">' + (comment.is_pinned ? 'Unpin' : 'Pin') + '</button>'
@@ -546,6 +616,7 @@
                 '<footer class="vibe-comment-footer">' +
                     rxBar.summaryHtml +
                     replyHtml +
+                    viewRepliesHtml +
                     pinHtml +
                 '</footer>' +
             '</article>';
@@ -747,9 +818,6 @@
     });
 
     /**
-     * AJAX comment submission
-     */
-    /**
      * Draft auto-save
      * Persists textarea content to localStorage keyed by post ID.
      * Restores on page load; clears on successful submit or manual discard.
@@ -780,7 +848,7 @@
         } catch (e) {}
 
         // Debounced save on input
-        var saveTimer;
+        let saveTimer; // reassigned on every keystroke for debounce
         textarea.addEventListener('input', function () {
             clearTimeout(saveTimer);
             saveTimer = setTimeout(function () {
@@ -792,7 +860,7 @@
                         }));
                     } else {
                         localStorage.removeItem(DRAFT_KEY);
-                        var badge = form.querySelector('.vibe-draft-badge');
+                        const badge = form.querySelector('.vibe-draft-badge');
                         if (badge) badge.remove();
                     }
                 } catch (e) {}
@@ -966,25 +1034,70 @@
         });
     }
 
+    /**
+     * Insert a comment into the DOM. Two call sites: the submit-success
+     * handler (a real new comment/reply just posted by this user) and the
+     * "click banner to load" path for comments that arrived via live polling.
+     *
+     * v3.4.0 changes, both required by the newest-first default order:
+     *
+     *   Top-level (parentId === 0): PREPENDED, not appended. The default
+     *   load order is now DESC (newest first) — appending to the bottom
+     *   would place a brand-new comment visually among the OLDEST comments
+     *   on the page, which is backwards.
+     *
+     *   Reply (parentId > 0): if the parent thread's replies are still
+     *   collapsed (no <ul class="children"> rendered yet, or it exists but
+     *   is hidden), this reply would silently vanish into a location the
+     *   user can't see — including their own just-submitted reply, which is
+     *   the one thing they most want to see confirmed. Handles all three
+     *   parent states: no button, collapsed, or already expanded.
+     */
     function appendComment(comment, parentId, scroll) {
         if (scroll === undefined) { scroll = true; }
-        const list = parentId === 0 
-            ? document.querySelector('.vibe-comment-list') 
-            : document.querySelector('#comment-' + parentId + ' > ul') || (function() {
-                const ul = document.createElement('ul');
-                ul.className = 'children';
-                const parentLi = document.getElementById('comment-' + parentId);
-                if (parentLi) parentLi.appendChild(ul);
-                return ul;
-            })();
 
-        if (!list) return;
+        if (parentId === 0) {
+            const list = document.querySelector('.vibe-comment-list');
+            if (!list) return;
+            const li = createCommentElement(comment);
+            list.prepend(li);
+            // A brand-new top-level comment always sits above any pinned
+            // comments visually if we don't re-hoist — pinned must stay on top.
+            hoistPinnedComments();
+            if (scroll) li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        const parentLi = document.getElementById('comment-' + parentId);
+        if (!parentLi) return; // parent not currently rendered (e.g. on another page) — nothing to attach to
 
         const li = createCommentElement(comment);
-        list.appendChild(li);
-        if (scroll) {
-            li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        let childUl = parentLi.querySelector(':scope > ul.children');
+
+        if (!childUl) {
+            // Thread was fully collapsed (no ul.children built yet). Create it
+            // and put the new reply there directly — this is the case that
+            // matters most: the user just clicked Reply and submitted, they
+            // must see their own reply land, not have it disappear behind a
+            // button that still says the stale pre-submission count.
+            childUl = document.createElement('ul');
+            childUl.className = 'children';
+            parentLi.appendChild(childUl);
+        } else if (childUl.style.display === 'none') {
+            // Thread exists but is currently hidden — reveal it so the new
+            // reply the user just posted is immediately visible.
+            childUl.style.display = '';
         }
+
+        childUl.appendChild(li);
+
+        // Update or remove the View/Hide Replies button to match new reality.
+        const viewBtn = parentLi.querySelector(':scope > article .vibe-view-replies-btn');
+        if (viewBtn) {
+            viewBtn.textContent = 'Hide replies';
+        }
+
+        if (scroll) li.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function escapeHtml(text) {
@@ -1029,9 +1142,6 @@
     }
 
     /**
-     * Google OAuth initiation
-     */
-    /**
      * Comments load on demand — show trigger button, fetch on click.
      */
     function initCommentsTrigger() {
@@ -1041,11 +1151,10 @@
 
         if (!btn || !container) return;
 
-        var loaded = false;
-
+        // B4 fix: { once: true } auto-detaches the listener after first firing —
+        // cleaner than a manual `loaded` boolean flag that left a dead listener
+        // checking a flag on every subsequent click forever.
         btn.addEventListener('click', function() {
-            if (loaded) return;
-            loaded          = true;
             btn.disabled    = true;
             btn.textContent = 'Loading\u2026';
 
@@ -1059,7 +1168,7 @@
                 // is 50k+ wasted AJAX requests from readers who never engaged.
                 initLivePolling();
             });
-        });
+        }, { once: true });
     }
 
     /**
@@ -1178,16 +1287,82 @@
     }
 
     /**
+     * On-demand reply loading (v3.4.0) — "View N replies" / "Hide replies" toggle.
+     *
+     * First click fetches the full nested subtree for that comment in one
+     * request (see load_replies() in class-ajax-handler.php) and renders it
+     * via the same buildCommentTree() the file already uses elsewhere —
+     * replies arrive in the identical nested-children JSON shape
+     * format_comment_tree() always produces, so no new rendering logic is
+     * needed for the reply markup itself.
+     *
+     * Subsequent clicks toggle visibility only (existence of the already-built
+     * <ul class="children"> is the state signal — no separate flag to drift
+     * out of sync with reality). No re-fetch for the rest of the page view.
+     */
+    function initViewReplies() {
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.vibe-view-replies-btn');
+            if (!btn) return;
+
+            var li = btn.closest('li.comment');
+            if (!li) return;
+
+            var existingUl = li.querySelector(':scope > ul.children');
+
+            if (existingUl) {
+                var willShow = existingUl.style.display === 'none';
+                existingUl.style.display = willShow ? '' : 'none';
+                btn.textContent = willShow ? 'Hide replies' : (btn.dataset.collapsedLabel || 'View replies');
+                return;
+            }
+
+            var commentId = btn.dataset.commentId;
+            var postId    = btn.dataset.postId || config.postId;
+            btn.dataset.collapsedLabel = btn.textContent; // remember "View N replies" for later
+            btn.disabled    = true;
+            btn.textContent = 'Loading\u2026';
+
+            var url = config.ajaxUrl + '?action=vibe_load_replies&post_id=' + postId + '&comment_id=' + commentId;
+
+            fetchWithTimeout(url, {}, 10000)
+            .then(function(res) { return res.json(); })
+            .then(function(result) {
+                btn.disabled = false;
+                if (!result.success || !result.data || !Array.isArray(result.data.replies) || result.data.replies.length === 0) {
+                    btn.textContent = btn.dataset.collapsedLabel || 'View replies';
+                    return;
+                }
+
+                var childUl = document.createElement('ul');
+                childUl.className = 'children';
+                result.data.replies.forEach(function(reply) {
+                    var replyLi = buildCommentTree(reply);
+                    if (replyLi) childUl.appendChild(replyLi);
+                });
+                li.appendChild(childUl);
+
+                btn.textContent = 'Hide replies';
+            })
+            .catch(function(err) {
+                console.error('Failed to load replies:', err);
+                btn.disabled    = false;
+                btn.textContent = btn.dataset.collapsedLabel || 'View replies';
+            });
+        });
+    }
+
+    /**
      * Silently fetch a fresh nonce to replace the one baked into the page cache.
      * WP nonces last 24h but a cached page can serve a nonce that is already 12h old.
      * Fires in parallel with initComments — no blocking.
      */
     function refreshNonce() {
-        fetch(config.ajaxUrl, {
+        fetchWithTimeout(config.ajaxUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({ action: 'vibe_refresh_nonce' }),
-        })
+        }, 8000)
         .then(function(res) { return res.json(); })
         .then(function(result) {
             if (result.success && result.data && result.data.nonce) {
@@ -1211,7 +1386,11 @@
         }
 
         btn.addEventListener('click', function() {
-            fetch(config.ajaxUrl, {
+            btn.disabled    = true;
+            var originalText = btn.textContent;
+            btn.textContent = 'Connecting\u2026';
+
+            fetchWithTimeout(config.ajaxUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -1221,18 +1400,23 @@
                     nonce:      config.nonce,
                     return_url: window.location.href, // reliable regardless of Referrer-Policy
                 }),
-            })
+            }, 10000)
             .then(function(res) { return res.json(); })
             .then(function(result) {
                 if (result.success && result.data && result.data.auth_url) {
                     window.location.href = result.data.auth_url;
+                    // No need to re-enable btn — we're navigating away.
                 } else {
                     showError('Google authentication is not configured.');
+                    btn.disabled    = false;
+                    btn.textContent = originalText;
                 }
             })
             .catch(function(err) {
                 console.error('Google auth failed:', err);
                 showError('Failed to initiate Google login.');
+                btn.disabled    = false;
+                btn.textContent = originalText;
             });
         });
     }
@@ -1415,40 +1599,47 @@
      * Zero server calls. Nested replies stay under their parent.
      */
     function initSortToggle() {
-        var btn  = document.getElementById('vibe-sort-toggle');
-        var list = document.getElementById('vibe-comment-list');
+        const btn  = document.getElementById('vibe-sort-toggle');
+        const list = document.getElementById('vibe-comment-list');
         if (!btn || !list) return;
 
-        var modes = [
-            { id: 'oldest', label: '\u2191', title: 'Ascending (oldest first)' },
-            { id: 'newest', label: '\u2193', title: 'Descending (newest first)' },
+        // v3.4.0: load_comments() default order flipped to DESC (newest first,
+        // see class-ajax-handler.php). snapshot() below captures whatever the
+        // list's DOM order is at first use — under the new default, that IS
+        // newest-first — so "restore snapshot" now means "newest" and "oldest"
+        // is the one that needs an explicit reverse. This is the inverse of the
+        // pre-v3.4.0 mapping, where the load order was oldest-first.
+        const modes = [
+            { id: 'newest', label: '\u2193', title: 'Newest first' },
+            { id: 'oldest', label: '\u2191', title: 'Oldest first' },
             { id: 'liked',  label: '\u2665', title: 'Most liked' },
         ];
-        var idx           = 0;  // current mode index
-        var originalOrder = null;
+        let idx           = 0;  // current mode index — reassigned on each click
+        let originalOrder = null;  // reassigned once on first snapshot()
 
         function snapshot() {
-            // Capture load order once, before any reordering.
+            // Capture load order once, before any reordering. Under v3.4.0
+            // this order IS newest-first (the server's default), not oldest.
             if (!originalOrder) {
                 originalOrder = Array.from(list.children);
             }
         }
 
         function applySort(modeId) {
-            if (modeId === 'newest') {
+            if (modeId === 'oldest') {
                 originalOrder.slice().reverse().forEach(function(el) {
                     list.appendChild(el);
                 });
             } else if (modeId === 'liked') {
                 Array.from(list.children)
                     .sort(function(a, b) {
-                        var aL = parseInt(((a.querySelector('.vibe-reactions') || {}).dataset || {}).totalReactions || '0', 10);
-                        var bL = parseInt(((b.querySelector('.vibe-reactions') || {}).dataset || {}).totalReactions || '0', 10);
+                        const aL = parseInt(((a.querySelector('.vibe-reactions') || {}).dataset || {}).totalReactions || '0', 10);
+                        const bL = parseInt(((b.querySelector('.vibe-reactions') || {}).dataset || {}).totalReactions || '0', 10);
                         return bL - aL;
                     })
                     .forEach(function(el) { list.appendChild(el); });
             } else {
-                // oldest — restore original load order
+                // newest — restore original load order (server default as of v3.4.0)
                 originalOrder.forEach(function(el) { list.appendChild(el); });
             }
             // Pinned comments must always stay at the top regardless of sort mode.
@@ -1458,8 +1649,8 @@
         btn.addEventListener('click', function() {
             snapshot();
             idx = (idx + 1) % modes.length;
-            var mode  = modes[idx];
-            var label = btn.querySelector('.vibe-sort-label');
+            const mode  = modes[idx];
+            const label = btn.querySelector('.vibe-sort-label');
             if (label) label.textContent = mode.label;
             btn.title = mode.title;
             btn.setAttribute('data-mode', mode.id);
@@ -1469,20 +1660,20 @@
 
     /** Search/filter visible comments by text. Zero server requests. */
     function initSearch() {
-        var list    = document.getElementById('vibe-comment-list');
-        var toolbar = document.getElementById('vibe-comments-toolbar');
+        const list    = document.getElementById('vibe-comment-list');
+        const toolbar = document.getElementById('vibe-comments-toolbar');
         if (!list || !toolbar) return;
 
-        var wrap   = document.createElement('div');
+        const wrap   = document.createElement('div');
         wrap.className = 'vibe-search-wrap';
 
-        var input  = document.createElement('input');
+        const input  = document.createElement('input');
         input.type = 'search';
         input.className   = 'vibe-search-input';
         input.placeholder = 'Search comments\u2026';
         input.setAttribute('aria-label', 'Search comments');
 
-        var status = document.createElement('span');
+        const status = document.createElement('span');
         status.className = 'vibe-search-status';
         status.setAttribute('aria-live', 'polite');
 
@@ -1490,14 +1681,21 @@
         wrap.appendChild(status);
         toolbar.appendChild(wrap); // sits beside the sort select on the same row
 
-        var timer;
+        let timer; // reassigned on every input event for debounce
         input.addEventListener('input', function() {
             clearTimeout(timer);
             timer = setTimeout(function() {
-                var q = input.value.trim().toLowerCase();
-                var count = 0;
+                const q = input.value.trim().toLowerCase();
+                let count = 0; // incremented in the loop below
                 list.querySelectorAll('li.comment').forEach(function(li) {
-                    var match = !q || li.textContent.toLowerCase().includes(q);
+                    // B6 fix: search was matching li.textContent, which includes
+                    // "Reply", "Pin", reaction counts, and timestamps — so searching
+                    // "Reply" matched every single comment. Now scoped to just the
+                    // comment body and author name, which is what "search" should mean.
+                    const content  = li.querySelector('.vibe-comment-content');
+                    const author   = li.querySelector('.vibe-comment-author');
+                    const haystack = (content ? content.textContent : '') + ' ' + (author ? author.textContent : '');
+                    const match    = !q || haystack.toLowerCase().includes(q);
                     li.style.display = match ? '' : 'none';
                     if (match) count++;
                 });
@@ -1553,7 +1751,8 @@
             if (!btn) return;
             var id     = btn.dataset.commentId;
             var pinned = btn.dataset.pinned === '1';
-            fetch(config.ajaxUrl, {
+            btn.disabled = true;
+            fetchWithTimeout(config.ajaxUrl, {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body:    new URLSearchParams({
@@ -1562,9 +1761,10 @@
                     comment_id: id,
                     pin:        pinned ? '0' : '1',
                 }),
-            })
+            }, 8000)
             .then(function(r) { return r.json(); })
             .then(function(res) {
+                btn.disabled = false;
                 if (!res.success) return;
                 var nowPinned = res.data.pinned;
                 btn.dataset.pinned = nowPinned ? '1' : '0';
@@ -1601,6 +1801,7 @@
             })
             .catch(function(err) {
                 console.error('Pin toggle failed:', err);
+                btn.disabled = false;
             });
         });
     }

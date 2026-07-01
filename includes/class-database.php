@@ -55,16 +55,24 @@ class Vibe_Comments_Database {
      */
     public static function get_guest_token( $client_id = '' ) {
         if ( ! empty( $client_id ) ) {
-            // Allow UUID format chars only: hex digits and hyphens.
-            $clean = preg_replace( '/[^a-zA-Z0-9\-]/', '', $client_id );
-            // Plausible UUID range: 32 chars (no hyphens) to 36 chars (with hyphens).
-            // Accept up to 40 to be tolerant of minor format variations.
-            if ( strlen( $clean ) >= 32 && strlen( $clean ) <= 40 ) {
+            // Strict UUID v4 format check (canonical hyphenated form, the only
+            // format our own getGuestId() in JS ever produces — via
+            // crypto.randomUUID(), the manual getRandomValues() fallback, or
+            // the Math.random() last resort, all three of which emit this exact
+            // shape). Previously this used preg_replace() to strip non-UUID
+            // characters and accepted anything left over in the 32-40 char range
+            // — which meant two DIFFERENT malformed inputs containing different
+            // disallowed characters could strip down to the IDENTICAL cleaned
+            // string and collide on the same guest token. A strict format match
+            // closes that off entirely: anything that isn't a well-formed UUID
+            // falls straight through to the IP-based fallback below.
+            if ( preg_match( '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $client_id ) ) {
                 $salt = defined( 'AUTH_KEY' ) ? AUTH_KEY : 'vibe-salt';
-                return substr( md5( $salt . $clean ), 0, 32 );
+                return substr( md5( $salt . strtolower( $client_id ) ), 0, 32 );
             }
         }
-        // Fallback: IP-based. Retains NAT-collision risk (H1) when no UUID is present.
+        // Fallback: IP-based. Retains NAT-collision risk (H1) when no UUID is present
+        // or when the supplied vibe_guest_id doesn't match the canonical UUID format.
         $ip   = self::resolve_client_ip();
         $salt = defined( 'AUTH_KEY' ) ? AUTH_KEY : 'vibe-salt';
         return substr( md5( $ip . $salt . gmdate( 'Y-m-d' ) ), 0, 32 );
@@ -389,22 +397,79 @@ class Vibe_Comments_Database {
      * Load all nested comments for a post in one query.
      * Returns [parent_id => [comment_rows]].
      */
-    public function get_children_map( $post_id ) {
+    /**
+     * Fetch the full descendant subtree for a SET of root comment IDs, scoped
+     * via IN() at each level — never scans the whole post's comments.
+     *
+     * Used two ways:
+     *   1. load_comments() passes the current page's top-level IDs (e.g. 10)
+     *      to compute reply_count per thread, without fetching reply CONTENT
+     *      at all for threads nobody has expanded yet.
+     *   2. load_replies() passes a single clicked comment_id to fetch its
+     *      entire nested conversation in one click (not one click per level).
+     *
+     * Replaces get_children_map()'s old behavior of fetching every approved
+     * reply for the ENTIRE post on every single load_comments() call,
+     * regardless of how many threads were actually on the current page or
+     * how many were ever expanded. On a post with hundreds of replies spread
+     * across many threads, that meant transferring full comment content
+     * (text, author, email, agent string) for replies nobody would ever see
+     * unless they happened to expand that exact thread — every single time
+     * anyone loaded the comment section.
+     *
+     * @param  int   $post_id
+     * @param  array $root_ids    Comment IDs to start from (their direct
+     *                            children are level 1 of the result).
+     * @param  int   $max_levels  Safety bound on recursion depth (default 4
+     *                            covers this plugin's supported nesting).
+     * @return array  [parent_comment_id => [WP_Comment, ...], ...] — same
+     *                shape as the old get_children_map(), so format_comment_tree()
+     *                needs zero changes to consume either one.
+     */
+    public function get_replies_map( $post_id, array $root_ids, $max_levels = 4 ) {
         global $wpdb;
 
-        $rows = $wpdb->get_results( $wpdb->prepare(
-            "SELECT * FROM {$wpdb->comments}
-             WHERE comment_post_ID = %d
-               AND comment_parent > 0
-               AND comment_approved = '1'
-             ORDER BY comment_date_gmt ASC",
-            absint( $post_id )
-        ) );
+        $post_id = absint( $post_id );
+        $map     = [];
+        $current_level_ids = array_values( array_filter( array_map( 'absint', $root_ids ) ) );
 
-        $map = [];
-        foreach ( $rows as $row ) {
-            $map[ (int) $row->comment_parent ][] = $row;
+        for ( $level = 0; $level < $max_levels && ! empty( $current_level_ids ); $level++ ) {
+            $placeholders = implode( ',', array_fill( 0, count( $current_level_ids ), '%d' ) );
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                "SELECT * FROM {$wpdb->comments}
+                 WHERE comment_post_ID = %d
+                   AND comment_parent IN ({$placeholders})
+                   AND comment_approved = '1'
+                 ORDER BY comment_date_gmt ASC",
+                array_merge( [ $post_id ], $current_level_ids )
+            ) );
+
+            if ( empty( $rows ) ) break;
+
+            $next_level_ids = [];
+            foreach ( $rows as $row ) {
+                $map[ (int) $row->comment_parent ][] = $row;
+                $next_level_ids[] = (int) $row->comment_ID;
+            }
+            $current_level_ids = $next_level_ids;
         }
+
         return $map;
+    }
+
+    /**
+     * Count total descendants (all levels) of a comment within an
+     * already-fetched map from get_replies_map(). Used to compute
+     * reply_count without re-querying.
+     */
+    public function count_descendants( $comment_id, array $map ) {
+        $comment_id = (int) $comment_id;
+        if ( empty( $map[ $comment_id ] ) ) return 0;
+
+        $count = 0;
+        foreach ( $map[ $comment_id ] as $child ) {
+            $count += 1 + $this->count_descendants( (int) $child->comment_ID, $map );
+        }
+        return $count;
     }
 }

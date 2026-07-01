@@ -3,6 +3,7 @@
     --vibe-primary: #3b82f6;
     --vibe-primary-hover: #2563eb;
     --vibe-bg: #ffffff;
+    --vibe-bg-alt: #f3f4f6;
     --vibe-surface: #f8fafc;
     --vibe-border: #e2e8f0;
     --vibe-text: #1e293b;
@@ -181,6 +182,10 @@
     background: var(--vibe-bg-alt, #f3f4f6);
     border-color: var(--vibe-text-muted, #888);
 }
+.vibe-reaction-summary:focus-visible {
+    outline: 2px solid var(--vibe-primary, #2563eb);
+    outline-offset: 1px;
+}
 .vibe-reaction-summary.vibe-has-reaction {
     border-color: var(--vibe-border, #e5e7eb);
     background: none;
@@ -281,6 +286,10 @@
 .vibe-reaction-option:active  { transform: scale(1.1); }
 .vibe-reaction-option.vibe-active-reaction { background: #eff6ff; }
 .vibe-reaction-option:disabled { opacity: 0.5; cursor: default; transform: none; }
+.vibe-reaction-option:focus-visible {
+    outline: 2px solid var(--vibe-primary, #2563eb);
+    outline-offset: 1px;
+}
 
 /* Emoji part of the picker button */
 .vibe-rx-picker-emoji {
@@ -323,6 +332,35 @@
 .vibe-reply-trigger:hover {
     background: var(--vibe-primary);
     color: white;
+}
+
+/* View/Hide Replies — a disclosure toggle, not an action, so it's deliberately
+   quieter than the Reply button: no border/pill treatment, just a text link
+   with an underline-on-hover, matching how Instagram/Reddit-style UIs treat
+   "view replies" as a lightweight affordance rather than a primary CTA. */
+.vibe-view-replies-btn {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--vibe-text-muted, #64748b);
+    background: none;
+    border: none;
+    padding: 0.35rem 0.4rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+.vibe-view-replies-btn:hover {
+    color: var(--vibe-primary);
+    text-decoration: underline;
+}
+.vibe-view-replies-btn:focus-visible {
+    outline: 2px solid var(--vibe-primary, #2563eb);
+    outline-offset: 1px;
+}
+.vibe-view-replies-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
 }
 
 /* Load More Button */
@@ -422,6 +460,23 @@
 
 .vibe-btn-primary:hover {
     background: var(--vibe-primary-hover);
+}
+
+/* CSS7 fix: this class was applied to the "Load Comments" button in the
+   template but never defined here — the button rendered with only the
+   generic .vibe-btn base (no background color), making it visually inert
+   as the page's primary engagement CTA. Styled to match .vibe-btn-primary. */
+.vibe-btn-load-comments {
+    background: var(--vibe-primary);
+    color: white;
+    border-color: var(--vibe-primary);
+}
+.vibe-btn-load-comments:hover {
+    background: var(--vibe-primary-hover);
+}
+.vibe-btn-load-comments:disabled {
+    opacity: 0.7;
+    cursor: default;
 }
 
 .vibe-btn-wp {
@@ -572,39 +627,6 @@
     to { transform: rotate(360deg); }
 }
 
-/* Pagination */
-.vibe-comments-nav {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-    margin: 1.5rem 0;
-}
-
-.vibe-comments-nav a,
-.vibe-comments-nav span {
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    text-decoration: none;
-    font-size: 0.9rem;
-}
-
-.vibe-comments-nav a {
-    background: var(--vibe-surface);
-    color: var(--vibe-text);
-    border: 1px solid var(--vibe-border);
-}
-
-.vibe-comments-nav a:hover {
-    background: var(--vibe-primary);
-    color: white;
-    border-color: var(--vibe-primary);
-}
-
-.vibe-comments-nav span.current {
-    background: var(--vibe-primary);
-    color: white;
-}
-
 /* Closed Message */
 .vibe-closed {
     text-align: center;
@@ -717,6 +739,15 @@
     cursor: pointer;
 }
 .vibe-sort-icon-btn:hover { border-color: var(--vibe-primary, #2563eb); color: var(--vibe-primary, #2563eb); }
+/* CSS5 fix: outline:none above removed the browser's default focus ring with
+   nothing to replace it — keyboard users had zero visual indicator of focus
+   on these two controls (WCAG 2.1 SC 2.4.7). :focus-visible only fires for
+   keyboard navigation, not mouse clicks, so sighted mouse users see no change. */
+.vibe-sort-icon-btn:focus-visible,
+.vibe-search-input:focus-visible {
+    outline: 2px solid var(--vibe-primary, #2563eb);
+    outline-offset: 1px;
+}
 
 /* Search wrap fills remaining space; min-width:0 prevents overflow on mobile */
 .vibe-search-wrap {
@@ -739,50 +770,6 @@
 }
 
 /* ── New comments banner ───────────────────────────────────────────────── */
-.vibe-new-banner {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--vibe-primary, #2563eb);
-    color: #fff;
-    font-size: 0.85rem;
-    font-weight: 500;
-    padding: 0.5rem 1.25rem;
-    border-radius: 999px;
-    margin-bottom: 1rem;
-    cursor: pointer;
-    user-select: none;
-    transition: background 0.2s ease;
-    width: fit-content;
-}
-.vibe-new-banner:hover { background: #1d4ed8; }
-
-/* ── Collapse long comments ────────────────────────────────────────────── */
-.vibe-comment-content.vibe-content-collapsed {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
-    overflow: hidden;
-}
-.vibe-read-more {
-    display: block;
-    background: none;
-    border: none;
-    color: var(--vibe-primary, #2563eb);
-    font-size: 0.85rem;
-    padding: 0.2rem 0;
-    margin-top: 0.25rem;
-    cursor: pointer;
-}
-.vibe-read-more:hover { text-decoration: underline; }
-
-/* ── Auto-linked URLs ──────────────────────────────────────────────────── */
-.vibe-comment-content a[rel~="ugc"] {
-    color: var(--vibe-primary, #2563eb);
-    text-decoration: underline;
-    word-break: break-all;
-}
-
 /* ── Markdown ──────────────────────────────────────────────────────────── */
 .vibe-comment-content blockquote {
     border-left: 3px solid var(--vibe-border, #e5e7eb);
@@ -844,6 +831,10 @@
     transition: all 0.2s ease;
 }
 .vibe-pin-btn:hover { background: #fef3c7; border-color: #fde68a; color: #b45309; }
+.vibe-pin-btn:focus-visible {
+    outline: 2px solid var(--vibe-primary, #2563eb);
+    outline-offset: 1px;
+}
 
 .vibe-new-banner {
     display: flex;

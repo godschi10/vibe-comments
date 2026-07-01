@@ -24,18 +24,23 @@ function vibe_log($message) {
     if (!defined('VIBE_COMMENTS_DEBUG_TOOLS') || !VIBE_COMMENTS_DEBUG_TOOLS) {
         return;
     }
+    // Wrap all filesystem work in try/catch. The logger must never crash the
+    // plugin — a read-only filesystem or bad permissions should fail silently.
+    try {
+        $log_dir  = WP_CONTENT_DIR . '/logs';
+        $log_file = $log_dir . '/vibe-comments-debug.log';
 
-    $log_dir  = WP_CONTENT_DIR . '/logs';
-    $log_file = $log_dir . '/vibe-comments-debug.log';
+        if (!is_dir($log_dir)) {
+            wp_mkdir_p($log_dir);
+            // Apache only. For Nginx/LiteSpeed, add a server-level block for /wp-content/logs/.
+            @file_put_contents($log_dir . '/.htaccess', "Require all denied\n");
+        }
 
-    if (!is_dir($log_dir)) {
-        wp_mkdir_p($log_dir);
-        // Apache only. For Nginx/LiteSpeed, add a server-level block for /wp-content/logs/.
-        @file_put_contents($log_dir . '/.htaccess', "Require all denied\n");
+        $line = gmdate('Y-m-d H:i:s') . ' UTC - ' . $message . PHP_EOL;
+        @file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX);
+    } catch ( Throwable $e ) {
+        // Silently swallow — logging must never be the reason the plugin fails.
     }
-
-    $line = gmdate('Y-m-d H:i:s') . ' UTC - ' . $message . PHP_EOL;
-    @file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX);
 }
 } // end function_exists vibe_log
 

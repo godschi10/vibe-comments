@@ -72,15 +72,15 @@ if ($vibe_count === 0) {
         <!-- Sort icon + search — revealed by JS once comments are loaded -->
         <div class="vibe-comments-toolbar" id="vibe-comments-toolbar" style="display:none;">
             <button type="button" id="vibe-sort-toggle" class="vibe-sort-icon-btn"
-                    title="<?php esc_attr_e('Ascending (oldest first)', 'vibe-comments'); ?>"
-                    data-mode="oldest">
+                    title="<?php esc_attr_e('Newest first', 'vibe-comments'); ?>"
+                    data-mode="newest">
                 <svg viewBox="0 0 16 16" width="13" height="13" fill="none"
                      stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <line x1="2" y1="4"  x2="14" y2="4"/>
                     <line x1="4" y1="8"  x2="12" y2="8"/>
                     <line x1="6" y1="12" x2="10" y2="12"/>
                 </svg>
-                <span class="vibe-sort-label">&#8593;</span>
+                <span class="vibe-sort-label">&#8595;</span>
             </button>
         </div>
 

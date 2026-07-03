@@ -19,6 +19,14 @@ Types of changes:
 
 ---
 
+## [3.5.3] — 2026-07-03
+
+### Fixed
+- **Footer buttons overflowing/breaking on comments with all 4 possible actions** (reaction pill, Reply, View/Hide Replies, Pin/Unpin — only occurs on a pinned comment that also has replies). `.vibe-comment-footer` had no `flex-wrap`, defaulting to `nowrap`, which forced all 4 items onto one line; flex then shrank individual buttons to fit, and since none of them had `white-space: nowrap`, the squeezed button's own text wrapped internally (visibly, "Hide replies" broke into "Hide" / "replies" across two lines). Fixed with `flex-wrap: wrap` on the container plus `flex-shrink: 0` and `white-space: nowrap` on every footer item (reaction summary, Reply, View/Hide Replies, Pin/Unpin) — nothing gets squeezed anymore; the row wraps as whole buttons onto a second line instead when it doesn't fit.
+- **Pinned badge rendering wider on the post author's own pinned comments than on other users' pinned comments**, despite identical badge markup and CSS. Root cause: `.vibe-comment-meta` is a `flex-direction: column` container with no explicit `align-items`, which defaults to `stretch` — every child (pinned badge, author-name line, timestamp) gets stretched to match the width of its *widest sibling*. On the post author's own comments, the "Author" badge sitting next to their name made that line wider than a regular commenter's plain name, and the pinned badge — a sibling in the same container — got stretched to match, even though "📌 Pinned" itself needs far less space. Regular commenters' pinned comments never showed this because their name line was never wide enough to stretch anything. Fixed with `align-items: flex-start`, which makes every child in this container size to its own content, independent of its siblings.
+
+---
+
 ## [3.5.2] — 2026-07-03
 
 **This is the confirmed fix for the v3.5.0 site-down crash.** v3.5.1 was defensive hardening shipped without the actual error text; this release was built directly from the real PHP parse error once the server's own log became available.

@@ -78,8 +78,20 @@
 .vibe-comment-meta {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 0.15rem;
 }
+/* align-items:flex-start above overrides the flex default of "stretch" for
+   column-direction containers. Without it, every child here (pinned badge,
+   the author-name line, the timestamp) was stretched to match the WIDTH OF
+   ITS WIDEST SIBLING. On a comment from the post author, the "Author" badge
+   sitting next to their name made that line wider than a regular commenter's
+   plain name — and since the pinned badge is a sibling in this SAME
+   container, it got stretched to match that wider line too, even though
+   "📌 Pinned" itself needs far less space. Regular (non-author) pinned
+   comments never showed this because their author-name line was never wide
+   enough to stretch anything. flex-start makes every child size to its own
+   content instead, independent of what its siblings need. */
 
 .vibe-comment-author {
     font-weight: 600;
@@ -145,10 +157,22 @@
 .vibe-comment-footer {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
     padding-top: 0.75rem;
     border-top: 1px solid var(--vibe-border);
 }
+/* Without flex-wrap above, a comment with all 4 possible footer items
+   (reaction pill, Reply, View/Hide Replies, Pin/Unpin — the combination that
+   only occurs on a pinned comment that also has replies) had nowhere to go
+   on a narrow mobile viewport except get squeezed by flex's default
+   flex-shrink:1 behavior. Since none of the buttons had white-space:nowrap,
+   the SQUEEZED button's own text wrapped internally instead of the row
+   wrapping as a whole ("Hide replies" broke into "Hide" / "replies" on two
+   lines) — which looks broken regardless of whether the row technically
+   stayed within the card's bounds. Row gap reduced to 0.5rem (from the
+   original 1rem, kept for column gap) so two wrapped rows don't sit too far
+   apart vertically. */
 
 /* ── Reactions — Facebook-style compact summary + expandable picker ─────── */
 
@@ -177,6 +201,7 @@
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 .vibe-reaction-summary:hover {
     background: var(--vibe-bg-alt, #f3f4f6);
@@ -326,6 +351,8 @@
     padding: 0.35rem 0.75rem;
     cursor: pointer;
     transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .vibe-comment-footer .comment-reply-link:hover,
@@ -349,6 +376,8 @@
     padding: 0.35rem 0.4rem;
     cursor: pointer;
     transition: color 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 .vibe-view-replies-btn:hover {
     color: var(--vibe-primary);
@@ -846,6 +875,8 @@
     color: var(--vibe-text-muted, #888);
     cursor: pointer;
     transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 .vibe-pin-btn:hover { background: #fef3c7; border-color: #fde68a; color: #b45309; }
 .vibe-pin-btn:focus-visible {

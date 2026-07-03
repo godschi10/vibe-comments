@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 /**
  * Vibe Comments REST API
  *
@@ -13,7 +16,11 @@
  *   3. Their rate limiters used wp_cache_get/set (worker-local), which is
  *      bypassable under concurrent load — the security model was wrong.
  *
- * Debug endpoints are still available in WP_DEBUG mode for development use.
+ * Debug endpoints are gated behind the VIBE_COMMENTS_DEBUG_TOOLS constant, not
+ * WP_DEBUG — see debug-logger.php for why: WP_DEBUG is commonly left on in
+ * production for error capture, which is not the same as consenting to expose
+ * debug-only REST routes. (This comment previously said "WP_DEBUG mode,"
+ * which never matched what the code below actually checks.)
  */
 class Vibe_Comments_REST_API {
     private $namespace = 'vibe-comments/v1';
@@ -57,7 +64,7 @@ class Vibe_Comments_REST_API {
     }
 
     /**
-     * Debug endpoint — admin + WP_DEBUG only.
+     * Debug endpoint — admin + VIBE_COMMENTS_DEBUG_TOOLS only.
      * Step-by-step comment insertion for diagnosing integration issues.
      */
     public function debug_comment($request) {

@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.4.0  
+**Version:** 3.5.2  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later
@@ -27,21 +27,19 @@ Assume 30% of visitors click. At 10M monthly = ~3M click events = ~100K/day.
 ```
 Click → admin-ajax.php?action=vibe_load_comments
           │
-          ├─ Layer 1: Cloudflare edge (s-maxage=120)
-          │   Same post, 100 clicks in 2 min = 1 PHP boot, 99 CF hits
-          │
-          ├─ Layer 2: LiteSpeed server cache (120s TTL, tag-based purge)
-          │   Visitors bypassing CF still hit zero PHP
-          │
-          └─ Layer 3: Transient (DB/Redis, 120s TTL)
-              PHP boots that miss both edge caches skip all DB queries
-              One DB read (options table) → pre-serialized JSON returned
+          └─ Transient cache (DB/Redis, 120s TTL, PER POST/PAGE — not per visitor)
+              PHP boots skip the DB query and get_replies_map()/reaction count
+              queries entirely on a cache hit; one lightweight per-request
+              lookup (get_user_reactions_batch) still runs to overlay THIS
+              visitor's own reaction state on top of the shared cached list —
+              see "Why this isn't edge-cached" below.
 ```
 
-**Actual DB load at 10M monthly visits:**  
-`100,000 clicks/day ÷ 86,400s ≈ 1.2 clicks/sec`  
-With 120s cache window: `1.2 ÷ 120 ≈ 0.01 PHP boots/sec` per post  
-On a post getting 10,000 visitors in 2 minutes: **1 PHP boot, 9,999 cache hits**
+**Why this isn't edge/CDN-cached (as of v3.5.0):** every `load_comments()`/`load_replies()` response is personalized — it always carries the requesting visitor's own `user_reaction` values on top of the shared comment list. `Cache-Control` is deliberately `private, max-age=120` (browser-only), not `public, s-maxage=...` (CDN-shareable). An earlier version of this plugin did instruct Cloudflare/LiteSpeed to cache the full response at the edge — that was only safe back when the response contained no visitor-specific data at all; once `user_reaction` was added to close a correctness bug (guests never saw their own reaction highlighted), a shared/edge-cacheable response would have meant one visitor's private reaction state getting served to every other visitor of the same post for up to 2 minutes. The PHP-side transient layer (which is what actually avoids the DB query) is completely unaffected by this — only the CDN-level layer was removed, and only because it became unsafe to keep.
+
+**Actual DB load at 10M monthly visits:**
+`100,000 clicks/day ÷ 86,400s ≈ 1.2 clicks/sec`
+With 120s cache window: `1.2 ÷ 120 ≈ 0.01 PHP boots/sec` per post that need the FULL query; every request still needs the one lightweight per-visitor reaction overlay lookup regardless of cache state, but that's a single batched query against an indexed table, not the comment-list query itself.
 
 ### Reactions (interactive users only — ~5% of visitors)
 ```
@@ -164,7 +162,8 @@ JWT signatures are verified against Google's JWKS on every callback. JWKS cached
 | SQL injection | ✅ `$wpdb->prepare()` throughout; `absint()` on all IDs |
 | XSS (server) | ✅ `sanitize_text_field`, `sanitize_textarea_field` |
 | XSS (client) | ✅ `escapeHtml()` with `"` encoding before any DOM write |
-| Rate limiting | ✅ Transients — shared across all PHP-FPM workers; comment submission scoped to IP + post_id (prevents cross-post NAT collision); `sync_likes` capped at 1 request per 3 seconds per IP |
+| Rate limiting | ✅ Transients — shared across all PHP-FPM workers; comment submission scoped to IP + post_id (prevents cross-post NAT collision); `sync_likes` capped at 1 request per 3 seconds per IP; `load_replies` capped at 1 request per 2 seconds per IP+comment |
+| JSON-LD structured data | ✅ Every text field passed through `wp_strip_all_tags()`; encoding additionally hardened with `JSON_HEX_TAG`/`JSON_HEX_AMP` as defense-in-depth |
 | Guest token forgery | ✅ Strict canonical UUID v4 regex match required before hashing — malformed input falls through to IP-based fallback rather than being cleaned and accepted |
 | IP spoofing | ✅ Only `CF-Connecting-IP` and `REMOTE_ADDR` trusted |
 | Content length | ✅ Enforced server-side against configured UX limit |
@@ -227,6 +226,14 @@ Note: this covers PHP-rendered strings only. JS-rendered UI text (button labels,
 ## Accessibility
 
 Keyboard focus indicators (`:focus-visible` outline rings) are present on every interactive control: the sort toggle, the search input, reaction summary pills, reaction picker buttons, and the moderator pin button. `:focus-visible` only activates for keyboard navigation, so mouse and touch interactions are visually unaffected.
+
+**Added in v3.5.0:**
+- `<noscript>` fallback notice (with the existing comment count, properly pluralized) — this plugin's comment system is entirely AJAX-driven with no server-rendered fallback content, so JS-disabled visitors previously saw an inert "Load Comments" button with no explanation.
+- New-comments polling banner announces itself via `role="status"`/`aria-live="polite"`.
+- Focus moves to a newly-posted comment after successful submission, confirming to keyboard/screen-reader users that it landed and where.
+- The comment textarea's character limit is linked via `aria-describedby`.
+- `prefers-reduced-motion: reduce` is respected globally — disables all animations/transitions and forces instant (non-smooth) scrolling, including for JS `scrollIntoView({behavior:'smooth'})` calls, which browsers honor `scroll-behavior: auto` for even when set via CSS rather than the JS call site itself.
+- No inline styles remain anywhere in the JS (previously used for error/success messages and the reply-form container) — all moved to CSS classes for compatibility with a strict Content-Security-Policy.
 
 ---
 

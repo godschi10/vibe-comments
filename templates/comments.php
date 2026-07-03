@@ -62,6 +62,35 @@ if ($vibe_count === 0) {
         </button>
     </div>
 
+    <?php /* A1 fix: this entire comment system — list, form, reactions, everything
+             — is AJAX-driven with no server-rendered fallback content anywhere in
+             this template. Without this, a visitor with JavaScript disabled sees
+             a "Load Comments" button that does nothing when clicked, with zero
+             indication of why. This doesn't attempt a full non-JS posting path
+             (that would mean rebuilding a parallel submission system this plugin
+             deliberately moved away from) — just an honest explanation, plus the
+             existing comment count so at least that much is visible either way. */ ?>
+    <noscript>
+        <p class="vibe-noscript-notice">
+            <?php
+            if ( $vibe_count > 0 ) {
+                printf(
+                    /* translators: %s: number of existing comments, already formatted. */
+                    esc_html( _n(
+                        'This page has %s comment. Enable JavaScript to view and join the discussion.',
+                        'This page has %s comments. Enable JavaScript to view and join the discussion.',
+                        $vibe_count,
+                        'vibe-comments'
+                    ) ),
+                    esc_html( number_format_i18n( $vibe_count ) )
+                );
+            } else {
+                esc_html_e( 'Enable JavaScript to view and join the discussion.', 'vibe-comments' );
+            }
+            ?>
+        </p>
+    </noscript>
+
     <!--
         Everything below is hidden until the button is clicked.
         This keeps the page completely static: no AJAX, no DB, no rendering cost
@@ -162,8 +191,9 @@ if ($vibe_count === 0) {
                             <?php _e('Your comment', 'vibe-comments'); ?>
                         </label>
                         <textarea id="vibe-comment-content" name="comment" rows="4" required
+                                  aria-describedby="vibe-char-counter"
                                   placeholder="<?php esc_attr_e('What do you think?', 'vibe-comments'); ?>"></textarea>
-                        <div class="vibe-char-counter" aria-live="polite">
+                        <div class="vibe-char-counter" id="vibe-char-counter" aria-live="polite">
                             <span id="vibe-char-count">0</span> / <span id="vibe-char-max">2000</span>
                         </div>
                     </div>

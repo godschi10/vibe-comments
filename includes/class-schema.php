@@ -100,7 +100,20 @@ class Vibe_Comments_Schema {
                 'datePublished' => gmdate( 'c', strtotime( $comment->comment_date_gmt ) ),
                 'author'        => [
                     '@type' => 'Person',
-                    'name'  => $comment->comment_author,
+                    // wp_strip_all_tags() here matches the protection already
+                    // applied to $text above. comment_content gets it; this field
+                    // did not, and JSON_UNESCAPED_SLASHES is enabled a few lines
+                    // down — the exact combination that lets a literal
+                    // </script> sequence in an author name break out of this
+                    // <script type="application/ld+json"> block and inject
+                    // arbitrary HTML into the page <head>. This plugin's own
+                    // submission path (sanitize_text_field() in submit_comment())
+                    // already strips such sequences, but that offers no
+                    // protection here — this reads whatever is in wp_comments
+                    // right now, regardless of how it got there: admin editing
+                    // (admins can typically post unfiltered HTML in WP), CSV/XML
+                    // import, a different plugin, or legacy pre-this-plugin data.
+                    'name'  => wp_strip_all_tags( $comment->comment_author ),
                 ],
                 'about'         => [ '@id' => $post_url ],
             ];
@@ -125,10 +138,21 @@ class Vibe_Comments_Schema {
             '@graph'   => $graph,
         ];
 
+        // JSON_HEX_TAG escapes < and > as \u003C/\u003E within string values —
+        // this is what actually closes the </script>-breakout risk at the
+        // encoding layer itself, for EVERY field, not just the ones this file
+        // remembers to wp_strip_all_tags() individually. Still fully valid,
+        // spec-compliant JSON — a JSON-LD parser decodes \u003C back to the
+        // literal character exactly as if it had been unescaped, so this is
+        // purely a raw-HTML-output-level protection with zero effect on how
+        // Google (or anything else) actually interprets the structured data.
+        // JSON_HEX_AMP is the standard companion flag for the same reason.
         // JSON_UNESCAPED_UNICODE keeps emoji/international text readable.
-        // JSON_UNESCAPED_SLASHES avoids \/  noise in URLs.
+        // JSON_UNESCAPED_SLASHES avoids \/  noise in URLs — safe to keep
+        // purely for readability now that JSON_HEX_TAG independently handles
+        // the actual angle-bracket risk regardless of slash-escaping.
         echo "\n<script type=\"application/ld+json\">\n"
-            . wp_json_encode( $schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES )
+            . wp_json_encode( $schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP )
             . "\n</script>\n";
     }
 }

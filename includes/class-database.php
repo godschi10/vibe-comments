@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 class Vibe_Comments_Database {
     private $table_name;
     private $cache_group = 'vibe_comments';
@@ -350,53 +353,18 @@ class Vibe_Comments_Database {
     }
 
     // -------------------------------------------------------------------------
-    // Comment list cache (unchanged)
+    // NOTE: an object-cache-versioned comment-list caching subsystem
+    // (get_comments_cache_version / increment_comments_cache_version /
+    // get_comments_for_post / clear_post_comments_cache) previously lived here.
+    // Removed after a full-codebase grep confirmed get_comments_for_post() —
+    // the only function that would ever READ using that versioned scheme —
+    // had zero callers anywhere in the plugin. The comment list is actually
+    // served entirely through load_comments()'s own separate vc_load_* transient
+    // cache in class-ajax-handler.php. The only thing this dead subsystem was
+    // doing in production was one wasted wp_cache_set() call on every single
+    // comment submission, bumping a version key nothing ever consulted.
     // -------------------------------------------------------------------------
 
-    public function get_comments_cache_version( $post_id ) {
-        $post_id = absint( $post_id );
-        $version = wp_cache_get( 'comments_version_' . $post_id, $this->cache_group );
-        if ( false === $version ) {
-            $version = time();
-            wp_cache_set( 'comments_version_' . $post_id, $version, $this->cache_group, 86400 );
-        }
-        return $version;
-    }
-
-    public function increment_comments_cache_version( $post_id ) {
-        $post_id     = absint( $post_id );
-        $new_version = time();
-        wp_cache_set( 'comments_version_' . $post_id, $new_version, $this->cache_group, 86400 );
-        return $new_version;
-    }
-
-    public function get_comments_for_post( $post_id, $args = [] ) {
-        $post_id   = absint( $post_id );
-        $version   = $this->get_comments_cache_version( $post_id );
-        $cache_key = 'comments_' . $post_id . '_v' . $version . '_' . md5( serialize( $args ) );
-
-        $comments = wp_cache_get( $cache_key, $this->cache_group );
-        if ( false === $comments ) {
-            $default_args = [
-                'post_id' => $post_id,
-                'status'  => 'approve',
-                'orderby' => 'comment_date_gmt',
-                'order'   => 'ASC',
-            ];
-            $comments = get_comments( array_merge( $default_args, $args ) );
-            wp_cache_set( $cache_key, $comments, $this->cache_group, 60 );
-        }
-        return $comments;
-    }
-
-    public function clear_post_comments_cache( $post_id ) {
-        $this->increment_comments_cache_version( $post_id );
-    }
-
-    /**
-     * Load all nested comments for a post in one query.
-     * Returns [parent_id => [comment_rows]].
-     */
     /**
      * Fetch the full descendant subtree for a SET of root comment IDs, scoped
      * via IN() at each level — never scans the whole post's comments.

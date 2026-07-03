@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 /**
  * Hooks the plugin's custom template into WordPress's comments system.
  *
@@ -15,10 +18,30 @@ class Vibe_Comments_Template_Loader {
 
     /**
      * Replace WordPress's native comments template with ours.
-     * Only applies on singular post/page views with comments open.
+     *
+     * Applies whenever commenting is open OR the post already has approved
+     * comments — NOT just when comments are open. Previously this bailed on
+     * !comments_open() unconditionally, which meant ANY post with commenting
+     * closed (a common state for archived content) fell through to the
+     * theme's default comment template instead of ours, regardless of
+     * whether that post had existing comments. templates/comments.php
+     * itself was already written to handle "closed but has comments"
+     * gracefully (see its own top-of-file gate) — that logic has been
+     * unreachable this whole time because THIS filter redirected away from
+     * our template before it was ever included. Also meant class-schema.php's
+     * JSON-LD output (which correctly outputs data for closed-with-comments
+     * posts) was describing a comment list visitors couldn't actually see
+     * through this plugin's own UI. get_comments_number() is used rather
+     * than have_comments() because it's a lighter, safe-anywhere template
+     * tag with no dependency on WP's comment query loop having run yet —
+     * the same primitive templates/comments.php already relies on for its
+     * own count display a few lines further into that file.
      */
     public function load_template( $template ) {
-        if ( ! is_singular() || ! comments_open() ) {
+        if ( ! is_singular() ) {
+            return $template;
+        }
+        if ( ! comments_open() && (int) get_comments_number() === 0 ) {
             return $template;
         }
         $plugin_template = VIBE_COMMENTS_PLUGIN_DIR . 'templates/comments.php';

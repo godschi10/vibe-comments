@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 class Vibe_Comments_Deactivator {
     public static function deactivate() {
         // Clear scheduled hooks if any

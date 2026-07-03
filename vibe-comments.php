@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.4.0
+ * Version:           3.5.2
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.4.0');
+define('VIBE_COMMENTS_VERSION', '3.5.2');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -81,13 +81,34 @@ class Vibe_Comments {
             vibe_log('init hook fired');
         }
 
-        // Run DB migration if needed (adds guest_token column for guest likes)
-        Vibe_Comments_Activator::maybe_upgrade();
-
-        // JSON-LD structured data for comments (SEO).
-        Vibe_Comments_Schema::init();
-
         $debug = defined('VIBE_COMMENTS_DEBUG_TOOLS') && VIBE_COMMENTS_DEBUG_TOOLS;
+
+        // These two were the ONLY subsystem-touching calls in this method not
+        // wrapped in try/catch(Throwable) — every other instantiation below
+        // already was. If either of these throws at runtime for any reason
+        // (a $wpdb issue, something host-specific), it previously took down
+        // the entire site with an uncaught fatal instead of degrading
+        // gracefully. Now matches the same pattern as everything else: log
+        // via error_log() unconditionally (so it's visible even without
+        // WP_DEBUG_LOG enabled — see debug-logger.php's own reasoning for
+        // why error_log() specifically, not just vibe_log()), and let the
+        // rest of the site keep functioning.
+        try {
+            Vibe_Comments_Activator::maybe_upgrade();
+            if ($debug) { vibe_log('maybe_upgrade completed'); }
+        } catch (Throwable $e) {
+            error_log('[Vibe Comments] FATAL in maybe_upgrade(): ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            if ($debug) { vibe_log('maybe_upgrade ERROR: ' . $e->getMessage()); }
+        }
+
+        try {
+            // JSON-LD structured data for comments (SEO).
+            Vibe_Comments_Schema::init();
+            if ($debug) { vibe_log('Schema instantiated'); }
+        } catch (Throwable $e) {
+            error_log('[Vibe Comments] FATAL in Schema::init(): ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            if ($debug) { vibe_log('Schema ERROR: ' . $e->getMessage()); }
+        }
 
         try {
             new Vibe_Comments_REST_API();
@@ -199,6 +220,11 @@ class Vibe_Comments {
                 'oneCommentText'      => esc_html__('1 Comment', 'vibe-comments'),
                 /* translators: %s = formatted number, e.g. "12 Comments" */
                 'manyCommentsTemplate' => esc_html__('%s Comments', 'vibe-comments'),
+                // Lets JS-side silent .catch() blocks (e.g. fetchCommentCount())
+                // optionally console.warn for a developer who deliberately
+                // turned on VIBE_COMMENTS_DEBUG_TOOLS, without ever logging
+                // anything to a real visitor's browser console by default.
+                'debug'                 => defined('VIBE_COMMENTS_DEBUG_TOOLS') && VIBE_COMMENTS_DEBUG_TOOLS,
             ));
         }
     }

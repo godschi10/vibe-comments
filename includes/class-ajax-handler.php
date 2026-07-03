@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 class Vibe_Comments_Ajax_Handler {
     public function __construct() {
         add_action('wp_ajax_vibe_submit_comment',           array($this, 'submit_comment'));
@@ -259,25 +262,32 @@ class Vibe_Comments_Ajax_Handler {
     }
 
     /**
-     * Load comments for a post — paginated, with children nested.
+     * Load comments for a post — paginated, top-level only (see reply_count
+     * on each entry; full reply subtrees are fetched on demand via
+     * load_replies()).
      *
-     * CACHING STRATEGY (two layers):
-     *   Layer 1 — Transient (server, ~5s for first request):
-     *     The formatted comment JSON is stored in a transient keyed by
-     *     post_id + page + per_page. Subsequent requests within 2 minutes
-     *     skip all DB queries entirely.
+     * CACHING STRATEGY (as of v3.5.0):
+     *   Layer 1 — Transient (server, DB or Redis/Memcached if configured):
+     *     The formatted comment JSON — WITHOUT any visitor-specific data —
+     *     is stored in a transient keyed by post_id + page + per_page, 120s
+     *     TTL. Subsequent requests within that window skip the comment-list
+     *     query, get_replies_map(), and reaction-count queries entirely.
      *
-     *   Layer 2 — Cloudflare / LiteSpeed edge cache (~2 min TTL):
-     *     Cache-Control: public, max-age=120 tells both CF and LiteSpeed
-     *     to cache this GET response at the edge. A post with 10,000
-     *     visitors within 2 minutes costs exactly 1 PHP boot, not 10,000.
+     *   Layer 2 — apply_user_reactions_overlay() (never cached, every request):
+     *     The requester's own user_reaction values are resolved and patched
+     *     onto the response fresh, after retrieval from cache or a live
+     *     query, every single time. This is why Cache-Control below is
+     *     `private`, not `public`/`s-maxage` — every response this endpoint
+     *     sends is personalized to whoever asked for it, so it must never be
+     *     stored by a shared/edge cache (Cloudflare, LiteSpeed's edge tier,
+     *     a corporate proxy) and replayed to a different visitor. Before this
+     *     was added, this docblock (and the actual headers) correctly said
+     *     `public, s-maxage=120` — that was only safe back when the response
+     *     genuinely contained nothing visitor-specific.
      *
      *   Invalidation:
-     *     Both layers are cleared when a comment is approved or deleted
-     *     via purge_comments_data_cache() hooked to comment status changes.
-     *
-     * NOTE: user-specific reaction state is NOT included here.
-     * syncReactions() fetches that separately and is never cached.
+     *     The transient layer is cleared when a comment is approved, deleted,
+     *     or reacted to, via purge_comments_data_cache() / sync_and_purge().
      */
     public function load_comments() {
         global $wpdb; // declared once here — used in both polling and non-polling branches
@@ -291,6 +301,17 @@ class Vibe_Comments_Ajax_Handler {
             return;
         }
 
+        // Resolved BEFORE the cache check on purpose. The comment list itself
+        // (vc_load_* transient) is cached with NO user identity in its key —
+        // it's the same cached blob served to every visitor of this post/page.
+        // user_reaction must therefore NEVER be baked into that cached payload;
+        // it's computed fresh per request and overlaid onto the comments array
+        // AFTER retrieval, whether that retrieval was a cache hit or a fresh
+        // query — see apply_user_reactions_overlay() below.
+        $user_id     = get_current_user_id();
+        $client_id   = isset($_GET['vibe_guest_id']) ? sanitize_text_field(wp_unslash($_GET['vibe_guest_id'])) : '';
+        $guest_token = ($user_id > 0) ? '' : Vibe_Comments_Database::get_guest_token($client_id);
+
         // Polling requests (since > 0) are never cached — they're checking for
         // new comments in real time and must always hit the DB.
         $is_polling = $since > 0;
@@ -300,6 +321,7 @@ class Vibe_Comments_Ajax_Handler {
             $cache_key = 'vc_load_' . $post_id . '_' . $page . '_' . $per_page;
             $cached    = get_transient($cache_key);
             if (false !== $cached) {
+                $this->apply_user_reactions_overlay($cached, $user_id, $guest_token);
                 $this->set_public_cache_headers();
                 wp_send_json_success($cached);
                 return;
@@ -420,16 +442,28 @@ class Vibe_Comments_Ajax_Handler {
             'has_more'        => ($page * $per_page) < $top_level_count,
         );
 
-        // Store in transient and instruct edge caches to cache the response.
+        // Store in transient BEFORE the per-requester overlay below — this is
+        // the anonymous, shared version (every comment's user_reaction is
+        // still null at this point, from format_comment_tree()'s default).
         // Polling requests are excluded — they must always reflect live data.
         if (!$is_polling) {
             set_transient($cache_key, $result, 120);
-            $this->set_public_cache_headers();
         } else {
             // Polling with new comments: return fresh reaction counts for visible IDs.
             if (!empty($reaction_ids)) {
                 $result['reaction_counts'] = $db->get_reaction_counts_batch($reaction_ids);
             }
+        }
+
+        // Personalize the response actually being sent, whether it was just
+        // cached (anonymous) or is a polling response (never cached at all).
+        // See apply_user_reactions_overlay() docblock for why this must never
+        // be baked into the cached blob itself.
+        $this->apply_user_reactions_overlay($result, $user_id, $guest_token);
+
+        if (!$is_polling) {
+            $this->set_public_cache_headers();
+        } else {
             header('Cache-Control: no-store, private');
         }
 
@@ -464,9 +498,32 @@ class Vibe_Comments_Ajax_Handler {
             return;
         }
 
+        // Same reasoning as load_comments(): vc_replies_{id} has no user
+        // identity in its key, so it must stay anonymous. Resolved here,
+        // before the cache check, for the same reason.
+        $user_id     = get_current_user_id();
+        $client_id   = isset($_GET['vibe_guest_id']) ? sanitize_text_field(wp_unslash($_GET['vibe_guest_id'])) : '';
+        $guest_token = ($user_id > 0) ? '' : Vibe_Comments_Database::get_guest_token($client_id);
+
+        // Rate limit: 1 request per 2 seconds per IP+comment. This endpoint
+        // had no rate limiting at all before this fix — every other AJAX
+        // action in this file has one. Its cache is keyed per comment_id, so
+        // unlike load_comments() (whose cache key is shared across an entire
+        // page of comments), an attacker enumerating many different
+        // comment_ids bypasses the cache benefit entirely; nothing else was
+        // bounding request volume.
+        $ip        = $this->get_remote_ip();
+        $rate_key  = 'vlr_' . substr(md5($ip . $comment_id), 0, 16);
+        if (get_transient($rate_key)) {
+            wp_send_json_error(array('message' => __('Too many requests.', 'vibe-comments')), 429);
+            return;
+        }
+        set_transient($rate_key, 1, 2);
+
         $cache_key = 'vc_replies_' . $comment_id;
         $cached    = get_transient($cache_key);
         if (false !== $cached) {
+            $this->apply_user_reactions_overlay($cached, $user_id, $guest_token, 'replies');
             $this->set_public_cache_headers();
             wp_send_json_success($cached);
             return;
@@ -505,23 +562,85 @@ class Vibe_Comments_Ajax_Handler {
         }
 
         $result = array('replies' => $replies);
+        // Cache the anonymous version (user_reaction still null on every entry
+        // at this point) BEFORE overlaying this specific requester's real state.
         set_transient($cache_key, $result, 120);
+        $this->apply_user_reactions_overlay($result, $user_id, $guest_token, 'replies');
         $this->set_public_cache_headers();
         wp_send_json_success($result);
     }
 
     /**
-     * Set Cache-Control headers that tell Cloudflare and LiteSpeed to
-     * cache this response at the edge for 2 minutes.
-     * s-maxage targets shared/proxy caches (CF, Varnish).
-     * max-age targets the browser cache as a fallback.
+     * Set Cache-Control headers for a load_comments()/load_replies() response.
+     *
+     * IMPORTANT: `private`, not `public`. Every response from these two
+     * endpoints now carries the REQUESTER'S OWN user_reaction values on every
+     * comment (see apply_user_reactions_overlay()) — the underlying comment
+     * LIST is still cached anonymously via the vc_load_ and vc_replies_
+     * transients (that layer is unaffected and still avoids the DB), but the
+     * actual HTTP RESPONSE sent to any one visitor is personalized to them.
+     * `public, s-maxage=120` (the previous value) explicitly permits shared
+     * caches — Cloudflare, LiteSpeed's edge tier, corporate proxies — to
+     * store ONE visitor's response and replay it to every OTHER visitor of
+     * the same post for up to 120 seconds, meaning visitor B could be shown
+     * visitor A's private "you reacted with ❤️" state as if it were their
+     * own. `private` still permits the REQUESTER'S OWN browser to reuse its
+     * own response (e.g. back/forward navigation within the cache window)
+     * but explicitly forbids any shared/intermediate cache from storing it.
      */
     private function set_public_cache_headers() {
-        header('Cache-Control: public, max-age=120, s-maxage=120');
+        header('Cache-Control: private, max-age=120');
         header('Vary: Accept-Encoding');
-        // Tell LiteSpeed Cache to store this response.
-        do_action('litespeed_control_set_maxage', 120);
-        do_action('litespeed_tag_add', 'vibe-comments');
+        // Do NOT tag this for LiteSpeed/edge storage — see docblock above.
+    }
+
+    /**
+     * Patch the current requester's own user_reaction values onto an already-
+     * built comments array — applied identically whether that array came from
+     * a fresh DB-backed compute or an anonymous, shared vc_load_ or vc_replies_
+     * cache hit. This is deliberately a SEPARATE step from format_comment_tree()
+     * rather than baked into what gets $wpdb-computed-and-cached, because the
+     * cache itself has no user identity in its key — it's the same stored blob
+     * served to every visitor of a given post/page. Only ONE lookup query
+     * (get_user_reactions_batch, itself internally batched) runs per request,
+     * regardless of how many comments are being overlaid, and it never touches
+     * the transient layer at all.
+     *
+     * Mutates $data in place. Safe to call with an empty/zero-comment payload
+     * (the early-exit branches in load_comments()) — array_map over an empty
+     * array is a no-op.
+     *
+     * @param array  &$data        Response array with a comment-list key (each
+     *                              entry either a top-level comment from
+     *                              load_comments(), or a reply from
+     *                              load_replies() — both share the same shape
+     *                              produced by format_comment_tree()).
+     * @param int    $user_id
+     * @param string $guest_token
+     * @param string $list_key     Which key in $data holds the comment array —
+     *                              'comments' for load_comments(), 'replies'
+     *                              for load_replies(). Defaults to 'comments'.
+     */
+    private function apply_user_reactions_overlay(array &$data, $user_id, $guest_token, $list_key = 'comments') {
+        if (empty($data[$list_key]) || (!$user_id && empty($guest_token))) {
+            return;
+        }
+
+        $ids = array();
+        foreach ($data[$list_key] as $c) {
+            if (isset($c['id'])) { $ids[] = (int) $c['id']; }
+        }
+        if (empty($ids)) return;
+
+        $db = new Vibe_Comments_Database();
+        $user_reactions_map = $db->get_user_reactions_batch($ids, $user_id, $guest_token);
+
+        foreach ($data[$list_key] as &$c) {
+            if (isset($c['id']) && isset($user_reactions_map[$c['id']])) {
+                $c['user_reaction'] = $user_reactions_map[$c['id']];
+            }
+        }
+        unset($c); // break the reference — defensive, prevents accidental reuse below
     }
 
     /**
@@ -671,7 +790,7 @@ class Vibe_Comments_Ajax_Handler {
      * Format a comment recursively using pre-built maps.
      * No DB queries — all data supplied by the caller.
      */
-    private function format_comment_tree($comment, $depth = 3, $now = null, array $children_map = array(), array $reactions_map = array(), $post_author_id = 0) {
+    private function format_comment_tree($comment, $depth = 3, $now = null, array $children_map = array(), array $reactions_map = array(), $post_author_id = 0, array $user_reactions_map = array()) {
         if ($now === null) $now = current_time('timestamp', true);
 
         $comment_id = intval($comment->comment_ID);
@@ -679,7 +798,7 @@ class Vibe_Comments_Ajax_Handler {
 
         if ($depth > 0 && !empty($children_map[$comment_id])) {
             foreach ($children_map[$comment_id] as $child) {
-                $children[] = $this->format_comment_tree($child, $depth - 1, $now, $children_map, $reactions_map, $post_author_id);
+                $children[] = $this->format_comment_tree($child, $depth - 1, $now, $children_map, $reactions_map, $post_author_id, $user_reactions_map);
             }
         }
 
@@ -693,18 +812,26 @@ class Vibe_Comments_Ajax_Handler {
             : 'vibe.guest.' . md5( 'vibe_' . $comment_id ) . '@comments.local';
 
         return array(
-            'id'        => $comment_id,
-            'author'    => $comment->comment_author,
-            'avatar'    => get_avatar_url($email, array('size' => 48)),
-            'date'      => human_time_diff(strtotime($comment->comment_date_gmt), $now) . ' ago',
-            'date_gmt'  => $comment->comment_date_gmt,
-            'content'   => $comment->comment_content,
-            'parent'    => intval($comment->comment_parent),
-            'reactions' => isset($reactions_map[$comment_id]) ? $reactions_map[$comment_id] : Vibe_Comments_Database::REACTION_DEFAULTS,
-            'approved'  => $comment->comment_approved,
-            'is_author' => ($post_author_id && intval($comment->user_id) === $post_author_id),
-            'is_pinned' => (bool) get_comment_meta($comment_id, '_vibe_pinned', true),
-            'children'  => $children,
+            'id'            => $comment_id,
+            'author'        => $comment->comment_author,
+            'avatar'        => get_avatar_url($email, array('size' => 48)),
+            'date'          => human_time_diff(strtotime($comment->comment_date_gmt), $now) . ' ago',
+            'date_gmt'      => $comment->comment_date_gmt,
+            'content'       => $comment->comment_content,
+            'parent'        => intval($comment->comment_parent),
+            'reactions'     => isset($reactions_map[$comment_id]) ? $reactions_map[$comment_id] : Vibe_Comments_Database::REACTION_DEFAULTS,
+            // Was entirely absent from this return array before this fix — every
+            // comment sent to the client always looked un-reacted-to on first
+            // render, for EVERY visitor (guest or logged-in), regardless of
+            // whether they actually had an active reaction. Logged-in users only
+            // ever saw it corrected because initComments() unconditionally calls
+            // syncReactions() for them; guests got no equivalent call on initial
+            // load and only self-corrected after the first 30s polling tick.
+            'user_reaction' => isset($user_reactions_map[$comment_id]) ? $user_reactions_map[$comment_id] : null,
+            'approved'      => $comment->comment_approved,
+            'is_author'     => ($post_author_id && intval($comment->user_id) === $post_author_id),
+            'is_pinned'     => (bool) get_comment_meta($comment_id, '_vibe_pinned', true),
+            'children'      => $children,
         );
     }
 
@@ -889,15 +1016,12 @@ class Vibe_Comments_Ajax_Handler {
 
             // wp_new_comment() already fires comment_post, clean_comment_cache,
             // and wp_update_comment_count internally. No need to repeat them.
-            // Only clear our own plugin-level JSON cache.
-            if (class_exists('Vibe_Comments_Database')) {
-                try {
-                    $db = new Vibe_Comments_Database();
-                    $db->clear_post_comments_cache($post_id);
-                } catch (Throwable $e) {
-                    error_log('Vibe Comments: cache clear error: ' . $e->getMessage());
-                }
-            }
+            // (A block here previously called clear_post_comments_cache(), which
+            // only bumped a wp_cache "comments_version_*" key — verified via a
+            // full-codebase grep that nothing ever reads that versioned cache;
+            // load_comments() uses its own separate vc_load_* transient scheme
+            // entirely. Removed as dead weight; sync_and_purge() below is the
+            // real, actually-consumed cache invalidation.)
 
             // Only purge the page cache when the comment is immediately public.
             // Pending / spam comments don't change the visible page — cache purge

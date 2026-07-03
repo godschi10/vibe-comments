@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 class Vibe_Comments_Admin {
     private $option_name = 'vibe_comments_google_settings';
 
@@ -71,9 +74,17 @@ class Vibe_Comments_Admin {
     public function sanitize_settings( $input ) {
         $clean = array();
 
-        if ( isset( $input['enable_google_login'] ) ) {
-            $clean['enable_google_login'] = (bool) $input['enable_google_login'];
-        }
+        // Unlike text fields, an HTML checkbox submits NOTHING when unchecked —
+        // it never appears in $_POST at all. Guarding this with isset() (as the
+        // other fields correctly do) meant unchecking "Enable Google Login" and
+        // saving silently dropped the key from the stored option entirely, rather
+        // than storing false. The consumption logic in vibe-comments.php then
+        // fell through to "enabled if client_id is set" — re-enabling Google
+        // login the admin had just explicitly turned off. Confirmed this form has
+        // exactly one <form> covering all three fields together (render_page()
+        // above), so absence here unambiguously means "checkbox was unchecked,"
+        // not "this field isn't part of this submission."
+        $clean['enable_google_login'] = ! empty( $input['enable_google_login'] );
         if ( isset( $input['client_id'] ) ) {
             // Client IDs are alphanumeric + hyphens + dots. Strip anything else.
             $clean['client_id'] = sanitize_text_field( $input['client_id'] );

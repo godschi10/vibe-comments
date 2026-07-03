@@ -638,6 +638,23 @@
 /* Messages */
 .vibe-message {
     animation: vibe-slide-in 0.3s ease;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+/* A6 fix: these two were previously set via inline style.cssText in JS
+   (showError()/showSuccess()), which breaks under a strict Content-Security-
+   Policy that disallows 'unsafe-inline' styles. Moved here as ordinary
+   classes — same exact color values, just applied via className instead of
+   the style attribute. */
+.vibe-message-error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+.vibe-message-success {
+    background: #dcfce7;
+    color: #166534;
 }
 
 @keyframes vibe-slide-in {
@@ -944,4 +961,36 @@
 }
 .vibe-recall-clear:hover {
     color: #1d4ed8;
+}
+
+/* Previously an inline style.cssText in moveFormToComment() — see A6 fix. */
+.vibe-reply-container {
+    margin-top: 1rem;
+}
+
+/* A1 fix: noscript fallback message. Kept visually consistent with the rest
+   of the plugin's muted/secondary text treatment rather than looking like an
+   afterthought. */
+.vibe-noscript-notice {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--vibe-border, #e2e8f0);
+    border-radius: var(--vibe-radius, 12px);
+    color: var(--vibe-text-muted, #64748b);
+    font-size: 0.9rem;
+}
+
+/* A5 fix: respect the OS-level "reduce motion" preference. This single,
+   universal rule covers every current animation/transition in this file
+   (reaction pulse, picker pop, loading spinner, message slide-in, all hover
+   transitions) plus every scrollIntoView({behavior:'smooth'}) call in the
+   JS — browsers honor scroll-behavior:auto as an override for that JS option
+   too, per the CSSOM View spec, so no JavaScript changes were needed to make
+   the smooth-scroll calls throughout vibe-comments.js respect this as well. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }

@@ -117,6 +117,11 @@
     let currentPage = 1;
     let hasMorePages = false; // Set by initComments() after first fetch
     let isLoadingMore = false;
+    // Tracks the active sort mode so loadMoreComments() knows whether newly
+    // fetched comments need to be re-sorted into the current view or can be
+    // appended as-is. See initSortToggle() (sets this on every click) and
+    // loadMoreComments() (reads it after appending a new page).
+    let currentSortMode = 'newest'; // matches load_comments()'s server-side default order
 
     document.addEventListener('DOMContentLoaded', function() {
         // Display OAuth redirect-back errors (L4 fix — oauth_error() redirects
@@ -162,15 +167,45 @@
     });
 
     /**
+     * Single source of truth for "N Comments" heading text — localized via
+     * config.oneCommentText / config.manyCommentsTemplate (populated from
+     * PHP's __() in vibe-comments.php), matching templates/comments.php's
+     * own 3-way branch exactly (0/1/many) so server and client never disagree.
+     *
+     * count === 0 returns '' (empty) rather than a "No comments yet" string —
+     * setting an empty heading auto-hides it via the
+     * `.vibe-comments-title:empty { display:none }` CSS rule, AND avoids
+     * duplicating the empty-state block's own "Be the first to share your
+     * thoughts" messaging that already appears directly below the heading
+     * once Load Comments is clicked on a 0-comment post.
+     *
+     * Before this existed, FOUR separate call sites (fetchCommentCount,
+     * initComments, incrementCommentHeading, plus the PHP template) each
+     * reimplemented this pluralization independently — two of them
+     * (initComments, incrementCommentHeading) hardcoded English text that
+     * silently overwrote whatever this function or PHP had already
+     * correctly localized, the moment a user clicked Load Comments or
+     * posted a new comment. Consolidated to this one function so there is
+     * exactly one place this logic can drift out of sync with the server.
+     *
+     * @param  {number} count
+     * @return {string}
+     */
+    function commentCountText(count) {
+        if (count === 0) return '';
+        if (count === 1) return config.oneCommentText || '1 Comment';
+        var tpl = config.manyCommentsTemplate || '%s Comments';
+        return tpl.replace('%s', count.toLocaleString());
+    }
+
+    /**
      * Decoupled comment-count refresh (v3.3.3).
      *
      * Fires on every page load, independent of the "Load Comments" click.
      * Fetches the live count from get_comment_count() — a tiny, cache-backed
      * read (see its PHP docblock for the full scalability design) — and
      * patches the heading text if it differs from what PHP baked into the
-     * cached page. Mirrors the PHP template's exact 3-way pluralization
-     * branch (0/1/many) using the pre-translated strings supplied via
-     * config, so server and client never disagree on grammar across locales.
+     * cached page.
      *
      * Setting .textContent on the heading also auto-reveals it via the
      * `.vibe-comments-title:empty { display:none }` CSS rule — no separate
@@ -186,25 +221,19 @@
         .then(function(res) { return res.json(); })
         .then(function(result) {
             if (!result.success || typeof result.data.count !== 'number') return;
-            var count = result.data.count;
-            var text;
-
-            if (count === 0) {
-                text = '';
-            } else if (count === 1) {
-                text = config.oneCommentText || '1 Comment';
-            } else {
-                var tpl = config.manyCommentsTemplate || '%s Comments';
-                text = tpl.replace('%s', count.toLocaleString());
-            }
-
+            var text = commentCountText(result.data.count);
             if (heading.textContent !== text) {
                 heading.textContent = text;
             }
         })
-        .catch(function() {
-            // Silent failure — the PHP-rendered count stays visible, just
-            // possibly stale by one comment. Not worth surfacing an error for.
+        .catch(function(err) {
+            // Failure here is genuinely low-stakes for a normal visitor — the
+            // PHP-rendered count stays visible, just possibly stale by one
+            // comment, so this stays silent by default. Gated behind
+            // config.debug so a developer who deliberately turned on
+            // VIBE_COMMENTS_DEBUG_TOOLS can actually see it happened, rather
+            // than this being unconditionally and permanently invisible.
+            if (config.debug) { console.warn('Vibe Comments: fetchCommentCount failed', err); }
         });
     }
 
@@ -308,6 +337,7 @@
         var bars = document.querySelectorAll('.vibe-reactions[data-comment-id]');
         var url  = config.ajaxUrl + '?action=vibe_load_comments&post_id=' + config.postId
                  + '&since=' + lastCheckTime + '&per_page=20&_=' + Date.now();
+        if (!config.isLoggedIn) { url += '&vibe_guest_id=' + encodeURIComponent(getGuestId()); }
         bars.forEach(function(bar) {
             var id = parseInt(bar.dataset.commentId, 10);
             if (id) url += '&comment_ids[]=' + id;
@@ -370,6 +400,13 @@
         var banner = document.createElement('div');
         banner.id = 'vibe-new-banner';
         banner.className = 'vibe-new-banner';
+        // A2 fix: without these, a screen reader user gets no notification at
+        // all that new comments arrived — the banner is purely a visual DOM
+        // insertion with nothing announcing it. role="status" + aria-live
+        // means assistive tech announces the label text the moment it's set,
+        // matching how sighted users notice the banner appearing.
+        banner.setAttribute('role', 'status');
+        banner.setAttribute('aria-live', 'polite');
         banner._pendingComments = comments;
 
         var label = document.createElement('span');
@@ -507,6 +544,7 @@
 
         var url = config.ajaxUrl + '?action=vibe_load_comments&post_id=' + config.postId
                 + '&page=' + nextPage + '&per_page=10&_=' + Date.now();
+        if (!config.isLoggedIn) { url += '&vibe_guest_id=' + encodeURIComponent(getGuestId()); }
 
         fetchWithTimeout(url, {}, 15000)
         .then(function(res) { return res.json(); })
@@ -521,14 +559,27 @@
                         if (li && !firstNewLi) firstNewLi = li;
                     }
                 });
-                // B1 fix: scroll ONCE to the first new comment after the whole
-                // batch has rendered. The previous version called scrollIntoView()
-                // inside the loop — once per comment — so a 10-comment batch fired
-                // 10 competing smooth-scroll animations that visibly jittered the
-                // page instead of landing cleanly on the new content.
-                if (firstNewLi) {
+
+                if (currentSortMode !== 'newest') {
+                    // Fix: without this, a newly-fetched page (always arrives in
+                    // the server's default newest-first order — load_comments()
+                    // has no sort param) would land at the bottom of an
+                    // already-resorted list, breaking whatever order the user
+                    // had chosen. Re-sorting the WHOLE list (existing + newly
+                    // appended) fixes this. Skips the scroll-to-newest behavior
+                    // below since "first new comment" isn't a coherent concept
+                    // once everything gets redistributed into oldest/liked
+                    // order — the new items could end up scattered anywhere.
+                    applySort(currentSortMode);
+                } else if (firstNewLi) {
+                    // B1 fix: scroll ONCE to the first new comment after the whole
+                    // batch has rendered. The previous version called scrollIntoView()
+                    // inside the loop — once per comment — so a 10-comment batch fired
+                    // 10 competing smooth-scroll animations that visibly jittered the
+                    // page instead of landing cleanly on the new content.
                     firstNewLi.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
+
                 hasMorePages = !!result.data.has_more;
                 if (!hasMorePages && btn) { btn.style.display = 'none'; }
             }
@@ -769,7 +820,6 @@
         if (!replyContainer) {
             replyContainer = document.createElement('div');
             replyContainer.className = 'vibe-reply-container';
-            replyContainer.style.marginTop = '1rem';
             const body = targetComment.querySelector('.vibe-comment-body');
             if (body) body.appendChild(replyContainer);
         }
@@ -991,10 +1041,24 @@
             .then(function(result) {
                 if (result.success && result.data) {
                     if (result.data.comment) {
-                        appendComment(result.data.comment, data.parent);
+                        var newLi = appendComment(result.data.comment, data.parent);
                         knownCommentIds.add(result.data.comment.id);
                         // Keep heading count in sync.
                         incrementCommentHeading();
+                        // A3 fix: move focus to the just-posted comment. Without
+                        // this, a keyboard/screen-reader user has no confirmation
+                        // their comment actually landed, or where — focus was
+                        // simply left on the now-cleared, now-empty textarea.
+                        // tabindex="-1" makes the <li> programmatically focusable
+                        // without adding a permanent Tab stop; removed again on
+                        // blur so it doesn't linger in the tab order afterward.
+                        if (newLi) {
+                            newLi.setAttribute('tabindex', '-1');
+                            newLi.focus({ preventScroll: true }); // appendComment already scrolled
+                            newLi.addEventListener('blur', function() {
+                                newLi.removeAttribute('tabindex');
+                            }, { once: true });
+                        }
                     }
                     // Clear saved draft — comment is now posted.
                     try { if (draftKey) localStorage.removeItem(draftKey); } catch (e) {}
@@ -1058,18 +1122,18 @@
 
         if (parentId === 0) {
             const list = document.querySelector('.vibe-comment-list');
-            if (!list) return;
+            if (!list) return null;
             const li = createCommentElement(comment);
             list.prepend(li);
             // A brand-new top-level comment always sits above any pinned
             // comments visually if we don't re-hoist — pinned must stay on top.
             hoistPinnedComments();
             if (scroll) li.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            return;
+            return li;
         }
 
         const parentLi = document.getElementById('comment-' + parentId);
-        if (!parentLi) return; // parent not currently rendered (e.g. on another page) — nothing to attach to
+        if (!parentLi) return null; // parent not currently rendered (e.g. on another page) — nothing to attach to
 
         const li = createCommentElement(comment);
         let childUl = parentLi.querySelector(':scope > ul.children');
@@ -1098,15 +1162,24 @@
         }
 
         if (scroll) li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return li;
     }
 
     function escapeHtml(text) {
-        // Browser-native escaping: encodes &, <, >, and " for safe use
-        // in both element content and double-quoted HTML attributes.
-        const div = document.createElement('div');
-        div.textContent = text;
-        // div.innerHTML encodes & < > but NOT " — add that explicitly.
-        return div.innerHTML.replace(/"/g, '&quot;');
+        // Regex-based equivalent of the previous DOM-element approach (set
+        // textContent, read innerHTML back) — same four characters escaped,
+        // in the same order (& first is mandatory, or you'd double-escape
+        // the & this function just inserted for < > "). Avoids creating a
+        // new <div> on every single call; this runs once per rendered field
+        // (author, content, date, etc.) per comment, on every render.
+        // Coerces non-string input the same way `div.textContent = text`
+        // implicitly did, so null/undefined/numbers behave identically to before.
+        text = (text === null || text === undefined) ? '' : String(text);
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
     }
 
     function isValidEmail(email) {
@@ -1118,7 +1191,6 @@
 
         const div = document.createElement('div');
         div.className = 'vibe-message vibe-message-error';
-        div.style.cssText = 'background:#fee2e2;color:#991b1b;padding:0.75rem 1rem;border-radius:8px;margin-bottom:1rem;font-size:0.9rem;';
         div.textContent = message; // textContent safely escapes HTML
 
         const form = document.getElementById('vibe-comment-form');
@@ -1132,7 +1204,6 @@
 
         const div = document.createElement('div');
         div.className = 'vibe-message vibe-message-success';
-        div.style.cssText = 'background:#dcfce7;color:#166534;padding:0.75rem 1rem;border-radius:8px;margin-bottom:1rem;font-size:0.9rem;';
         div.textContent = message;
 
         const form = document.getElementById('vibe-comment-form');
@@ -1184,6 +1255,7 @@
 
         var url = config.ajaxUrl + '?action=vibe_load_comments&post_id=' + config.postId
                 + '&page=1&per_page=10&_=' + Date.now();
+        if (!config.isLoggedIn) { url += '&vibe_guest_id=' + encodeURIComponent(getGuestId()); }
 
         fetchWithTimeout(url, {}, 15000)
         .then(function(res) {
@@ -1206,13 +1278,16 @@
             // Overwrite heading with the live accurate count from the server response.
             // PHP already rendered the wp_options count, but this corrects any edge
             // case where the option was slightly behind (e.g. plugin just installed).
+            // Uses the same shared commentCountText() as fetchCommentCount() and
+            // incrementCommentHeading() — previously this block hardcoded English
+            // text directly, silently overwriting whatever fetchCommentCount() had
+            // already correctly localized the moment a user clicked Load Comments.
             if (titleEl) {
-                titleEl.textContent = total === 0 ? 'No Comments Yet'
-                    : total === 1  ? '1 Comment'
-                    : total.toLocaleString() + ' Comments';
-                // In case heading was hidden via :empty (count was 0 at render time),
-                // force it visible now that it has real content.
-                if (titleEl.style.display === 'none') titleEl.style.display = '';
+                titleEl.textContent = commentCountText(total);
+                // Visibility is handled entirely by the .vibe-comments-title:empty
+                // CSS rule (no text content = hidden) — nothing in this codebase
+                // sets display:none as an inline style on this element, so the
+                // display-restoration check that used to live here was dead code.
             }
 
             if (comments.length === 0) {
@@ -1324,6 +1399,7 @@
             btn.textContent = 'Loading\u2026';
 
             var url = config.ajaxUrl + '?action=vibe_load_replies&post_id=' + postId + '&comment_id=' + commentId;
+            if (!config.isLoggedIn) { url += '&vibe_guest_id=' + encodeURIComponent(getGuestId()); }
 
             fetchWithTimeout(url, {}, 10000)
             .then(function(res) { return res.json(); })
@@ -1421,10 +1497,6 @@
         });
     }
 
-    /**
-     * Fetch live comment count on page load — bypasses full-page cache.
-     * Updates both the heading and the trigger button text before anyone clicks.
-     */
     /**
      * Guest identity persistence via localStorage.
      * ─────────────────────────────────────────────
@@ -1598,56 +1670,69 @@
      * Sort toggle — reverses top-level comment order in the DOM.
      * Zero server calls. Nested replies stay under their parent.
      */
+    /**
+     * Apply a sort mode to the current top-level comment list. Always reads
+     * live DOM state (list.children / the datetime attribute each comment
+     * already carries) rather than a point-in-time snapshot — this is what
+     * makes it safe to call again after loadMoreComments() appends a new
+     * page: there's no stale captured array that doesn't know about the
+     * newly added elements, unlike the original implementation, which
+     * snapshotted "load order" once and reversed that fixed array for
+     * "oldest" mode — a snapshot that couldn't account for comments
+     * appended later via Load More.
+     */
+    function applySort(modeId) {
+        const list = document.getElementById('vibe-comment-list');
+        if (!list) return;
+
+        if (modeId === 'oldest') {
+            // Reuses the same chronological sort already proven correct for
+            // the unpin-snaps-back-into-place behavior below.
+            restoreChronologicalOrder(list);
+        } else if (modeId === 'liked') {
+            Array.from(list.children)
+                .sort(function(a, b) {
+                    const aL = parseInt(((a.querySelector('.vibe-reactions') || {}).dataset || {}).totalReactions || '0', 10);
+                    const bL = parseInt(((b.querySelector('.vibe-reactions') || {}).dataset || {}).totalReactions || '0', 10);
+                    return bL - aL;
+                })
+                .forEach(function(el) { list.appendChild(el); });
+        } else {
+            // newest — same datetime comparison as restoreChronologicalOrder(),
+            // just descending instead of ascending.
+            Array.from(list.querySelectorAll('li.comment'))
+                .sort(function(a, b) {
+                    const aEl = a.querySelector('time.vibe-comment-time[datetime]');
+                    const bEl = b.querySelector('time.vibe-comment-time[datetime]');
+                    const aDate = aEl ? aEl.getAttribute('datetime') : '';
+                    const bDate = bEl ? bEl.getAttribute('datetime') : '';
+                    if (aDate > bDate) return -1;
+                    if (aDate < bDate) return  1;
+                    const aId = parseInt((a.id || '').replace('comment-', ''), 10) || 0;
+                    const bId = parseInt((b.id || '').replace('comment-', ''), 10) || 0;
+                    return bId - aId;
+                })
+                .forEach(function(el) { list.appendChild(el); });
+        }
+        // Pinned comments must always stay at the top regardless of sort mode.
+        hoistPinnedComments();
+    }
+
     function initSortToggle() {
-        const btn  = document.getElementById('vibe-sort-toggle');
+        const btn = document.getElementById('vibe-sort-toggle');
         const list = document.getElementById('vibe-comment-list');
         if (!btn || !list) return;
 
         // v3.4.0: load_comments() default order flipped to DESC (newest first,
-        // see class-ajax-handler.php). snapshot() below captures whatever the
-        // list's DOM order is at first use — under the new default, that IS
-        // newest-first — so "restore snapshot" now means "newest" and "oldest"
-        // is the one that needs an explicit reverse. This is the inverse of the
-        // pre-v3.4.0 mapping, where the load order was oldest-first.
+        // see class-ajax-handler.php). "Newest" is therefore mode index 0.
         const modes = [
             { id: 'newest', label: '\u2193', title: 'Newest first' },
             { id: 'oldest', label: '\u2191', title: 'Oldest first' },
             { id: 'liked',  label: '\u2665', title: 'Most liked' },
         ];
-        let idx           = 0;  // current mode index — reassigned on each click
-        let originalOrder = null;  // reassigned once on first snapshot()
-
-        function snapshot() {
-            // Capture load order once, before any reordering. Under v3.4.0
-            // this order IS newest-first (the server's default), not oldest.
-            if (!originalOrder) {
-                originalOrder = Array.from(list.children);
-            }
-        }
-
-        function applySort(modeId) {
-            if (modeId === 'oldest') {
-                originalOrder.slice().reverse().forEach(function(el) {
-                    list.appendChild(el);
-                });
-            } else if (modeId === 'liked') {
-                Array.from(list.children)
-                    .sort(function(a, b) {
-                        const aL = parseInt(((a.querySelector('.vibe-reactions') || {}).dataset || {}).totalReactions || '0', 10);
-                        const bL = parseInt(((b.querySelector('.vibe-reactions') || {}).dataset || {}).totalReactions || '0', 10);
-                        return bL - aL;
-                    })
-                    .forEach(function(el) { list.appendChild(el); });
-            } else {
-                // newest — restore original load order (server default as of v3.4.0)
-                originalOrder.forEach(function(el) { list.appendChild(el); });
-            }
-            // Pinned comments must always stay at the top regardless of sort mode.
-            hoistPinnedComments();
-        }
+        let idx = 0;  // current mode index — reassigned on each click
 
         btn.addEventListener('click', function() {
-            snapshot();
             idx = (idx + 1) % modes.length;
             const mode  = modes[idx];
             const label = btn.querySelector('.vibe-sort-label');
@@ -1655,6 +1740,13 @@
             btn.title = mode.title;
             btn.setAttribute('data-mode', mode.id);
             applySort(mode.id);
+            // Fix for Load More + Sort interaction: loadMoreComments() fetches
+            // the next page in the SERVER's default order (always newest-first,
+            // no sort param sent) and appends it — without tracking which sort
+            // mode is currently active, a newly-appended page would land in
+            // server order at the end of an already-resorted list, breaking
+            // the visual sort the user just chose. See loadMoreComments().
+            currentSortMode = mode.id;
         });
     }
 
@@ -1839,7 +1931,9 @@
         if (isNaN(current)) current = 0;
 
         var next = current + 1;
-        titleEl.textContent = next === 1 ? '1 Comment' : next.toLocaleString() + ' Comments';
+        // Shared with fetchCommentCount() and initComments() — see
+        // commentCountText()'s docblock for why this was consolidated.
+        titleEl.textContent = commentCountText(next);
         // Heading may have been empty/hidden via CSS :empty — text content
         // now makes it non-empty so the :empty rule no longer applies.
     }

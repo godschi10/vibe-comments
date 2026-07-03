@@ -286,31 +286,47 @@ class Vibe_Comments_OAuth_Google {
         $valid_issuers = array('https://accounts.google.com', 'accounts.google.com');
         if (empty($payload['iss']) || !in_array($payload['iss'], $valid_issuers, true)) return null;
 
-        // Fetch Google's JWKS — cached for 1 hour.
-        $jwks = get_transient('vibe_google_jwks');
-        if (false === $jwks) {
-            $res = wp_remote_get('https://www.googleapis.com/oauth2/v3/certs', array(
-                'timeout' => 5,
-            ));
-            if (is_wp_error($res)) return null;
-            $jwks = json_decode(wp_remote_retrieve_body($res), true);
-            if (empty($jwks['keys'])) return null;
-            set_transient('vibe_google_jwks', $jwks, HOUR_IN_SECONDS);
-        }
-
-        // Find the key matching the token's kid.
+        // Fetch Google's JWKS — cached for 1 hour. Find the key matching the
+        // token's kid, retrying ONCE with a forced-fresh fetch if not found.
+        //
+        // Google rotates its signing keys periodically. If a token was signed
+        // with a key that rotated in AFTER our transient was cached, the kid
+        // won't be in our stale cached set. Previously this comment claimed
+        // "try once more" but the code only busted the cache for NEXT time and
+        // failed the CURRENT request — a user hitting a rotation window got a
+        // hard login failure and had to manually retry. This now actually
+        // retries within the same request: attempt 1 uses whatever's cached
+        // (or fetches if nothing is), and only if the kid genuinely isn't
+        // found does attempt 2 force a fresh network fetch and try again
+        // before giving up for real.
         $matching_key = null;
-        foreach ($jwks['keys'] ?? array() as $key) {
-            if (($key['kid'] ?? '') === $header['kid']) {
-                $matching_key = $key;
-                break;
+        for ( $attempt = 0; $attempt < 2 && null === $matching_key; $attempt++ ) {
+            $jwks = ( $attempt === 0 ) ? get_transient( 'vibe_google_jwks' ) : false;
+
+            if ( false === $jwks ) {
+                $res = wp_remote_get( 'https://www.googleapis.com/oauth2/v3/certs', array(
+                    'timeout' => 5,
+                ) );
+                if ( is_wp_error( $res ) ) return null;
+                $jwks = json_decode( wp_remote_retrieve_body( $res ), true );
+                if ( empty( $jwks['keys'] ) ) return null;
+                set_transient( 'vibe_google_jwks', $jwks, HOUR_IN_SECONDS );
+            }
+
+            foreach ( $jwks['keys'] ?? array() as $key ) {
+                if ( ( $key['kid'] ?? '' ) === $header['kid'] ) {
+                    $matching_key = $key;
+                    break;
+                }
+            }
+
+            if ( null === $matching_key && $attempt === 0 ) {
+                // Cached set didn't have it — force a genuine network refetch
+                // on the next loop iteration rather than trusting the cache again.
+                delete_transient( 'vibe_google_jwks' );
             }
         }
-        if (null === $matching_key) {
-            // kid not found — JWKS may be stale. Bust cache and try once more.
-            delete_transient('vibe_google_jwks');
-            return null;
-        }
+        if ( null === $matching_key ) return null;
 
         // Convert the JWK to a PEM public key for openssl_verify().
         $pem = $this->jwk_to_pem($matching_key);

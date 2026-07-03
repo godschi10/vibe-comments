@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 class Vibe_Comments_Activator {
     const DB_VERSION = '1.3.1';
 
@@ -44,6 +47,17 @@ class Vibe_Comments_Activator {
 
         global $wpdb;
         $table_name = $wpdb->prefix . 'vibe_comment_likes';
+        // Tracks whether EVERY step below actually succeeded. Previously none
+        // of these $wpdb->query() return values were checked — a partially
+        // failed migration (e.g. the ADD COLUMN succeeds but the subsequent
+        // DROP INDEX fails for some reason) would silently continue to the
+        // NEXT statement anyway, then still call update_option() at the end
+        // regardless, permanently marking a broken migration as "done." Since
+        // maybe_upgrade() only runs when the stored version is behind
+        // DB_VERSION, that means it would NEVER run again — the table stays
+        // in a broken, inconsistent state with no further attempt to
+        // self-heal and no error surfaced to the site admin anywhere.
+        $ok = true;
 
         // ── v1.1 → v1.2: guest_token ─────────────────────────────────────
         // MUST run BEFORE v1.2→v1.3. reaction_type is added AFTER guest_token,
@@ -51,20 +65,42 @@ class Vibe_Comments_Activator {
         // and reaction_type is never created. Running in ascending order fixes this.
         $col = $wpdb->get_results( "SHOW COLUMNS FROM `{$table_name}` LIKE 'guest_token'" );
         if ( empty( $col ) ) {
-            $wpdb->query( "ALTER TABLE `{$table_name}` ADD COLUMN `guest_token` VARCHAR(64) NOT NULL DEFAULT ''" );
-            $wpdb->query( "ALTER TABLE `{$table_name}` DROP INDEX `unique_like`" );
-            $wpdb->query( "ALTER TABLE `{$table_name}` ADD UNIQUE KEY `unique_like` (`comment_id`, `user_id`, `guest_token`)" );
+            $r1 = $wpdb->query( "ALTER TABLE `{$table_name}` ADD COLUMN `guest_token` VARCHAR(64) NOT NULL DEFAULT ''" );
+            $r2 = $wpdb->query( "ALTER TABLE `{$table_name}` DROP INDEX `unique_like`" );
+            $r3 = $wpdb->query( "ALTER TABLE `{$table_name}` ADD UNIQUE KEY `unique_like` (`comment_id`, `user_id`, `guest_token`)" );
+            if ( false === $r1 || false === $r2 || false === $r3 ) {
+                $ok = false;
+                error_log( '[Vibe Comments] Migration v1.1→v1.2 (guest_token) failed: ' . $wpdb->last_error );
+            }
         }
 
         // ── v1.2 → v1.3: reaction_type ───────────────────────────────────
         // Existing rows get reaction_type = 'like' via the DEFAULT clause.
-        $col = $wpdb->get_results( "SHOW COLUMNS FROM `{$table_name}` LIKE 'reaction_type'" );
-        if ( empty( $col ) ) {
-            $wpdb->query(
-                "ALTER TABLE `{$table_name}`
-                 ADD COLUMN `reaction_type` VARCHAR(20) NOT NULL DEFAULT 'like'
-                 AFTER `guest_token`"
-            );
+        // Only attempted if the previous step succeeded (or wasn't needed) —
+        // no point trying to add reaction_type AFTER guest_token if
+        // guest_token itself just failed to get created.
+        if ( $ok ) {
+            $col = $wpdb->get_results( "SHOW COLUMNS FROM `{$table_name}` LIKE 'reaction_type'" );
+            if ( empty( $col ) ) {
+                $r4 = $wpdb->query(
+                    "ALTER TABLE `{$table_name}`
+                     ADD COLUMN `reaction_type` VARCHAR(20) NOT NULL DEFAULT 'like'
+                     AFTER `guest_token`"
+                );
+                if ( false === $r4 ) {
+                    $ok = false;
+                    error_log( '[Vibe Comments] Migration v1.2→v1.3 (reaction_type) failed: ' . $wpdb->last_error );
+                }
+            }
+        }
+
+        if ( ! $ok ) {
+            // Do NOT update_option() here — leaving the stored version behind
+            // DB_VERSION means maybe_upgrade() will genuinely retry on the
+            // next request, rather than permanently giving up after one
+            // failed attempt. The transient flush below still runs regardless
+            // (harmless either way, and if some columns DID succeed before
+            // the failure, stale cached JSON still shouldn't survive it).
         }
 
         // Flush all vc_load_* transients so the first request after upgrade
@@ -76,6 +112,8 @@ class Vibe_Comments_Activator {
                 OR option_name LIKE '\_transient\_timeout\_vc\_%'"
         );
 
-        update_option('vibe_comments_db_version', self::DB_VERSION);
+        if ( $ok ) {
+            update_option('vibe_comments_db_version', self::DB_VERSION);
+        }
     }
 }

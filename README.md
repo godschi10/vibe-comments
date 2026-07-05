@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.5.3  
+**Version:** 3.5.5  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later
@@ -152,6 +152,8 @@ Fire-and-forget (`blocking: false`) — never delays comment approval.
 
 JWT signatures are verified against Google's JWKS on every callback. JWKS cached for 1 hour.
 
+**Account matching:** a verified Google login is matched to an existing WordPress account by email address. This is standard "Sign in with X" behavior, not a plugin-specific choice — but it's worth being aware of on this specific site: if a WordPress user account already exists with the same email a visitor's Google account uses, signing in with Google logs them into *that* existing account, with whatever role and capabilities it already has. Only relevant if WordPress accounts are ever created with emails a site visitor might also control via Google.
+
 ---
 
 ## Security
@@ -159,7 +161,8 @@ JWT signatures are verified against Google's JWKS on every callback. JWKS cached
 | Control | Status |
 |---|---|
 | CSRF (nonces on all writes) | ✅ `wp_rest` nonce on every AJAX action |
-| SQL injection | ✅ `$wpdb->prepare()` throughout; `absint()` on all IDs |
+| Post visibility | ✅ `load_comments()`/`load_replies()` check the post's status against WordPress's own public-status list (`get_post_stati(['public' => true])`), falling back to `current_user_can('read_post', ...)` only for non-public posts (so the post's own author/an editor can still see their own draft), plus `post_password_required()` — a post moved to draft/private, or password-protected, no longer serves its comment content to unauthorized visitors regardless of post_id |
+| SQL injection | ✅ `$wpdb->prepare()` on all parameterized queries; IN() clauses use `absint()`-cast ID arrays interpolated directly (not injectable — every element is guaranteed a non-negative integer — but not literally `prepare()`, since MySQL's `IN()` has no native array placeholder) |
 | XSS (server) | ✅ `sanitize_text_field`, `sanitize_textarea_field` |
 | XSS (client) | ✅ `escapeHtml()` with `"` encoding before any DOM write |
 | Rate limiting | ✅ Transients — shared across all PHP-FPM workers; comment submission scoped to IP + post_id (prevents cross-post NAT collision); `sync_likes` capped at 1 request per 3 seconds per IP; `load_replies` capped at 1 request per 2 seconds per IP+comment |

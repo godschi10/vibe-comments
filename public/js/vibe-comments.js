@@ -1266,7 +1266,21 @@
             list.innerHTML = '';
 
             if (!result.success || !result.data) {
+                // BUG FIX: this branch handles a "soft" failure — the server
+                // responded fine (HTTP 200, valid JSON), it just reported
+                // success:false. That's a RESOLVED promise, not a rejected
+                // one, so .catch() below never runs for this case — meaning
+                // onComplete() must be called HERE too, or the trigger
+                // button (which set itself to "Loading…" before this fetch
+                // even started) never gets reset and the container holding
+                // this very error message never gets revealed. The visitor
+                // was left staring at a permanently stuck "Loading…" button
+                // with a perfectly good error message sitting hidden right
+                // behind it, for ANY reason this could return success:false
+                // — not just the specific post-visibility cause that first
+                // exposed this.
                 list.innerHTML = '<li class="vibe-error">Could not load comments. <button type="button" class="vibe-retry-btn">Try again</button></li>';
+                if (typeof onComplete === 'function') onComplete();
                 return;
             }
 
@@ -1699,8 +1713,15 @@
                 .forEach(function(el) { list.appendChild(el); });
         } else {
             // newest — same datetime comparison as restoreChronologicalOrder(),
-            // just descending instead of ascending.
-            Array.from(list.querySelectorAll('li.comment'))
+            // just descending instead of ascending. :scope > li.comment scopes
+            // this to direct (top-level) children only — see the fix note on
+            // restoreChronologicalOrder() for why this matters: the original
+            // version of this branch was written by mirroring that function's
+            // (then-buggy) list.querySelectorAll('li.comment') pattern, which
+            // matches the ENTIRE subtree including nested replies, and moves
+            // every one of them out of its parent thread into the top-level
+            // list the moment "newest" mode ran with any thread expanded.
+            Array.from(list.querySelectorAll(':scope > li.comment'))
                 .sort(function(a, b) {
                     const aEl = a.querySelector('time.vibe-comment-time[datetime]');
                     const bEl = b.querySelector('time.vibe-comment-time[datetime]');
@@ -1819,7 +1840,20 @@
      * rightful position without requiring a page refresh.
      */
     function restoreChronologicalOrder(list) {
-        var items = Array.from(list.querySelectorAll('li.comment'));
+        // :scope > li.comment restricts this to DIRECT children only — the
+        // top-level comments. Was previously list.querySelectorAll('li.comment'),
+        // which searches the ENTIRE subtree and matches every nested reply
+        // inside any expanded thread's <ul class="children"> too. Since
+        // list.appendChild() on an element that already exists elsewhere in
+        // the DOM MOVES it rather than cloning it, every single reply in every
+        // expanded thread was being ripped out of its parent and flattened
+        // into the top-level list on every call — completely destroying the
+        // nesting structure. This function is shared by "oldest" sort mode,
+        // the "newest" sort branch in applySort() (which mirrored this exact
+        // pattern, propagating the same bug there), and the pin/unpin
+        // snap-back-to-chronological-position behavior — all three were
+        // affected by this single root cause.
+        var items = Array.from(list.querySelectorAll(':scope > li.comment'));
         items.sort(function(a, b) {
             var aEl = a.querySelector('time.vibe-comment-time[datetime]');
             var bEl = b.querySelector('time.vibe-comment-time[datetime]');

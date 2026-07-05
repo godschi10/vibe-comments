@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.5.3
+ * Version:           3.5.5
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.5.3');
+define('VIBE_COMMENTS_VERSION', '3.5.5');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -179,7 +179,16 @@ class Vibe_Comments {
     }
 
     public function enqueue_assets() {
-        if (is_singular() && comments_open()) {
+        // Matches class-template-loader.php's load_template() condition exactly
+        // — that function was fixed in v3.5.0 to route to this plugin's
+        // template whenever a post has existing comments, even if new
+        // commenting is closed, so JSON-LD schema output isn't describing a
+        // discussion the plugin's own UI can't display. This condition was
+        // the other half of that same fix and was never updated to match —
+        // the template rendered correctly, but its CSS/JS never loaded,
+        // leaving visitors an unstyled heading and a "Load Comments" button
+        // that did nothing when clicked.
+        if (is_singular() && (comments_open() || (int) get_comments_number() > 0)) {
             wp_enqueue_style(
                 'vibe-comments',
                 VIBE_COMMENTS_PLUGIN_URL . 'public/css/vibe-comments.css',
@@ -201,15 +210,11 @@ class Vibe_Comments {
                 : !empty($vibe_gs['client_id']);
 
             wp_localize_script('vibe-comments', 'vibeComments', array(
-                'restUrl'          => esc_url_raw(rest_url('vibe-comments/v1/')),
                 'nonce'            => wp_create_nonce('wp_rest'),
                 'ajaxUrl'          => admin_url('admin-ajax.php'),
                 'postId'           => get_the_ID(),
                 'isLoggedIn'       => is_user_logged_in(),
                 'isAdmin'          => current_user_can('moderate_comments'),
-                'loginUrl'         => wp_login_url(get_permalink()),
-                'siteName'         => get_bloginfo('name'),
-                'googleAuth'       => esc_url_raw(rest_url('vibe-comments/v1/google-auth')),
                 'googleEnabled'    => $google_on,
                 'maxCommentLength' => (int) apply_filters('vibe_comments_max_length', 2000),
                 // Mirrors templates/comments.php's exact 3-way branch (0/1/many) so the

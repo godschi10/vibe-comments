@@ -301,6 +301,45 @@ class Vibe_Comments_Ajax_Handler {
             return;
         }
 
+        // Neither this nor load_replies() previously checked whether the
+        // CURRENT VISITOR is actually allowed to see this post at all — only
+        // that it existed and had approved comments. A post moved to draft
+        // or private after collecting comments (a normal editorial action,
+        // not an edge case), or password-protected, would still serve its
+        // full comment content — author names, text, timestamps — to anyone
+        // who called this endpoint with the post_id, completely bypassing
+        // whatever visibility WordPress itself enforces on the post.
+        //
+        // FIX: current_user_can('read_post', ...) was the wrong check here.
+        // For a PUBLISHED post, that meta capability resolves (per WordPress
+        // core's own map_meta_cap()) to the PRIMITIVE 'read' capability — and
+        // 'read' is only granted to authenticated roles (Subscriber and up).
+        // An anonymous, logged-out visitor has zero roles and zero
+        // capabilities, 'read' included — meaning this check returned FALSE
+        // for every single anonymous visitor on every single post, published
+        // or not. Since anonymous visitors are the overwhelming majority of
+        // real traffic on any public blog, this rejected almost every
+        // legitimate load_comments() call the moment it shipped.
+        //
+        // Corrected logic: a post is visible if its status is one of
+        // WordPress's own registered PUBLIC statuses (get_post_stati() with
+        // 'public' => true — 'publish' by default, but this also correctly
+        // picks up any custom public statuses a site or plugin registers,
+        // rather than hardcoding the literal string 'publish'). Only when
+        // the post is NOT publicly visible does it fall back to
+        // current_user_can('read_post', ...) — which is exactly the right
+        // tool for THAT narrower question ("can this specific logged-in
+        // user, e.g. the post's author or an editor, see their own
+        // draft/private post"), rather than the wrong tool for "can the
+        // general public see this at all."
+        $post = get_post($post_id);
+        $public_statuses    = get_post_stati(array('public' => true));
+        $is_publicly_viewable = $post && in_array($post->post_status, $public_statuses, true);
+        if (!$post || (!$is_publicly_viewable && !current_user_can('read_post', $post_id)) || post_password_required($post)) {
+            wp_send_json_error(array('message' => __('Invalid post.', 'vibe-comments')));
+            return;
+        }
+
         // Resolved BEFORE the cache check on purpose. The comment list itself
         // (vc_load_* transient) is cached with NO user identity in its key —
         // it's the same cached blob served to every visitor of this post/page.
@@ -488,6 +527,17 @@ class Vibe_Comments_Ajax_Handler {
         $comment_id = isset($_GET['comment_id']) ? absint($_GET['comment_id']) : 0;
 
         if (!$post_id || !$comment_id) {
+            wp_send_json_error(array('message' => __('Invalid request.', 'vibe-comments')));
+            return;
+        }
+
+        // Same reasoning and same fix as load_comments() — see that function's
+        // comment for the full explanation. This endpoint had the identical gap,
+        // including the same now-corrected mistake with current_user_can('read_post').
+        $post = get_post($post_id);
+        $public_statuses      = get_post_stati(array('public' => true));
+        $is_publicly_viewable = $post && in_array($post->post_status, $public_statuses, true);
+        if (!$post || (!$is_publicly_viewable && !current_user_can('read_post', $post_id)) || post_password_required($post)) {
             wp_send_json_error(array('message' => __('Invalid request.', 'vibe-comments')));
             return;
         }

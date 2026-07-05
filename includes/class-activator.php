@@ -63,14 +63,42 @@ class Vibe_Comments_Activator {
         // MUST run BEFORE v1.2→v1.3. reaction_type is added AFTER guest_token,
         // so if guest_token doesn't exist yet, MySQL silently fails the ALTER
         // and reaction_type is never created. Running in ascending order fixes this.
+        //
+        // Column addition and index correction are checked INDEPENDENTLY
+        // (two separate guards below) rather than one "does guest_token
+        // exist" check covering all three ALTER statements. With a single
+        // coarse guard, a partial failure — ADD COLUMN succeeds, but DROP
+        // INDEX or the re-ADD fails — would still correctly set $ok=false
+        // and prevent update_option() from advancing (that part already
+        // worked). But on the NEXT request, the guard would find the column
+        // already exists and skip the ENTIRE block, including the index
+        // correction that never actually completed — silently leaving
+        // unique_like without guest_token in it, forever, with no further
+        // retry attempt.
         $col = $wpdb->get_results( "SHOW COLUMNS FROM `{$table_name}` LIKE 'guest_token'" );
         if ( empty( $col ) ) {
             $r1 = $wpdb->query( "ALTER TABLE `{$table_name}` ADD COLUMN `guest_token` VARCHAR(64) NOT NULL DEFAULT ''" );
-            $r2 = $wpdb->query( "ALTER TABLE `{$table_name}` DROP INDEX `unique_like`" );
-            $r3 = $wpdb->query( "ALTER TABLE `{$table_name}` ADD UNIQUE KEY `unique_like` (`comment_id`, `user_id`, `guest_token`)" );
-            if ( false === $r1 || false === $r2 || false === $r3 ) {
+            if ( false === $r1 ) {
                 $ok = false;
-                error_log( '[Vibe Comments] Migration v1.1→v1.2 (guest_token) failed: ' . $wpdb->last_error );
+                error_log( '[Vibe Comments] Migration v1.1→v1.2 (add guest_token column) failed: ' . $wpdb->last_error );
+            }
+        }
+
+        // Checked independently of the column-existence guard above, so this
+        // retries correctly even if guest_token already exists from a prior
+        // partial attempt that got this far but failed on the index itself.
+        if ( $ok ) {
+            $idx = $wpdb->get_results( $wpdb->prepare(
+                "SHOW INDEX FROM `{$table_name}` WHERE Key_name = %s AND Column_name = %s",
+                'unique_like', 'guest_token'
+            ) );
+            if ( empty( $idx ) ) {
+                $r2 = $wpdb->query( "ALTER TABLE `{$table_name}` DROP INDEX `unique_like`" );
+                $r3 = $wpdb->query( "ALTER TABLE `{$table_name}` ADD UNIQUE KEY `unique_like` (`comment_id`, `user_id`, `guest_token`)" );
+                if ( false === $r2 || false === $r3 ) {
+                    $ok = false;
+                    error_log( '[Vibe Comments] Migration v1.1→v1.2 (unique_like index) failed: ' . $wpdb->last_error );
+                }
             }
         }
 

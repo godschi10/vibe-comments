@@ -6,8 +6,17 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Vibe Comments REST API
  *
  * The plugin's primary AJAX surface is admin-ajax.php (class-ajax-handler.php).
- * This class registers only the Google OAuth callback route — all other REST
- * endpoints that existed in earlier versions have been removed because:
+ * This class registers only debug/diagnostic REST routes (/test,
+ * /debug-comment, both gated behind VIBE_COMMENTS_DEBUG_TOOLS) — it does NOT
+ * register the Google OAuth callback route. That route (/google-callback) is
+ * registered entirely independently, in class-oauth-google.php's own
+ * register_callback_route(), hooked separately to rest_api_init. (This
+ * docblock previously claimed this class registered the OAuth callback —
+ * it never did; that was a separate stale-comment issue from the "WP_DEBUG
+ * mode" phrasing fixed elsewhere in this same file.)
+ *
+ * All OTHER REST endpoints that existed in earlier versions have been
+ * removed because:
  *
  *   1. The JS frontend no longer calls them (migrated to admin-ajax in v2.0.0).
  *   2. The DB methods they depended on (toggle_like, user_has_liked, etc.) were
@@ -19,8 +28,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Debug endpoints are gated behind the VIBE_COMMENTS_DEBUG_TOOLS constant, not
  * WP_DEBUG — see debug-logger.php for why: WP_DEBUG is commonly left on in
  * production for error capture, which is not the same as consenting to expose
- * debug-only REST routes. (This comment previously said "WP_DEBUG mode,"
- * which never matched what the code below actually checks.)
+ * debug-only REST routes.
  */
 class Vibe_Comments_REST_API {
     private $namespace = 'vibe-comments/v1';

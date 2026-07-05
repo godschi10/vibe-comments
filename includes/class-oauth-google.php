@@ -43,7 +43,10 @@ class Vibe_Comments_OAuth_Google {
     }
 
     public function ajax_google_auth() {
-        check_ajax_referer( 'wp_rest', 'nonce', false );
+        if ( ! check_ajax_referer( 'wp_rest', 'nonce', false ) ) {
+            wp_send_json_error( array( 'message' => __( 'Security check failed.', 'vibe-comments' ) ), 403 );
+            return;
+        }
 
         $settings  = get_option( $this->option_name, array() );
         $client_id = isset( $settings['client_id'] ) ? $settings['client_id'] : '';

@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.5.5  
+**Version:** 3.5.6  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later
@@ -168,7 +168,7 @@ JWT signatures are verified against Google's JWKS on every callback. JWKS cached
 | Rate limiting | ✅ Transients — shared across all PHP-FPM workers; comment submission scoped to IP + post_id (prevents cross-post NAT collision); `sync_likes` capped at 1 request per 3 seconds per IP; `load_replies` capped at 1 request per 2 seconds per IP+comment |
 | JSON-LD structured data | ✅ Every text field passed through `wp_strip_all_tags()`; encoding additionally hardened with `JSON_HEX_TAG`/`JSON_HEX_AMP` as defense-in-depth |
 | Guest token forgery | ✅ Strict canonical UUID v4 regex match required before hashing — malformed input falls through to IP-based fallback rather than being cleaned and accepted |
-| IP spoofing | ✅ Only `CF-Connecting-IP` and `REMOTE_ADDR` trusted |
+| IP spoofing | ✅ `CF-Connecting-IP` only trusted when `REMOTE_ADDR` (unspoofable — the actual TCP connection source) falls within Cloudflare's own published IP ranges; otherwise falls back to `REMOTE_ADDR` directly. `X-Forwarded-For` never trusted at all |
 | Content length | ✅ Enforced server-side against configured UX limit |
 | Honeypot spam | ✅ CSS off-screen, fake-success response to bots |
 | Reaction type whitelist | ✅ Server-side `in_array` before any DB write |

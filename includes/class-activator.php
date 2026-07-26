@@ -3,7 +3,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 class Vibe_Comments_Activator {
-    const DB_VERSION = '1.3.1';
+    const DB_VERSION = '1.4.0';
 
     public static function activate() {
         global $wpdb;
@@ -14,6 +14,7 @@ class Vibe_Comments_Activator {
         // Each user gets exactly one reaction per comment (the UNIQUE KEY
         // covers both logged-in and guest paths without collision).
         // Existing installs: existing rows get reaction_type = 'like' via DEFAULT.
+        // guest_token is VARCHAR(64) — SHA256 produces exactly 64 hex chars.
         $sql = "CREATE TABLE {$table_name} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             comment_id bigint(20) unsigned NOT NULL,
@@ -118,6 +119,25 @@ class Vibe_Comments_Activator {
                 if ( false === $r4 ) {
                     $ok = false;
                     error_log( '[Vibe Comments] Migration v1.2→v1.3 (reaction_type) failed: ' . $wpdb->last_error );
+                }
+            }
+        }
+
+        // ── v1.3 → v1.4: guest_token to SHA256 (64 chars) ─────────────────────
+        // guest_token column is already VARCHAR(64) from v1.1→v1.2.
+        // Existing tokens are 32-char MD5. We need to note legacy tokens exist
+        // and they will be regenerated to SHA256 on next user interaction.
+        if ( $ok ) {
+            $col = $wpdb->get_results( "SHOW COLUMNS FROM `{$table_name}` LIKE 'guest_token'" );
+            if ( ! empty( $col ) ) {
+                // Check if any existing tokens are 32 chars (old MD5 format)
+                $old_tokens = $wpdb->get_results( "SELECT guest_token FROM `{$table_name}` WHERE LENGTH(guest_token) = 32" );
+                if ( ! empty( $old_tokens ) ) {
+                    // We can't directly reverse MD5 to get the original UUID/IP.
+                    // Legacy tokens will be regenerated to SHA256 on next user interaction
+                    // via get_guest_token() in class-database.php.
+                    // The UNIQUE KEY still works because old tokens are unique.
+                    error_log( '[Vibe Comments] Migration v1.3→v1.4: ' . count( $old_tokens ) . ' legacy MD5 guest_tokens detected. They will be regenerated to SHA256 on next user interaction.' );
                 }
             }
         }

@@ -697,25 +697,37 @@ class Vibe_Comments_Ajax_Handler {
      * Purge all cached comment data for a post.
      * Called when a comment is approved, trashed, or deleted.
      * Covers both the server-side transients and edge caches.
+     *
+     * @param int $post_id
+     * @return void
      */
-    public function purge_comments_data_cache($post_id) {
-        $post_id = absint($post_id);
-        if (!$post_id) return;
+    public static function purge_comments_data_cache( $post_id ) {
+        $post_id = absint( $post_id );
+        if ( ! $post_id ) {
+            return;
+        }
 
         // Purge transients for pages 1–5 (covers almost all real posts).
         // Deep pages (6+) rarely get cached and regenerate on demand.
-        foreach (array(10, 20, 50) as $per_page) {
-            for ($p = 1; $p <= 5; $p++) {
-                delete_transient('vc_load_' . $post_id . '_' . $p . '_' . $per_page);
+        foreach ( array( 10, 20, 50 ) as $per_page ) {
+            for ( $p = 1; $p <= 5; $p++ ) {
+                delete_transient( 'vc_load_' . $post_id . '_' . $p . '_' . $per_page );
             }
         }
 
         // Tell LiteSpeed to purge all responses tagged with 'vibe-comments'.
-        do_action('litespeed_purge_tag', 'vibe-comments');
+        do_action( 'litespeed_purge_tag', 'vibe-comments' );
 
         // Cloudflare: purge via Cache-Tag if CF Pro/Ent is in use.
         // For CF Free/Pro without tags: the 2-minute TTL is the fallback.
-        do_action('cloudflare_purge_by_tags', array('vibe-comments-' . $post_id));
+        do_action( 'cloudflare_purge_by_tags', array( 'vibe-comments-' . $post_id ) );
+    }
+
+    /**
+     * Instance method wrapper for backward compatibility.
+     */
+    public function purge_comments_data_cache_instance( $post_id ) {
+        self::purge_comments_data_cache( $post_id );
     }
 
     /**

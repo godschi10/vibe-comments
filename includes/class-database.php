@@ -133,7 +133,7 @@ class Vibe_Comments_Database {
     }
 
     /**
-     * Derive a 32-char guest token for DB storage.
+     * Derive a 64-char guest token for DB storage using SHA256.
      *
      * Preferred path (H1 fix): accept the client-supplied UUID from localStorage
      * (sent as `vibe_guest_id` in POST/GET by the JS). Hash it with AUTH_KEY so
@@ -148,7 +148,7 @@ class Vibe_Comments_Database {
      *
      * @param  string $client_id  UUID from localStorage, passed by caller after
      *                            reading from $_POST['vibe_guest_id'].
-     * @return string             32 hex chars.
+     * @return string             64 hex chars (SHA256).
      */
     public static function get_guest_token( $client_id = '' ) {
         if ( ! empty( $client_id ) ) {
@@ -165,14 +165,14 @@ class Vibe_Comments_Database {
             // falls straight through to the IP-based fallback below.
             if ( preg_match( '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $client_id ) ) {
                 $salt = defined( 'AUTH_KEY' ) ? AUTH_KEY : 'vibe-salt';
-                return substr( md5( $salt . strtolower( $client_id ) ), 0, 32 );
+                return hash( 'sha256', $salt . strtolower( $client_id ) );
             }
         }
         // Fallback: IP-based. Retains NAT-collision risk (H1) when no UUID is present
         // or when the supplied vibe_guest_id doesn't match the canonical UUID format.
         $ip   = self::resolve_client_ip();
         $salt = defined( 'AUTH_KEY' ) ? AUTH_KEY : 'vibe-salt';
-        return substr( md5( $ip . $salt . gmdate( 'Y-m-d' ) ), 0, 32 );
+        return hash( 'sha256', $ip . $salt . gmdate( 'Y-m-d' ) );
     }
 
     // -------------------------------------------------------------------------

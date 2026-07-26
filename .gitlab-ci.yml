@@ -1,0 +1,26 @@
+stages:
+  - deploy
+
+variables:
+  GIT_STRATEGY: fetch
+  GIT_DEPTH: 1
+
+deploy:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client git bash
+    - eval $(ssh-agent -s)
+    - echo "$SSH_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  script:
+    - ssh -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" "cd /var/www && sudo git -C wp-content/themes/gwill-starter-theme pull origin main && sudo git -C wp-content/plugins/vibe-comments pull origin main && sudo chown -R www-data:www-data wp-content/themes/gwill-starter-theme wp-content/plugins/vibe-comments && sudo wp cache flush --allow-root --path=/var/www && echo Deploy complete"
+  only:
+    - main
+  environment:
+    name: production
+    url: http://132.145.8.196
+  when: manual

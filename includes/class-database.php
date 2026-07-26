@@ -22,20 +22,114 @@ class Vibe_Comments_Database {
     // -------------------------------------------------------------------------
 
     /**
+     * Cloudflare's published IP ranges (https://www.cloudflare.com/ips-v4 and
+     * /ips-v6), as of this writing. Verified against two independent current
+     * sources before hardcoding. Cloudflare changes these infrequently and
+     * with advance notice — this is the same "refresh occasionally" approach
+     * widely used by Cloudflare-integration plugins and server configs (see
+     * e.g. the official real_ip_module / mod_cloudflare patterns). If
+     * Cloudflare's ranges change and this list goes stale, the practical
+     * failure mode is graceful: is_cloudflare_ip() returns false for genuine
+     * Cloudflare traffic, and the code falls back to trusting REMOTE_ADDR
+     * directly (Cloudflare's own edge IP) rather than CF-Connecting-IP —
+     * rate limiting and guest identity still work, just keyed on Cloudflare's
+     * edge IP instead of the real visitor IP until this list is refreshed.
+     */
+    private static $cf_ipv4_ranges = array(
+        '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22',
+        '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
+        '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+        '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+    );
+    private static $cf_ipv6_ranges = array(
+        '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32',
+        '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32',
+    );
+
+    /**
+     * Check whether $ip falls within a given CIDR range. Handles both IPv4
+     * (via 32-bit integer comparison) and IPv6 (via packed-binary byte
+     * comparison, since PHP has no native 128-bit integer type).
+     */
+    private static function ip_in_cidr( $ip, $cidr ) {
+        list( $subnet, $bits ) = explode( '/', $cidr );
+        $bits = (int) $bits;
+
+        if ( strpos( $ip, ':' ) !== false || strpos( $subnet, ':' ) !== false ) {
+            // IPv6: compare packed binary representations byte-by-byte up to $bits.
+            $ip_bin     = @inet_pton( $ip );
+            $subnet_bin = @inet_pton( $subnet );
+            if ( false === $ip_bin || false === $subnet_bin ) {
+                return false;
+            }
+            $bytes    = intdiv( $bits, 8 );
+            $rem_bits = $bits % 8;
+            if ( $bytes > 0 && substr( $ip_bin, 0, $bytes ) !== substr( $subnet_bin, 0, $bytes ) ) {
+                return false;
+            }
+            if ( $rem_bits > 0 ) {
+                $mask = chr( 0xFF << ( 8 - $rem_bits ) & 0xFF );
+                if ( ( $ip_bin[ $bytes ] & $mask ) !== ( $subnet_bin[ $bytes ] & $mask ) ) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // IPv4: standard netmask-and-compare on 32-bit integers.
+        $ip_long     = ip2long( $ip );
+        $subnet_long = ip2long( $subnet );
+        if ( false === $ip_long || false === $subnet_long ) {
+            return false;
+        }
+        $mask = -1 << ( 32 - $bits );
+        return ( $ip_long & $mask ) === ( $subnet_long & $mask );
+    }
+
+    /**
+     * Whether $ip genuinely belongs to Cloudflare's edge network.
+     */
+    private static function is_cloudflare_ip( $ip ) {
+        $ranges = ( strpos( $ip, ':' ) !== false ) ? self::$cf_ipv6_ranges : self::$cf_ipv4_ranges;
+        foreach ( $ranges as $cidr ) {
+            if ( self::ip_in_cidr( $ip, $cidr ) ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Resolve the real client IP.
-     * Trusts CF-Connecting-IP (Cloudflare) only. X-Forwarded-For is intentionally
-     * ignored — it can be spoofed by any client and would allow rate-limit bypass.
+     *
+     * CF-Connecting-IP is only trusted if the ACTUAL TCP connection
+     * (REMOTE_ADDR — set by the web server from the live socket, which a
+     * client cannot spoof) genuinely originates from one of Cloudflare's own
+     * published IP ranges. Without this check, any client could send an
+     * arbitrary CF-Connecting-IP header directly to the origin server and
+     * have it trusted verbatim — trivially bypassing IP-based rate limiting
+     * (rotate the header value on every request) and polluting the guest
+     * identity derivation this value feeds into. The existing docblock below
+     * already correctly reasoned about this exact risk for X-Forwarded-For
+     * ("it can be spoofed by any client") without applying the same
+     * reasoning to CF-Connecting-IP, which is equally spoofable by anyone
+     * who can reach the origin server directly.
+     *
+     * X-Forwarded-For remains intentionally ignored entirely — it can be
+     * spoofed by any client and would allow rate-limit bypass.
      */
     public static function resolve_client_ip() {
-        if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+        $remote = ! empty( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
+        $remote = preg_replace( '/[^0-9a-fA-F:.]/', '', $remote );
+        $remote = filter_var( $remote, FILTER_VALIDATE_IP ) ? $remote : '0.0.0.0';
+
+        if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) && self::is_cloudflare_ip( $remote ) ) {
             $ip = preg_replace( '/[^0-9a-fA-F:.]/', '', $_SERVER['HTTP_CF_CONNECTING_IP'] );
             if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
                 return $ip;
             }
         }
-        $remote = ! empty( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
-        $ip     = preg_replace( '/[^0-9a-fA-F:.]/', '', $remote );
-        return filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '0.0.0.0';
+        return $remote;
     }
 
     /**

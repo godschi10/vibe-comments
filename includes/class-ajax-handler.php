@@ -718,6 +718,13 @@ class Vibe_Comments_Ajax_Handler {
         // Tell LiteSpeed to purge all responses tagged with 'vibe-comments'.
         do_action( 'litespeed_purge_tag', 'vibe-comments' );
 
+        // Nginx Helper (FastCGI cache purge) -- purges the specific post URL.
+        // Requires Nginx Helper plugin active with "Enable Purge" and "Purge Method: FastCGI".
+        // Fires the nginx_helper_purge_url action with the post permalink.
+        $url = get_permalink( $post_id );
+        if ( $url ) {
+            do_action( "nginx_helper_purge_url", $url );
+        }
         // Cloudflare: purge via Cache-Tag if CF Pro/Ent is in use.
         // For CF Free/Pro without tags: the 2-minute TTL is the fallback.
         do_action( 'cloudflare_purge_by_tags', array( 'vibe-comments-' . $post_id ) );

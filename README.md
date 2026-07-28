@@ -141,6 +141,33 @@ Fire-and-forget (`blocking: false`) — never delays comment approval.
 
 ---
 
+## Nginx FastCGI Cache Purge (Nginx Helper plugin)
+
+The plugin auto-detects **Nginx Helper** (WordPress.org) with FastCGI purge enabled and fires the native `nginx_helper_purge_url` action on every comment event (approve, trash, delete, status change) **and** reaction toggle. This busts the Nginx page cache for the specific post URL instantly — keeping comment counts and content fresh without manual intervention.
+
+**Requirements:**
+- Nginx Helper plugin installed & active
+- Nginx Helper → Settings → **Enable Purge** checked
+- Nginx Helper → Settings → **Purge Method: FastCGI** selected
+- Nginx FastCGI cache configured with a `fastcgi_cache_key` that includes the request URI (standard WP Nginx configs already do this)
+
+**How it works:**
+
+```php
+// In purge_comments_data_cache($post_id):
+if ( function_exists( 'nginx_helper_purge_url' ) ) {
+    do_action( 'nginx_helper_purge_url', get_permalink( $post_id ) );
+}
+```
+
+This runs alongside (not instead of) the existing purge mechanisms:
+- `litespeed_purge_tag('vibe-comments')` — instant on Hetzner/OpenLiteSpeed
+- Cloudflare Cache Purge API — CF Free compatible
+- `delete_transient('vc_load_{id}_*')` — kills the PHP transient cache
+- `update_option('vibe_comment_count_{id}', $count)` — written **before** purge, so the rebuilt cache reads the correct count
+
+**No extra config needed** — if Nginx Helper is active with FastCGI purge enabled, it just works. If Nginx Helper isn't active or FastCGI purge isn't selected, the action simply does nothing (graceful no-op).
+
 ## Google OAuth Setup
 
 1. [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → Credentials → Create OAuth 2.0 Client ID

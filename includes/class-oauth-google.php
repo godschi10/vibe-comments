@@ -87,13 +87,19 @@ class Vibe_Comments_OAuth_Google {
             PHP_URL_PATH
         );
 
-        // Secure flag only on HTTPS; SameSite=Lax prevents cross-origin use.
+        // Secure flag only on HTTPS; SameSite=Strict prevents cross-origin use entirely.
+        // Lax allows the cookie on top-level GET navigations from external links,
+        // which is exactly the login-CSRF vector: attacker crafts a malicious link
+        // to the callback URL with a known state, victim clicks it, browser sends
+        // the Lax cookie, attacker's state validates, victim's Google account links
+        // to attacker's WP account. Strict blocks this — cookie only sent on
+        // same-site requests (user typing URL, bookmarks, or same-origin links).
         $cookie_options = array(
             'expires'  => time() + 600,
             'path'     => $callback_path,
             'secure'   => is_ssl(),
             'httponly' => true,
-            'samesite' => 'Lax',
+            'samesite' => 'Strict',
         );
         // setcookie() with options array requires PHP 7.3+ (our min is 7.4).
         setcookie( 'vibe_oauth_state', $state, $cookie_options );
@@ -143,7 +149,7 @@ class Vibe_Comments_OAuth_Google {
             'path'     => wp_parse_url( rest_url( 'vibe-comments/v1/google-callback' ), PHP_URL_PATH ),
             'secure'   => is_ssl(),
             'httponly' => true,
-            'samesite' => 'Lax',
+            'samesite' => 'Strict',
         ) );
 
         $return_url = $stored_url;

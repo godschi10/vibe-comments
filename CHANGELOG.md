@@ -12,6 +12,7 @@ Types of changes:
 - `Removed` — removed features
 - `Deprecated` — features that will be removed in a future release
 - `Security` — changes that address vulnerabilities
+### Added- **Nginx FastCGI cache auto-purge on comment events** -- purge_comments_data_cache() now fires do_action('nginx_helper_purge_url', $url) when the Nginx Helper plugin is active with FastCGI purge enabled. This busts the Nginx page cache for the specific post URL immediately when a comment is approved, trashed, deleted, or reacted to -- keeping comment counts and content fresh without manual intervention.  - Requires: Nginx Helper plugin active, 'Enable Purge' checked, 'Purge Method: FastCGI' selected.  - Works alongside existing LiteSpeed tag purge, Cloudflare Cache-Tag purge, and transient invalidation.
 
 ---
 

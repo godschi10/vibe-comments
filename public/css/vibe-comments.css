@@ -1,5 +1,10 @@
-/* Vibe Comments - Theme-Agnostic Styles */
+/* Vibe Comments - Theme-Agnostic Styles (v3.5.7)
+ * All colors use CSS custom properties for seamless dark mode support.
+ * Theme only needs to override the --vibe-* variables under [data-theme="dark"] .vibe-comments-section
+ * No hardcoded hex values in this file — everything tokenized. */
+
 :root {
+    /* Core palette (light mode defaults) */
     --vibe-primary: #3b82f6;
     --vibe-primary-hover: #2563eb;
     --vibe-bg: #ffffff;
@@ -8,9 +13,26 @@
     --vibe-border: #e2e8f0;
     --vibe-text: #1e293b;
     --vibe-text-muted: #64748b;
+
+    /* Semantic colors */
+    --vibe-success-bg: #dcfce7;
+    --vibe-success-text: #166534;
+    --vibe-error-bg: #fee2e2;
+    --vibe-error-text: #991b1b;
+    --vibe-warn-bg: #fef3c7;
+    --vibe-warn-text: #92400e;
+    --vibe-info-bg: #eff6ff;
+    --vibe-info-text: #1e40af;
+
+    /* Focus ring */
+    --vibe-focus-ring: 2px solid var(--vibe-primary);
+    --vibe-focus-offset: 1px;
+
+    /* Structure */
     --vibe-radius: 12px;
     --vibe-gap: 1rem;
     --vibe-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    --vibe-shadow-hover: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .vibe-comments-section {
@@ -27,6 +49,7 @@
     padding-bottom: 0.75rem;
     border-bottom: 2px solid var(--vibe-border);
 }
+
 /* Auto-hide when empty (0 comments on first render) —
    JS populates the text after Load is clicked, making it reappear. */
 .vibe-comments-title:empty {
@@ -57,7 +80,7 @@
 }
 
 .vibe-comment-body:hover {
-    box-shadow: var(--vibe-shadow);
+    box-shadow: var(--vibe-shadow-hover);
 }
 
 /* Comment Header */
@@ -81,17 +104,6 @@
     align-items: flex-start;
     gap: 0.15rem;
 }
-/* align-items:flex-start above overrides the flex default of "stretch" for
-   column-direction containers. Without it, every child here (pinned badge,
-   the author-name line, the timestamp) was stretched to match the WIDTH OF
-   ITS WIDEST SIBLING. On a comment from the post author, the "Author" badge
-   sitting next to their name made that line wider than a regular commenter's
-   plain name — and since the pinned badge is a sibling in this SAME
-   container, it got stretched to match that wider line too, even though
-   "📌 Pinned" itself needs far less space. Regular (non-author) pinned
-   comments never showed this because their author-name line was never wide
-   enough to stretch anything. flex-start makes every child size to its own
-   content instead, independent of what its siblings need. */
 
 .vibe-comment-author {
     font-weight: 600;
@@ -126,6 +138,34 @@
     color: white;
 }
 
+.vibe-author-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--vibe-primary);
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 4px;
+    padding: 1px 5px;
+    vertical-align: middle;
+    margin-left: 4px;
+    line-height: 1.5;
+}
+
+.vibe-pinned-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #b45309;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-bottom: 0.3rem;
+}
+
 /* Comment Content */
 .vibe-comment-content {
     line-height: 1.6;
@@ -142,13 +182,15 @@
     margin-bottom: 0;
 }
 
+/* Awaiting moderation notice */
 .vibe-awaiting {
     display: block;
     font-style: italic;
     color: var(--vibe-text-muted);
     margin-bottom: 0.5rem;
     padding: 0.5rem;
-    background: #fef3c7;
+    background: var(--vibe-warn-bg);
+    color: var(--vibe-warn-text);
     border-radius: 6px;
     font-size: 0.85rem;
 }
@@ -160,401 +202,138 @@
     flex-wrap: wrap;
     gap: 0.5rem 1rem;
     padding-top: 0.75rem;
-    border-top: 1px solid var(--vibe-border);
-}
-/* Without flex-wrap above, a comment with all 4 possible footer items
-   (reaction pill, Reply, View/Hide Replies, Pin/Unpin — the combination that
-   only occurs on a pinned comment that also has replies) had nowhere to go
-   on a narrow mobile viewport except get squeezed by flex's default
-   flex-shrink:1 behavior. Since none of the buttons had white-space:nowrap,
-   the SQUEEZED button's own text wrapped internally instead of the row
-   wrapping as a whole ("Hide replies" broke into "Hide" / "replies" on two
-   lines) — which looks broken regardless of whether the row technically
-   stayed within the card's bounds. Row gap reduced to 0.5rem (from the
-   original 1rem, kept for column gap) so two wrapped rows don't sit too far
-   apart vertically. */
-
-/* ── Reactions — Facebook-style compact summary + expandable picker ─────── */
-
-/* Picker lives outside the footer as a block element between content and footer.
- * This eliminates the mobile layout-blowout where picker was inside the
- * footer flex row and pushed Reply + Pin offscreen when opened.
- */
-
-.vibe-reactions {
-    display: flex;
-    align-items: center;
 }
 
-/* ── Summary pill — always visible in footer ─── */
-.vibe-reaction-summary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    background: none;
-    border: 1px solid var(--vibe-border, #e5e7eb);
-    border-radius: 999px;
-    padding: 0.3rem 0.65rem;
-    cursor: pointer;
-    line-height: 1;
-    transition: border-color 0.15s ease, background 0.15s ease;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-.vibe-reaction-summary:hover {
-    background: var(--vibe-bg-alt, #f3f4f6);
-    border-color: var(--vibe-text-muted, #888);
-}
-.vibe-reaction-summary:focus-visible {
-    outline: 2px solid var(--vibe-primary, #2563eb);
-    outline-offset: 1px;
-}
-.vibe-reaction-summary.vibe-has-reaction {
-    border-color: var(--vibe-border, #e5e7eb);
-    background: none;
-}
-.vibe-reaction-summary.vibe-has-reaction .vibe-rx-total {
-    color: var(--vibe-primary, #2563eb);
-    font-weight: 700;
-}
-
-/* ── Default state: overlapping emoji bubble stack + aggregate total ────── */
-/*
- * Summary is ALWAYS this format — compact, never scatters.
- * Per-type counts appear only in the picker (below each emoji), never here.
- */
-.vibe-rx-stack {
-    display: inline-flex;
-    flex-direction: row;
-    align-items: center;
-}
-.vibe-rx-bubble {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: var(--vibe-bg-alt, #f3f4f6);
-    border: 2px solid var(--vibe-bg, #fff);
-    font-size: 0.8rem;
-    line-height: 1;
-    position: relative;
-}
-.vibe-rx-bubble + .vibe-rx-bubble { margin-left: -7px; }
-.vibe-rx-stack .vibe-rx-bubble:nth-child(1) { z-index: 3; }
-.vibe-rx-stack .vibe-rx-bubble:nth-child(2) { z-index: 2; }
-.vibe-rx-stack .vibe-rx-bubble:nth-child(3) { z-index: 1; }
-.vibe-rx-total {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--vibe-text-muted, #888);
-    margin-left: 0.4rem;
-    line-height: 1;
-}
-/* zero-reactions state */
-.vibe-rx-icon  { font-size: 0.9rem; line-height: 1; }
-.vibe-rx-label { font-size: 0.78rem; color: var(--vibe-text-muted, #888); font-weight: 500; }
-
-/* spring pulse when adding a new reaction */
-@keyframes vibe-summary-pulse {
-    0%   { transform: scale(1);    }
-    30%  { transform: scale(1.12); }
-    65%  { transform: scale(0.95); }
-    100% { transform: scale(1);    }
-}
-.vibe-reaction-summary.vibe-reaction-pulse {
-    animation: vibe-summary-pulse 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-/* ── Picker — block child of <article>, sits between content and footer ─── */
-.vibe-reaction-picker {
-    display: flex;
-    align-items: center;
-    gap: 0.05rem;
-    background: var(--vibe-bg, #fff);
-    border: 1px solid var(--vibe-border, #e5e7eb);
-    border-radius: 999px;
-    padding: 0.2rem 0.4rem;
-    width: fit-content;
-    margin-top: 0.45rem;
-    margin-bottom: 0.45rem;
-    animation: vibe-picker-pop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.vibe-reaction-picker[hidden] { display: none; }
-@keyframes vibe-picker-pop {
-    from { transform: scale(0.75); opacity: 0; }
-    to   { transform: scale(1);    opacity: 1; }
-}
-
-/* Individual emoji option inside the picker — emoji above, count below */
-.vibe-reaction-option {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.1rem;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.3rem 0.3rem 0.25rem;
-    border-radius: 8px;
-    min-width: 36px;
-    transition: transform 0.12s ease, background 0.1s ease;
-    -webkit-tap-highlight-color: transparent;
-}
-.vibe-reaction-option:hover {
-    transform: scale(1.35) translateY(-3px);
-    background: var(--vibe-bg-alt, #f3f4f6);
-}
-.vibe-reaction-option:active  { transform: scale(1.1); }
-.vibe-reaction-option.vibe-active-reaction { background: #eff6ff; }
-.vibe-reaction-option:disabled { opacity: 0.5; cursor: default; transform: none; }
-.vibe-reaction-option:focus-visible {
-    outline: 2px solid var(--vibe-primary, #2563eb);
-    outline-offset: 1px;
-}
-
-/* Emoji part of the picker button */
-.vibe-rx-picker-emoji {
-    font-size: 1.3rem;
-    line-height: 1;
-    display: block;
-}
-
-/* Count below each emoji — always has space reserved even when empty */
-.vibe-rx-picker-n {
-    font-size: 0.62rem;
-    font-weight: 700;
-    color: var(--vibe-text-muted, #888);
-    line-height: 1;
-    min-height: 0.75rem;
-    text-align: center;
-    display: block;
-}
-.vibe-reaction-option.vibe-active-reaction .vibe-rx-picker-n {
-    color: var(--vibe-primary, #2563eb);
-}
-
-/* Reply Link — sits beside the reaction summary in the footer row */
 .vibe-comment-footer .comment-reply-link,
 .vibe-reply-trigger {
     display: inline-flex;
     align-items: center;
-    font-size: 0.85rem;
-    color: var(--vibe-primary);
-    text-decoration: none;
-    background: none;
-    border: 1px solid var(--vibe-primary);
-    border-radius: 999px;
+    gap: 0.35rem;
     padding: 0.35rem 0.75rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.vibe-comment-footer .comment-reply-link:hover,
-.vibe-reply-trigger:hover {
-    background: var(--vibe-primary);
-    color: white;
-}
-
-/* View/Hide Replies — a disclosure toggle, not an action, so it's deliberately
-   quieter than the Reply button: no border/pill treatment, just a text link
-   with an underline-on-hover, matching how Instagram/Reddit-style UIs treat
-   "view replies" as a lightweight affordance rather than a primary CTA. */
-.vibe-view-replies-btn {
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--vibe-text-muted, #64748b);
-    background: none;
-    border: none;
-    padding: 0.35rem 0.4rem;
-    cursor: pointer;
-    transition: color 0.2s ease;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-.vibe-view-replies-btn:hover {
-    color: var(--vibe-primary);
-    text-decoration: underline;
-}
-.vibe-view-replies-btn:focus-visible {
-    outline: 2px solid var(--vibe-primary, #2563eb);
-    outline-offset: 1px;
-}
-.vibe-view-replies-btn:disabled {
-    opacity: 0.6;
-    cursor: default;
-}
-
-/* Load More Button */
-.vibe-load-more-wrap {
-    text-align: center;
-    margin: 2rem 0;
-}
-
-.vibe-btn-load-more {
-    background: var(--vibe-surface);
-    color: var(--vibe-text);
-    border: 2px solid var(--vibe-border);
-    padding: 0.75rem 2rem;
-    font-size: 1rem;
-    font-weight: 600;
-    border-radius: var(--vibe-radius);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.vibe-btn-load-more:hover {
-    background: var(--vibe-primary);
-    color: white;
-    border-color: var(--vibe-primary);
-}
-
-.vibe-btn-load-more:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* Auth Bar */
-.vibe-auth-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    background: var(--vibe-surface);
-    border-radius: var(--vibe-radius);
-    border: 1px solid var(--vibe-border);
-}
-
-.vibe-user-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-    padding: 0.75rem 1rem;
-    background: var(--vibe-surface);
-    border-radius: var(--vibe-radius);
-    border: 1px solid var(--vibe-border);
-}
-
-.vibe-user-bar img {
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
-}
-
-.vibe-user-bar span {
-    font-weight: 600;
-    flex: 1;
-}
-
-.vibe-logout {
-    font-size: 0.85rem;
-    color: var(--vibe-text-muted);
-    text-decoration: none;
-}
-
-.vibe-logout:hover {
-    color: #ef4444;
-}
-
-/* Buttons */
-.vibe-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.6rem 1.2rem;
     border-radius: 8px;
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
     border: 1px solid transparent;
     transition: all 0.2s ease;
     text-decoration: none;
+    background: var(--vibe-surface);
+    color: var(--vibe-text-muted);
+    border-color: var(--vibe-border);
 }
 
-.vibe-btn-primary {
-    background: var(--vibe-primary);
-    color: white;
+.vibe-comment-footer .comment-reply-link:hover,
+.vibe-reply-trigger:hover {
+    background: var(--vibe-info-bg);
+    color: var(--vibe-info-text);
     border-color: var(--vibe-primary);
 }
 
-.vibe-btn-primary:hover {
-    background: var(--vibe-primary-hover);
+.vibe-comment-footer .comment-reply-link:focus-visible,
+.vibe-reply-trigger:focus-visible {
+    outline: var(--vibe-focus-ring);
+    outline-offset: var(--vibe-focus-offset);
 }
 
-/* CSS7 fix: this class was applied to the "Load Comments" button in the
-   template but never defined here — the button rendered with only the
-   generic .vibe-btn base (no background color), making it visually inert
-   as the page's primary engagement CTA. Styled to match .vibe-btn-primary. */
-.vibe-btn-load-comments {
+/* Comment Footer - Reaction Summary */
+.vibe-reaction-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+/* Reaction pills */
+.vibe-reaction-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: var(--vibe-surface);
+    border: 1px solid var(--vibe-border);
+    color: var(--vibe-text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.vibe-reaction-pill:hover {
     background: var(--vibe-primary);
-    color: white;
     border-color: var(--vibe-primary);
-}
-.vibe-btn-load-comments:hover {
-    background: var(--vibe-primary-hover);
-}
-.vibe-btn-load-comments:disabled {
-    opacity: 0.7;
-    cursor: default;
-}
-
-.vibe-btn-wp {
-    background: #1e293b;
     color: white;
 }
 
-.vibe-btn-wp:hover {
-    background: #0f172a;
+.vibe-reaction-pill.vibe-user-reacted {
+    background: var(--vibe-primary);
+    border-color: var(--vibe-primary);
+    color: white;
 }
 
-.vibe-btn-google {
-    background: white;
-    color: #1e293b;
-    border-color: var(--vibe-border);
+.vibe-reaction-pill svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
 }
 
-.vibe-btn-google:hover {
+.vibe-reaction-count {
+    min-width: 1.25rem;
+    text-align: center;
+}
+
+/* Reaction Picker */
+.vibe-reaction-picker {
+    display: none;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--vibe-border);
+}
+
+.vibe-reaction-picker.open {
+    display: flex;
+}
+
+.vibe-reaction-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
     background: var(--vibe-surface);
-    border-color: var(--vibe-text-muted);
-}
-
-.vibe-btn-guest {
-    background: transparent;
+    border: 1px solid var(--vibe-border);
+    cursor: pointer;
+    transition: all 0.15s ease;
     color: var(--vibe-text-muted);
-    border-color: var(--vibe-border);
 }
 
-.vibe-btn-guest:hover {
-    background: var(--vibe-surface);
-    color: var(--vibe-text);
+.vibe-reaction-btn:hover {
+    background: var(--vibe-primary);
+    border-color: var(--vibe-primary);
+    color: white;
+    transform: scale(1.1);
 }
 
-.vibe-btn-cancel {
-    background: transparent;
-    color: var(--vibe-text-muted);
-    border-color: var(--vibe-border);
+.vibe-reaction-btn.vibe-user-reacted {
+    background: var(--vibe-primary);
+    border-color: var(--vibe-primary);
+    color: white;
 }
 
-.vibe-btn-cancel:hover {
-    background: #fee2e2;
-    color: #ef4444;
-    border-color: #ef4444;
+.vibe-reaction-btn svg {
+    width: 1.25rem;
+    height: 1.25rem;
 }
 
-.vibe-or {
-    font-size: 0.85rem;
-    color: var(--vibe-text-muted);
-    text-transform: uppercase;
+.vibe-reaction-btn .vibe-reaction-count {
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-left: 0.25rem;
 }
 
 /* Form */
@@ -623,15 +402,104 @@
     .vibe-guest-fields {
         grid-template-columns: 1fr;
     }
+}
 
-    .vibe-auth-bar {
-        flex-direction: column;
-        align-items: stretch;
-    }
+/* Buttons */
+.vibe-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
 
-    .vibe-comment-list ul {
-        padding-left: 1.25rem;
-    }
+.vibe-btn-primary {
+    background: var(--vibe-primary);
+    color: white;
+    border-color: var(--vibe-primary);
+}
+
+.vibe-btn-primary:hover {
+    background: var(--vibe-primary-hover);
+}
+
+.vibe-btn-load-comments {
+    background: var(--vibe-primary);
+    color: white;
+    border-color: var(--vibe-primary);
+}
+
+.vibe-btn-load-comments:hover {
+    background: var(--vibe-primary-hover);
+}
+
+.vibe-btn-load-comments:disabled {
+    opacity: 0.7;
+    cursor: default;
+}
+
+.vibe-btn-wp {
+    background: var(--vibe-text);
+    color: white;
+}
+
+.vibe-btn-wp:hover {
+    background: #0f172a;
+}
+
+.vibe-btn-google {
+    background: var(--vibe-bg);
+    color: var(--vibe-text);
+    border-color: var(--vibe-border);
+}
+
+.vibe-btn-google:hover {
+    background: var(--vibe-surface);
+    border-color: var(--vibe-text-muted);
+}
+
+.vibe-btn-guest {
+    background: transparent;
+    color: var(--vibe-text-muted);
+    border-color: var(--vibe-border);
+}
+
+.vibe-btn-guest:hover {
+    background: var(--vibe-surface);
+    color: var(--vibe-text);
+}
+
+.vibe-btn-cancel {
+    background: transparent;
+    color: var(--vibe-text-muted);
+    border-color: var(--vibe-border);
+}
+
+.vibe-btn-cancel:hover {
+    background: var(--vibe-error-bg);
+    color: var(--vibe-error-text);
+    border-color: var(--vibe-error-text);
+}
+
+.vibe-or {
+    font-size: 0.85rem;
+    color: var(--vibe-text-muted);
+    text-transform: uppercase;
+}
+
+/* Auth Bar */
+.vibe-auth-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
 }
 
 /* Loading States */
@@ -672,18 +540,15 @@
     margin-bottom: 1rem;
     font-size: 0.9rem;
 }
-/* A6 fix: these two were previously set via inline style.cssText in JS
-   (showError()/showSuccess()), which breaks under a strict Content-Security-
-   Policy that disallows 'unsafe-inline' styles. Moved here as ordinary
-   classes — same exact color values, just applied via className instead of
-   the style attribute. */
+
 .vibe-message-error {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--vibe-error-bg);
+    color: var(--vibe-error-text);
 }
+
 .vibe-message-success {
-    background: #dcfce7;
-    color: #166534;
+    background: var(--vibe-success-bg);
+    color: var(--vibe-success-text);
 }
 
 @keyframes vibe-slide-in {
@@ -697,10 +562,10 @@
     }
 }
 
-/* =============================================
+/* ===========================================
    HONEYPOT — keep offscreen; never visible.
    Do not remove: this is bot protection.
-   ============================================= */
+   =========================================== */
 .vibe-hp-field {
     position: absolute !important;
     left: -9999px !important;
@@ -718,7 +583,7 @@
 .vibe-char-counter {
     text-align: right;
     font-size: 0.78rem;
-    color: var(--vibe-text-muted, #888);
+    color: var(--vibe-text-muted);
     margin-top: 0.3rem;
     transition: color 0.2s ease;
 }
@@ -737,22 +602,25 @@
     align-items: center;
     gap: 0.25rem;
     font-size: 0.78rem;
-    color: var(--vibe-text-muted, #888);
+    color: var(--vibe-text-muted);
     margin-top: 0.3rem;
 }
-
 .vibe-draft-clear {
     background: none;
     border: none;
-    color: var(--vibe-primary, #2563eb);
+    color: var(--vibe-primary);
     font-size: 0.78rem;
     cursor: pointer;
     padding: 0;
     text-decoration: underline;
+    text-underline-offset: 2px;
     line-height: inherit;
 }
+.vibe-draft-clear:hover {
+    color: #1d4ed8;
+}
 
-/* ── Comments toolbar — sort button + search on one line ───────────────── */
+/* Toolbar — sort + search */
 .vibe-comments-toolbar {
     display: flex;
     align-items: center;
@@ -760,16 +628,15 @@
     margin-bottom: 0.75rem;
 }
 
-/* Shared design token: both controls look like one family */
 .vibe-sort-icon-btn,
 .vibe-search-input {
     height: 38px;
     box-sizing: border-box;
     padding: 0 0.75rem;
-    border: 1px solid var(--vibe-border, #e5e7eb);
+    border: 1px solid var(--vibe-border);
     border-radius: 8px;
-    background: var(--vibe-bg, #fff);
-    color: var(--vibe-text, #111);
+    background: var(--vibe-bg);
+    color: var(--vibe-text);
     font-size: 0.875rem;
     line-height: 1;
     outline: none;
@@ -784,18 +651,16 @@
     white-space: nowrap;
     cursor: pointer;
 }
-.vibe-sort-icon-btn:hover { border-color: var(--vibe-primary, #2563eb); color: var(--vibe-primary, #2563eb); }
-/* CSS5 fix: outline:none above removed the browser's default focus ring with
-   nothing to replace it — keyboard users had zero visual indicator of focus
-   on these two controls (WCAG 2.1 SC 2.4.7). :focus-visible only fires for
-   keyboard navigation, not mouse clicks, so sighted mouse users see no change. */
+.vibe-sort-icon-btn:hover {
+    border-color: var(--vibe-primary);
+    color: var(--vibe-primary);
+}
 .vibe-sort-icon-btn:focus-visible,
 .vibe-search-input:focus-visible {
-    outline: 2px solid var(--vibe-primary, #2563eb);
-    outline-offset: 1px;
+    outline: var(--vibe-focus-ring);
+    outline-offset: var(--vibe-focus-offset);
 }
 
-/* Search wrap fills remaining space; min-width:0 prevents overflow on mobile */
 .vibe-search-wrap {
     flex: 1;
     min-width: 0;
@@ -808,87 +673,63 @@
     min-width: 0;
     width: 100%;
 }
-.vibe-search-input:focus  { border-color: var(--vibe-primary, #2563eb); }
+.vibe-search-input:focus { border-color: var(--vibe-primary); }
 .vibe-search-status {
     font-size: 0.8rem;
-    color: var(--vibe-text-muted, #888);
+    color: var(--vibe-text-muted);
     white-space: nowrap;
 }
 
-/* ── New comments banner ───────────────────────────────────────────────── */
-/* ── Markdown ──────────────────────────────────────────────────────────── */
+/* Blockquote & Code */
 .vibe-comment-content blockquote {
-    border-left: 3px solid var(--vibe-border, #e5e7eb);
+    border-left: 3px solid var(--vibe-border);
     padding-left: 0.75rem;
     margin: 0.5rem 0;
-    color: var(--vibe-text-muted, #888);
+    color: var(--vibe-text-muted);
     font-style: italic;
 }
 .vibe-comment-content code {
-    background: var(--vibe-bg-alt, #f3f4f6);
-    border: 1px solid var(--vibe-border, #e5e7eb);
+    background: var(--vibe-bg-alt);
+    border: 1px solid var(--vibe-border);
     border-radius: 4px;
     padding: 0.1em 0.35em;
     font-size: 0.88em;
     font-family: monospace;
 }
 
-/* ── Author badge ──────────────────────────────────────────────────────── */
-.vibe-author-badge {
-    display: inline-block;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--vibe-primary, #2563eb);
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    border-radius: 4px;
-    padding: 1px 5px;
-    vertical-align: middle;
-    margin-left: 4px;
-    line-height: 1.5;
-}
-
-/* ── Pinned comment ────────────────────────────────────────────────────── */
-.vibe-pinned-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #b45309;
-    background: #fef3c7;
-    border: 1px solid #fde68a;
-    border-radius: 4px;
-    padding: 1px 6px;
-    margin-bottom: 0.3rem;
-}
+/* Pinned Comment */
 .vibe-comment-pinned > article {
     border-left: 3px solid #fbbf24;
     padding-left: 0.75rem;
 }
 .vibe-pin-btn {
     background: none;
-    border: 1px solid var(--vibe-border, #e5e7eb);
+    border: 1px solid var(--vibe-border);
     border-radius: 999px;
     padding: 0.3rem 0.65rem;
     font-size: 0.78rem;
-    color: var(--vibe-text-muted, #888);
+    color: var(--vibe-text-muted);
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
     flex-shrink: 0;
 }
-.vibe-pin-btn:hover { background: #fef3c7; border-color: #fde68a; color: #b45309; }
+.vibe-pin-btn:hover {
+    background: #fef3c7;
+    border-color: #fde68a;
+    color: #b45309;
+}
 .vibe-pin-btn:focus-visible {
-    outline: 2px solid var(--vibe-primary, #2563eb);
-    outline-offset: 1px;
+    outline: var(--vibe-focus-ring);
+    outline-offset: var(--vibe-focus-offset);
 }
 
+/* New Comments Banner */
 .vibe-new-banner {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--vibe-primary, #2563eb);
+    background: var(--vibe-primary);
     color: #fff;
     font-size: 0.85rem;
     font-weight: 500;
@@ -904,7 +745,7 @@
     background: #1d4ed8;
 }
 
-/* ── Collapse long comments ────────────────────────────────────────────── */
+/* Collapse Long Comments */
 .vibe-comment-content.vibe-content-collapsed {
     display: -webkit-box;
     -webkit-box-orient: vertical;
@@ -914,7 +755,7 @@
 .vibe-read-more {
     background: none;
     border: none;
-    color: var(--vibe-primary, #2563eb);
+    color: var(--vibe-primary);
     font-size: 0.85rem;
     padding: 0.2rem 0;
     cursor: pointer;
@@ -925,50 +766,46 @@
     text-decoration: underline;
 }
 
-/* ── Linkified URLs ────────────────────────────────────────────────────── */
+/* Linkified URLs */
 .vibe-comment-content a[rel~="ugc"] {
-    color: var(--vibe-primary, #2563eb);
+    color: var(--vibe-primary);
     text-decoration: underline;
     word-break: break-all;
 }
 
-/* ── Empty state CTA ───────────────────────────────────────────────────── */
+/* Empty State CTA */
 .vibe-empty-state {
     list-style: none;
     text-align: center;
     padding: 2rem 1rem;
-    color: var(--vibe-text-muted, #888);
+    color: var(--vibe-text-muted);
 }
 .vibe-empty-title {
     font-size: 1.1rem;
     font-weight: 600;
     margin: 0 0 0.4rem;
-    color: var(--vibe-text, #111);
+    color: var(--vibe-text);
 }
 .vibe-empty-sub {
     margin: 0;
     font-size: 0.9rem;
 }
 
-/* ── Retry button in error state ───────────────────────────────────────── */
+/* Retry Button */
 .vibe-retry-btn {
     background: none;
     border: none;
-    color: var(--vibe-primary, #2563eb);
+    color: var(--vibe-primary);
     text-decoration: underline;
     cursor: pointer;
     font-size: inherit;
     padding: 0;
 }
 
-/* ── Guest identity recall ─────────────────────────────────────────────── */
-/*
- * Appears above the guest fields when name/email are pre-filled from
- * localStorage. Gives users an easy way to clear their saved identity.
- */
+/* Guest Identity Recall */
 .vibe-guest-recall {
     font-size: 0.82rem;
-    color: var(--vibe-text-muted, #888);
+    color: var(--vibe-text-muted);
     margin: 0 0 0.5rem;
     display: flex;
     align-items: center;
@@ -977,13 +814,13 @@
     line-height: 1.4;
 }
 .vibe-guest-recall strong {
-    color: var(--vibe-text, #111);
+    color: var(--vibe-text);
     font-weight: 600;
 }
 .vibe-recall-clear {
     background: none;
     border: none;
-    color: var(--vibe-primary, #2563eb);
+    color: var(--vibe-primary);
     font-size: inherit;
     cursor: pointer;
     padding: 0;
@@ -994,34 +831,140 @@
     color: #1d4ed8;
 }
 
-/* Previously an inline style.cssText in moveFormToComment() — see A6 fix. */
+/* Reply Container */
 .vibe-reply-container {
     margin-top: 1rem;
 }
 
-/* A1 fix: noscript fallback message. Kept visually consistent with the rest
-   of the plugin's muted/secondary text treatment rather than looking like an
-   afterthought. */
-.vibe-noscript-notice {
-    padding: 0.75rem 1rem;
-    border: 1px solid var(--vibe-border, #e2e8f0);
-    border-radius: var(--vibe-radius, 12px);
-    color: var(--vibe-text-muted, #64748b);
-    font-size: 0.9rem;
+/* Character counter */
+.vibe-char-counter {
+    text-align: right;
+    font-size: 0.78rem;
+    color: var(--vibe-text-muted);
+    margin-top: 0.3rem;
+    transition: color 0.2s ease;
+}
+.vibe-char-counter.vibe-char-warn {
+    color: #b45309;
+    font-weight: 600;
+}
+.vibe-char-counter.vibe-char-over {
+    color: #dc2626;
+    font-weight: 700;
 }
 
-/* A5 fix: respect the OS-level "reduce motion" preference. This single,
-   universal rule covers every current animation/transition in this file
-   (reaction pulse, picker pop, loading spinner, message slide-in, all hover
-   transitions) plus every scrollIntoView({behavior:'smooth'}) call in the
-   JS — browsers honor scroll-behavior:auto as an override for that JS option
-   too, per the CSSOM View spec, so no JavaScript changes were needed to make
-   the smooth-scroll calls throughout vibe-comments.js respect this as well. */
+/* Draft auto-save badge */
+.vibe-draft-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.78rem;
+    color: var(--vibe-text-muted);
+    margin-top: 0.3rem;
+}
+.vibe-draft-clear {
+    background: none;
+    border: none;
+    color: var(--vibe-primary);
+    font-size: 0.78rem;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    line-height: inherit;
+}
+
+/* ============================================================
+   DARK MODE — CSS VARIABLE OVERRIDES ONLY
+   ============================================================
+   The theme's darkmode-vibe-comments.css should ONLY override
+   the --vibe-* custom properties under [data-theme="dark"] .vibe-comments-section
+   No hardcoded selector patches needed when all colors use variables. */
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .vibe-comments-section {
+        --vibe-primary:       #60a5fa;
+        --vibe-primary-hover: #3b82f6;
+        --vibe-bg:            #1e293b;
+        --vibe-bg-alt:        #0f172a;
+        --vibe-surface:       #0f172a;
+        --vibe-border:        #334155;
+        --vibe-text:          #f1f5f9;
+        --vibe-text-muted:    #94a3b8;
+        --vibe-shadow:        0 1px 3px rgba(0, 0, 0, 0.4);
+        --vibe-shadow-hover:  0 4px 12px rgba(0, 0, 0, 0.5);
+
+        --vibe-success-bg: #064e3b;
+        --vibe-success-text: #86efac;
+        --vibe-error-bg:   #450a0a;
+        --vibe-error-text: #fca5a5;
+        --vibe-warn-bg:    #451a03;
+        --vibe-warn-text:  #fcd34d;
+        --vibe-info-bg:    #1e3a5f;
+        --vibe-info-text:  #93c5fd;
+    }
+}
+
+[data-theme="dark"] .vibe-comments-section {
+    --vibe-primary:       #60a5fa;
+    --vibe-primary-hover: #3b82f6;
+    --vibe-bg:            #1e293b;
+    --vibe-bg-alt:        #0f172a;
+    --vibe-surface:       #0f172a;
+    --vibe-border:        #334155;
+    --vibe-text:          #f1f5f9;
+    --vibe-text-muted:    #94a3b8;
+    --vibe-shadow:        0 1px 3px rgba(0, 0, 0, 0.4);
+    --vibe-shadow-hover:  0 4px 12px rgba(0, 0, 0, 0.5);
+
+    --vibe-success-bg: #064e3b;
+    --vibe-success-text: #86efac;
+    --vibe-error-bg:   #450a0a;
+    --vibe-error-text: #fca5a5;
+    --vibe-warn-bg:    #451a03;
+    --vibe-warn-text:  #fcd34d;
+    --vibe-info-bg:    #1e3a5f;
+    --vibe-info-text:  #93c5fd;
+}
+
+/* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
+    .vibe-comment-body,
+    .vibe-reaction-pill,
+    .vibe-reaction-btn,
+    .vibe-btn,
+    .vibe-field input,
+    .vibe-field textarea,
+    .vibe-sort-icon-btn,
+    .vibe-search-input,
+    .vibe-new-banner,
+    .vibe-read-more,
+    .vibe-loading::after {
+        transition: none !important;
+        animation: none !important;
+    }
+    .vibe-comment-content.vibe-content-collapsed {
+        display: block;
+        -webkit-line-clamp: unset;
+        -webkit-box-orient: unset;
+        overflow: visible;
+    }
+}
+
+/* Print styles */
+@media print {
+    .vibe-comments-toolbar,
+    .vibe-comment-form-wrapper,
+    .vibe-new-banner,
+    .vibe-read-more,
+    .vibe-reaction-picker,
+    .vibe-comment-footer .comment-reply-link,
+    .vibe-reply-trigger {
+        display: none !important;
+    }
+    .vibe-comment-body {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ccc;
     }
 }

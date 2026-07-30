@@ -235,56 +235,76 @@
     outline-offset: var(--vibe-focus-offset);
 }
 
-/* Comment Footer - Reaction Summary */
+/* Comment Footer - Reaction Summary — is a <button>, not a container */
 .vibe-reaction-summary {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    flex-wrap: wrap;
-    margin-left: auto;
-}
-
-/* Reaction pills */
-.vibe-reaction-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.15rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 500;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
     background: var(--vibe-surface);
     border: 1px solid var(--vibe-border);
     color: var(--vibe-text-muted);
     cursor: pointer;
     transition: all 0.15s ease;
-    white-space: nowrap;
+    font-family: inherit;
+    margin-left: auto;
 }
 
-.vibe-reaction-pill:hover {
+.vibe-reaction-summary:hover {
     background: var(--vibe-primary);
     border-color: var(--vibe-primary);
     color: white;
 }
 
-.vibe-reaction-pill.vibe-user-reacted {
-    background: var(--vibe-primary);
-    border-color: var(--vibe-primary);
-    color: white;
+/* Summary inner elements */
+.vibe-rx-stack {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
 }
 
-.vibe-reaction-pill svg {
-    width: 1rem;
-    height: 1rem;
-    flex-shrink: 0;
+.vibe-rx-stack .vibe-rx-bubble {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    font-size: 0.8rem;
+    margin-left: -0.2rem;
 }
 
-.vibe-reaction-count {
-    min-width: 1.25rem;
+.vibe-rx-stack .vibe-rx-bubble:first-child {
+    margin-left: 0;
+}
+
+.vibe-rx-total {
+    font-weight: 700;
+    min-width: 1rem;
     text-align: center;
+    font-size: 0.75rem;
 }
 
-/* Reaction Picker */
+.vibe-rx-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.vibe-rx-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Reactions wrapper */
+.vibe-reactions {
+    display: inline-flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+/* Reaction Picker — option buttons */
 .vibe-reaction-picker {
     display: none;
     flex-wrap: wrap;
@@ -298,42 +318,43 @@
     display: flex;
 }
 
-.vibe-reaction-btn {
+.vibe-reaction-option {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
-    border-radius: 50%;
+    gap: 0.25rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 8px;
     background: var(--vibe-surface);
     border: 1px solid var(--vibe-border);
     cursor: pointer;
     transition: all 0.15s ease;
     color: var(--vibe-text-muted);
+    font-family: inherit;
+    font-size: 0.85rem;
 }
 
-.vibe-reaction-btn:hover {
+.vibe-reaction-option:hover {
     background: var(--vibe-primary);
     border-color: var(--vibe-primary);
     color: white;
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
-.vibe-reaction-btn.vibe-user-reacted {
+.vibe-reaction-option.vibe-active-reaction {
     background: var(--vibe-primary);
     border-color: var(--vibe-primary);
     color: white;
 }
 
-.vibe-reaction-btn svg {
-    width: 1.25rem;
-    height: 1.25rem;
+.vibe-rx-picker-emoji {
+    font-size: 1.15rem;
+    line-height: 1;
 }
 
-.vibe-reaction-btn .vibe-reaction-count {
-    font-size: 0.65rem;
+.vibe-rx-picker-n {
+    font-size: 0.7rem;
     font-weight: 600;
-    margin-left: 0.25rem;
+    min-width: 0.75rem;
 }
 
 /* Form */
@@ -930,8 +951,8 @@
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
     .vibe-comment-body,
-    .vibe-reaction-pill,
-    .vibe-reaction-btn,
+    .vibe-reaction-summary,
+    .vibe-reaction-option,
     .vibe-btn,
     .vibe-field input,
     .vibe-field textarea,

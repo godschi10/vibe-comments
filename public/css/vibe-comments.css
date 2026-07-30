@@ -1,991 +1,497 @@
-/* Vibe Comments - Theme-Agnostic Styles (v3.5.7)
- * All colors use CSS custom properties for seamless dark mode support.
- * Theme only needs to override the --vibe-* variables under [data-theme="dark"] .vibe-comments-section
- * No hardcoded hex values in this file — everything tokenized. */
-
-:root {
-    /* Core palette (light mode defaults) */
-    --vibe-primary: #3b82f6;
-    --vibe-primary-hover: #2563eb;
-    --vibe-bg: #ffffff;
-    --vibe-bg-alt: #f3f4f6;
-    --vibe-surface: #f8fafc;
-    --vibe-border: #e2e8f0;
-    --vibe-text: #1e293b;
-    --vibe-text-muted: #64748b;
-
-    /* Semantic colors */
-    --vibe-success-bg: #dcfce7;
-    --vibe-success-text: #166534;
-    --vibe-error-bg: #fee2e2;
-    --vibe-error-text: #991b1b;
-    --vibe-warn-bg: #fef3c7;
-    --vibe-warn-text: #92400e;
-    --vibe-info-bg: #eff6ff;
-    --vibe-info-text: #1e40af;
-
-    /* Focus ring */
-    --vibe-focus-ring: 2px solid var(--vibe-primary);
-    --vibe-focus-offset: 1px;
-
-    /* Structure */
-    --vibe-radius: 12px;
-    --vibe-gap: 1rem;
-    --vibe-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    --vibe-shadow-hover: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.vibe-comments-section {
-    max-width: 800px;
-    margin: 2rem auto;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    color: var(--vibe-text);
-}
-
-.vibe-comments-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 2px solid var(--vibe-border);
-}
-
-/* Auto-hide when empty (0 comments on first render) —
-   JS populates the text after Load is clicked, making it reappear. */
-.vibe-comments-title:empty {
-    display: none;
-}
-
-/* Comment List */
-.vibe-comment-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.vibe-comment-list ul {
-    list-style: none;
-    padding-left: 2.5rem;
-    margin-top: var(--vibe-gap);
-    border-left: 2px solid var(--vibe-border);
-}
-
-.vibe-comment-body {
-    background: var(--vibe-bg);
-    border: 1px solid var(--vibe-border);
-    border-radius: var(--vibe-radius);
-    padding: 1.25rem;
-    margin-bottom: var(--vibe-gap);
-    transition: box-shadow 0.2s ease;
-}
-
-.vibe-comment-body:hover {
-    box-shadow: var(--vibe-shadow-hover);
-}
-
-/* Comment Header */
-.vibe-comment-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-}
-
-.vibe-comment-avatar img {
-    border-radius: 50%;
-    width: 48px;
-    height: 48px;
-    object-fit: cover;
-}
-
-.vibe-comment-meta {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.15rem;
-}
-
-.vibe-comment-author {
-    font-weight: 600;
-    font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.vibe-comment-author a {
-    color: var(--vibe-text);
-    text-decoration: none;
-}
-
-.vibe-comment-author a:hover {
-    color: var(--vibe-primary);
-}
-
-.vibe-comment-time {
-    font-size: 0.8rem;
-    color: var(--vibe-text-muted);
-}
-
-/* Badges */
-.vibe-badge {
-    font-size: 0.65rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    padding: 0.15rem 0.5rem;
-    border-radius: 999px;
-    background: var(--vibe-primary);
-    color: white;
-}
-
-.vibe-author-badge {
-    display: inline-block;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--vibe-primary);
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    border-radius: 4px;
-    padding: 1px 5px;
-    vertical-align: middle;
-    margin-left: 4px;
-    line-height: 1.5;
-}
-
-.vibe-pinned-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #b45309;
-    background: #fef3c7;
-    border: 1px solid #fde68a;
-    border-radius: 4px;
-    padding: 1px 6px;
-    margin-bottom: 0.3rem;
-}
-
-/* Comment Content */
-.vibe-comment-content {
-    line-height: 1.6;
-    margin-bottom: 0.75rem;
-    overflow-wrap: break-word;
-    word-break: break-word;
-}
-
-.vibe-comment-content p {
-    margin: 0 0 0.5rem 0;
-}
-
-.vibe-comment-content p:last-child {
-    margin-bottom: 0;
-}
-
-/* Awaiting moderation notice */
-.vibe-awaiting {
-    display: block;
-    font-style: italic;
-    color: var(--vibe-text-muted);
-    margin-bottom: 0.5rem;
-    padding: 0.5rem;
-    background: var(--vibe-warn-bg);
-    color: var(--vibe-warn-text);
-    border-radius: 6px;
-    font-size: 0.85rem;
-}
-
-/* Comment Footer */
-.vibe-comment-footer {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.5rem 1rem;
-    padding-top: 0.75rem;
-}
-
-.vibe-comment-footer .comment-reply-link,
-.vibe-reply-trigger {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.75rem;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid transparent;
-    transition: all 0.2s ease;
-    text-decoration: none;
-    background: var(--vibe-surface);
-    color: var(--vibe-text-muted);
-    border-color: var(--vibe-border);
-}
-
-.vibe-comment-footer .comment-reply-link:hover,
-.vibe-reply-trigger:hover {
-    background: var(--vibe-info-bg);
-    color: var(--vibe-info-text);
-    border-color: var(--vibe-primary);
-}
-
-.vibe-comment-footer .comment-reply-link:focus-visible,
-.vibe-reply-trigger:focus-visible {
-    outline: var(--vibe-focus-ring);
-    outline-offset: var(--vibe-focus-offset);
-}
-
-/* Comment Footer - Reaction Summary — is a <button>, not a container */
-.vibe-reaction-summary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem 0.65rem;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    background: var(--vibe-surface);
-    border: 1px solid var(--vibe-border);
-    color: var(--vibe-text-muted);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    font-family: inherit;
-    margin-left: auto;
-}
-
-.vibe-reaction-summary:hover {
-    background: var(--vibe-primary);
-    border-color: var(--vibe-primary);
-    color: white;
-}
-
-/* Summary inner elements */
-.vibe-rx-stack {
-    display: inline-flex;
-    align-items: center;
-    gap: 0;
-}
-
-.vibe-rx-stack .vibe-rx-bubble {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.35rem;
-    height: 1.35rem;
-    font-size: 0.8rem;
-    margin-left: -0.2rem;
-}
-
-.vibe-rx-stack .vibe-rx-bubble:first-child {
-    margin-left: 0;
-}
-
-.vibe-rx-total {
-    font-weight: 700;
-    min-width: 1rem;
-    text-align: center;
-    font-size: 0.75rem;
-}
-
-.vibe-rx-icon {
-    font-size: 1rem;
-    line-height: 1;
-}
-
-.vibe-rx-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-
-/* Reactions wrapper */
-.vibe-reactions {
-    display: inline-flex;
-    align-items: center;
-    margin-left: auto;
-}
-
-/* Reaction Picker — option buttons */
-.vibe-reaction-picker {
-    display: none;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--vibe-border);
-}
-
-.vibe-reaction-picker.open {
-    display: flex;
-}
-
-.vibe-reaction-option {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.35rem 0.6rem;
-    border-radius: 8px;
-    background: var(--vibe-surface);
-    border: 1px solid var(--vibe-border);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    color: var(--vibe-text-muted);
-    font-family: inherit;
-    font-size: 0.85rem;
-}
-
-.vibe-reaction-option:hover {
-    background: var(--vibe-primary);
-    border-color: var(--vibe-primary);
-    color: white;
-    transform: scale(1.05);
-}
-
-.vibe-reaction-option.vibe-active-reaction {
-    background: var(--vibe-primary);
-    border-color: var(--vibe-primary);
-    color: white;
-}
-
-.vibe-rx-picker-emoji {
-    font-size: 1.15rem;
-    line-height: 1;
-}
-
-.vibe-rx-picker-n {
-    font-size: 0.7rem;
-    font-weight: 600;
-    min-width: 0.75rem;
-}
-
-/* Form */
-.vibe-comment-form-wrapper {
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 2px solid var(--vibe-border);
-}
-
-.vibe-comment-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.vibe-field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-}
-
-.vibe-field label {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--vibe-text-muted);
-}
-
-.vibe-field input,
-.vibe-field textarea {
-    padding: 0.75rem 1rem;
-    border: 1px solid var(--vibe-border);
-    border-radius: 8px;
-    font-size: 1rem;
-    font-family: inherit;
-    background: var(--vibe-bg);
-    color: var(--vibe-text);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.vibe-field input:focus,
-.vibe-field textarea:focus {
-    outline: none;
-    border-color: var(--vibe-primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.vibe-field textarea {
-    resize: vertical;
-    min-height: 100px;
-}
-
-.vibe-form-actions {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-}
-
-/* Guest Fields */
-.vibe-guest-fields {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-}
-
-@media (max-width: 480px) {
-    .vibe-guest-fields {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Buttons */
-.vibe-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.6rem 1.2rem;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid transparent;
-    transition: all 0.2s ease;
-    text-decoration: none;
-}
-
-.vibe-btn-primary {
-    background: var(--vibe-primary);
-    color: white;
-    border-color: var(--vibe-primary);
-}
-
-.vibe-btn-primary:hover {
-    background: var(--vibe-primary-hover);
-}
-
-.vibe-btn-load-comments {
-    background: var(--vibe-primary);
-    color: white;
-    border-color: var(--vibe-primary);
-}
-
-.vibe-btn-load-comments:hover {
-    background: var(--vibe-primary-hover);
-}
-
-.vibe-btn-load-comments:disabled {
-    opacity: 0.7;
-    cursor: default;
-}
-
-.vibe-btn-wp {
-    background: var(--vibe-text);
-    color: white;
-}
-
-.vibe-btn-wp:hover {
-    background: #0f172a;
-}
-
-.vibe-btn-google {
-    background: var(--vibe-bg);
-    color: var(--vibe-text);
-    border-color: var(--vibe-border);
-}
-
-.vibe-btn-google:hover {
-    background: var(--vibe-surface);
-    border-color: var(--vibe-text-muted);
-}
-
-.vibe-btn-guest {
-    background: transparent;
-    color: var(--vibe-text-muted);
-    border-color: var(--vibe-border);
-}
-
-.vibe-btn-guest:hover {
-    background: var(--vibe-surface);
-    color: var(--vibe-text);
-}
-
-.vibe-btn-cancel {
-    background: transparent;
-    color: var(--vibe-text-muted);
-    border-color: var(--vibe-border);
-}
-
-.vibe-btn-cancel:hover {
-    background: var(--vibe-error-bg);
-    color: var(--vibe-error-text);
-    border-color: var(--vibe-error-text);
-}
-
-.vibe-or {
-    font-size: 0.85rem;
-    color: var(--vibe-text-muted);
-    text-transform: uppercase;
-}
-
-/* Auth Bar */
-.vibe-auth-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-}
-
-/* Loading States */
-.vibe-loading {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-.vibe-loading::after {
-    content: '';
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--vibe-border);
-    border-top-color: var(--vibe-primary);
-    border-radius: 50%;
-    animation: vibe-spin 0.6s linear infinite;
-    margin-left: 0.5rem;
-}
-
-@keyframes vibe-spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Closed Message */
-.vibe-closed {
-    text-align: center;
-    color: var(--vibe-text-muted);
-    padding: 2rem;
-    font-style: italic;
-}
-
-/* Messages */
-.vibe-message {
-    animation: vibe-slide-in 0.3s ease;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    font-size: 0.9rem;
-}
-
-.vibe-message-error {
-    background: var(--vibe-error-bg);
-    color: var(--vibe-error-text);
-}
-
-.vibe-message-success {
-    background: var(--vibe-success-bg);
-    color: var(--vibe-success-text);
-}
-
-@keyframes vibe-slide-in {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* ===========================================
-   HONEYPOT — keep offscreen; never visible.
-   Do not remove: this is bot protection.
-   =========================================== */
-.vibe-hp-field {
-    position: absolute !important;
-    left: -9999px !important;
-    top: -9999px !important;
-    opacity: 0 !important;
-    height: 0 !important;
-    width: 0 !important;
-    padding: 0 !important;
-    border: 0 !important;
-    pointer-events: none !important;
-    overflow: hidden !important;
-}
-
-/* Character counter */
-.vibe-char-counter {
-    text-align: right;
-    font-size: 0.78rem;
-    color: var(--vibe-text-muted);
-    margin-top: 0.3rem;
-    transition: color 0.2s ease;
-}
-.vibe-char-counter.vibe-char-warn {
-    color: #b45309;
-    font-weight: 600;
-}
-.vibe-char-counter.vibe-char-over {
-    color: #dc2626;
-    font-weight: 700;
-}
-
-/* Draft auto-save badge */
-.vibe-draft-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.78rem;
-    color: var(--vibe-text-muted);
-    margin-top: 0.3rem;
-}
-.vibe-draft-clear {
-    background: none;
-    border: none;
-    color: var(--vibe-primary);
-    font-size: 0.78rem;
-    cursor: pointer;
-    padding: 0;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    line-height: inherit;
-}
-.vibe-draft-clear:hover {
-    color: #1d4ed8;
-}
-
-/* Toolbar — sort + search */
-.vibe-comments-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-}
-
-.vibe-sort-icon-btn,
-.vibe-search-input {
-    height: 38px;
-    box-sizing: border-box;
-    padding: 0 0.75rem;
-    border: 1px solid var(--vibe-border);
-    border-radius: 8px;
-    background: var(--vibe-bg);
-    color: var(--vibe-text);
-    font-size: 0.875rem;
-    line-height: 1;
-    outline: none;
-    transition: border-color 0.15s ease;
-}
-
-.vibe-sort-icon-btn {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    white-space: nowrap;
-    cursor: pointer;
-}
-.vibe-sort-icon-btn:hover {
-    border-color: var(--vibe-primary);
-    color: var(--vibe-primary);
-}
-.vibe-sort-icon-btn:focus-visible,
-.vibe-search-input:focus-visible {
-    outline: var(--vibe-focus-ring);
-    outline-offset: var(--vibe-focus-offset);
-}
-
-.vibe-search-wrap {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    margin-bottom: 0;
-}
-.vibe-search-input {
-    flex: 1;
-    min-width: 0;
-    width: 100%;
-}
-.vibe-search-input:focus { border-color: var(--vibe-primary); }
-.vibe-search-status {
-    font-size: 0.8rem;
-    color: var(--vibe-text-muted);
-    white-space: nowrap;
-}
-
-/* Blockquote & Code */
-.vibe-comment-content blockquote {
-    border-left: 3px solid var(--vibe-border);
-    padding-left: 0.75rem;
-    margin: 0.5rem 0;
-    color: var(--vibe-text-muted);
-    font-style: italic;
-}
-.vibe-comment-content code {
-    background: var(--vibe-bg-alt);
-    border: 1px solid var(--vibe-border);
-    border-radius: 4px;
-    padding: 0.1em 0.35em;
-    font-size: 0.88em;
-    font-family: monospace;
-}
-
-/* Pinned Comment */
-.vibe-comment-pinned > article {
-    border-left: 3px solid #fbbf24;
-    padding-left: 0.75rem;
-}
-.vibe-pin-btn {
-    background: none;
-    border: 1px solid var(--vibe-border);
-    border-radius: 999px;
-    padding: 0.3rem 0.65rem;
-    font-size: 0.78rem;
-    color: var(--vibe-text-muted);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-.vibe-pin-btn:hover {
-    background: #fef3c7;
-    border-color: #fde68a;
-    color: #b45309;
-}
-.vibe-pin-btn:focus-visible {
-    outline: var(--vibe-focus-ring);
-    outline-offset: var(--vibe-focus-offset);
-}
-
-/* New Comments Banner */
-.vibe-new-banner {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--vibe-primary);
-    color: #fff;
-    font-size: 0.85rem;
-    font-weight: 500;
-    padding: 0.5rem 1.25rem;
-    border-radius: 999px;
-    margin-bottom: 1rem;
-    cursor: pointer;
-    user-select: none;
-    transition: background 0.2s ease;
-    width: fit-content;
-}
-.vibe-new-banner:hover {
-    background: #1d4ed8;
-}
-
-/* Collapse Long Comments */
-.vibe-comment-content.vibe-content-collapsed {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
-    overflow: hidden;
-}
-.vibe-read-more {
-    background: none;
-    border: none;
-    color: var(--vibe-primary);
-    font-size: 0.85rem;
-    padding: 0.2rem 0;
-    cursor: pointer;
-    margin-top: 0.25rem;
-    display: block;
-}
-.vibe-read-more:hover {
-    text-decoration: underline;
-}
-
-/* Linkified URLs */
-.vibe-comment-content a[rel~="ugc"] {
-    color: var(--vibe-primary);
-    text-decoration: underline;
-    word-break: break-all;
-}
-
-/* Empty State CTA */
-.vibe-empty-state {
-    list-style: none;
-    text-align: center;
-    padding: 2rem 1rem;
-    color: var(--vibe-text-muted);
-}
-.vibe-empty-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin: 0 0 0.4rem;
-    color: var(--vibe-text);
-}
-.vibe-empty-sub {
-    margin: 0;
-    font-size: 0.9rem;
-}
-
-/* Retry Button */
-.vibe-retry-btn {
-    background: none;
-    border: none;
-    color: var(--vibe-primary);
-    text-decoration: underline;
-    cursor: pointer;
-    font-size: inherit;
-    padding: 0;
-}
-
-/* Guest Identity Recall */
-.vibe-guest-recall {
-    font-size: 0.82rem;
-    color: var(--vibe-text-muted);
-    margin: 0 0 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    flex-wrap: wrap;
-    line-height: 1.4;
-}
-.vibe-guest-recall strong {
-    color: var(--vibe-text);
-    font-weight: 600;
-}
-.vibe-recall-clear {
-    background: none;
-    border: none;
-    color: var(--vibe-primary);
-    font-size: inherit;
-    cursor: pointer;
-    padding: 0;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-}
-.vibe-recall-clear:hover {
-    color: #1d4ed8;
-}
-
-/* Reply Container */
-.vibe-reply-container {
-    margin-top: 1rem;
-}
-
-/* Character counter */
-.vibe-char-counter {
-    text-align: right;
-    font-size: 0.78rem;
-    color: var(--vibe-text-muted);
-    margin-top: 0.3rem;
-    transition: color 0.2s ease;
-}
-.vibe-char-counter.vibe-char-warn {
-    color: #b45309;
-    font-weight: 600;
-}
-.vibe-char-counter.vibe-char-over {
-    color: #dc2626;
-    font-weight: 700;
-}
-
-/* Draft auto-save badge */
-.vibe-draft-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.78rem;
-    color: var(--vibe-text-muted);
-    margin-top: 0.3rem;
-}
-.vibe-draft-clear {
-    background: none;
-    border: none;
-    color: var(--vibe-primary);
-    font-size: 0.78rem;
-    cursor: pointer;
-    padding: 0;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    line-height: inherit;
-}
-
-/* ============================================================
-   DARK MODE — CSS VARIABLE OVERRIDES ONLY
-   ============================================================
-   The theme's darkmode-vibe-comments.css should ONLY override
-   the --vibe-* custom properties under [data-theme="dark"] .vibe-comments-section
-   No hardcoded selector patches needed when all colors use variables. */
-
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .vibe-comments-section {
-        --vibe-primary:       #60a5fa;
-        --vibe-primary-hover: #3b82f6;
-        --vibe-bg:            #1e293b;
-        --vibe-bg-alt:        #0f172a;
-        --vibe-surface:       #0f172a;
-        --vibe-border:        #334155;
-        --vibe-text:          #f1f5f9;
-        --vibe-text-muted:    #94a3b8;
-        --vibe-shadow:        0 1px 3px rgba(0, 0, 0, 0.4);
-        --vibe-shadow-hover:  0 4px 12px rgba(0, 0, 0, 0.5);
-
-        --vibe-success-bg: #064e3b;
-        --vibe-success-text: #86efac;
-        --vibe-error-bg:   #450a0a;
-        --vibe-error-text: #fca5a5;
-        --vibe-warn-bg:    #451a03;
-        --vibe-warn-text:  #fcd34d;
-        --vibe-info-bg:    #1e3a5f;
-        --vibe-info-text:  #93c5fd;
-    }
-}
-
-[data-theme="dark"] .vibe-comments-section {
-    --vibe-primary:       #60a5fa;
-    --vibe-primary-hover: #3b82f6;
-    --vibe-bg:            #1e293b;
-    --vibe-bg-alt:        #0f172a;
-    --vibe-surface:       #0f172a;
-    --vibe-border:        #334155;
-    --vibe-text:          #f1f5f9;
-    --vibe-text-muted:    #94a3b8;
-    --vibe-shadow:        0 1px 3px rgba(0, 0, 0, 0.4);
-    --vibe-shadow-hover:  0 4px 12px rgba(0, 0, 0, 0.5);
-
-    --vibe-success-bg: #064e3b;
-    --vibe-success-text: #86efac;
-    --vibe-error-bg:   #450a0a;
-    --vibe-error-text: #fca5a5;
-    --vibe-warn-bg:    #451a03;
-    --vibe-warn-text:  #fcd34d;
-    --vibe-info-bg:    #1e3a5f;
-    --vibe-info-text:  #93c5fd;
-}
-
-/* Respect prefers-reduced-motion */
-@media (prefers-reduced-motion: reduce) {
-    .vibe-comment-body,
-    .vibe-reaction-summary,
-    .vibe-reaction-option,
-    .vibe-btn,
-    .vibe-field input,
-    .vibe-field textarea,
-    .vibe-sort-icon-btn,
-    .vibe-search-input,
-    .vibe-new-banner,
-    .vibe-read-more,
-    .vibe-loading::after {
-        transition: none !important;
-        animation: none !important;
-    }
-    .vibe-comment-content.vibe-content-collapsed {
-        display: block;
-        -webkit-line-clamp: unset;
-        -webkit-box-orient: unset;
-        overflow: visible;
-    }
-}
-
-/* Print styles */
-@media print {
-    .vibe-comments-toolbar,
-    .vibe-comment-form-wrapper,
-    .vibe-new-banner,
-    .vibe-read-more,
-    .vibe-reaction-picker,
-    .vibe-comment-footer .comment-reply-link,
-    .vibe-reply-trigger {
-        display: none !important;
-    }
-    .vibe-comment-body {
-        break-inside: avoid;
-        box-shadow: none;
-        border: 1px solid #ccc;
-    }
-}
+1|/* Vibe Comments - Theme-Agnostic Styles (v3.5.7)
+2| * All colors use CSS custom properties for seamless dark mode support.
+3| * Theme only needs to override the --vibe-* variables under [data-theme="dark"] .vibe-comments-section
+4| * No hardcoded hex values in this file — everything tokenized. */
+5|
+6|:root {
+7|    /* Core palette (light mode defaults) */
+8|    --vibe-primary: #3b82f6;
+9|    --vibe-primary-hover: #2563eb;
+10|    --vibe-bg: #ffffff;
+11|    --vibe-bg-alt: #f3f4f6;
+12|    --vibe-surface: #f8fafc;
+13|    --vibe-border: #e2e8f0;
+14|    --vibe-text: #1e293b;
+15|    --vibe-text-muted: #64748b;
+16|
+17|    /* Semantic colors */
+18|    --vibe-success-bg: #dcfce7;
+19|    --vibe-success-text: #166534;
+20|    --vibe-error-bg: #fee2e2;
+21|    --vibe-error-text: #991b1b;
+22|    --vibe-warn-bg: #fef3c7;
+23|    --vibe-warn-text: #92400e;
+24|    --vibe-info-bg: #eff6ff;
+25|    --vibe-info-text: #1e40af;
+26|
+27|    /* Focus ring */
+28|    --vibe-focus-ring: 2px solid var(--vibe-primary);
+29|    --vibe-focus-offset: 1px;
+30|
+31|    /* Structure */
+32|    --vibe-radius: 12px;
+33|    --vibe-gap: 1rem;
+34|    --vibe-shadow: 0 1px 3px rgba(0,0,0,0.1);
+35|    --vibe-shadow-hover: 0 4px 12px rgba(0,0,0,0.1);
+36|}
+37|
+38|.vibe-comments-section {
+39|    max-width: 800px;
+40|    margin: 2rem auto;
+41|    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+42|    color: var(--vibe-text);
+43|}
+44|
+45|.vibe-comments-title {
+46|    font-size: 1.5rem;
+47|    font-weight: 700;
+48|    margin-bottom: 1.5rem;
+49|    padding-bottom: 0.75rem;
+50|    border-bottom: 2px solid var(--vibe-border);
+51|}
+52|
+53|/* Auto-hide when empty (0 comments on first render) —
+54|   JS populates the text after Load is clicked, making it reappear. */
+55|.vibe-comments-title:empty {
+56|    display: none;
+57|}
+58|
+59|/* Comment List */
+60|.vibe-comment-list {
+61|    list-style: none;
+62|    padding: 0;
+63|    margin: 0;
+64|}
+65|
+66|.vibe-comment-list ul {
+67|    list-style: none;
+68|    padding-left: 2.5rem;
+69|    margin-top: var(--vibe-gap);
+70|    border-left: 2px solid var(--vibe-border);
+71|}
+72|
+73|.vibe-comment-body {
+74|    background: var(--vibe-bg);
+75|    border: 1px solid var(--vibe-border);
+76|    border-radius: var(--vibe-radius);
+77|    padding: 1.25rem;
+78|    margin-bottom: var(--vibe-gap);
+79|    transition: box-shadow 0.2s ease;
+80|}
+81|
+82|.vibe-comment-body:hover {
+83|    box-shadow: var(--vibe-shadow-hover);
+84|}
+85|
+86|/* Comment Header */
+87|.vibe-comment-header {
+88|    display: flex;
+89|    align-items: center;
+90|    gap: 0.75rem;
+91|    margin-bottom: 0.75rem;
+92|}
+93|
+94|.vibe-comment-avatar img {
+95|    border-radius: 50%;
+96|    width: 48px;
+97|    height: 48px;
+98|    object-fit: cover;
+99|}
+100|
+101|.vibe-comment-meta {
+102|    display: flex;
+103|    flex-direction: column;
+104|    align-items: flex-start;
+105|    gap: 0.15rem;
+106|}
+107|
+108|.vibe-comment-author {
+109|    font-weight: 600;
+110|    font-size: 0.95rem;
+111|    display: flex;
+112|    align-items: center;
+113|    gap: 0.5rem;
+114|}
+115|
+116|.vibe-comment-author a {
+117|    color: var(--vibe-text);
+118|    text-decoration: none;
+119|}
+120|
+121|.vibe-comment-author a:hover {
+122|    color: var(--vibe-primary);
+123|}
+124|
+125|.vibe-comment-time {
+126|    font-size: 0.8rem;
+127|    color: var(--vibe-text-muted);
+128|}
+129|
+130|/* Badges */
+131|.vibe-badge {
+132|    font-size: 0.65rem;
+133|    font-weight: 700;
+134|    text-transform: uppercase;
+135|    padding: 0.15rem 0.5rem;
+136|    border-radius: 999px;
+137|    background: var(--vibe-primary);
+138|    color: white;
+139|}
+140|
+141|.vibe-author-badge {
+142|    display: inline-block;
+143|    font-size: 0.7rem;
+144|    font-weight: 600;
+145|    color: var(--vibe-primary);
+146|    background: #eff6ff;
+147|    border: 1px solid #bfdbfe;
+148|    border-radius: 4px;
+149|    padding: 1px 5px;
+150|    vertical-align: middle;
+151|    margin-left: 4px;
+152|    line-height: 1.5;
+153|}
+154|
+155|.vibe-pinned-badge {
+156|    display: inline-flex;
+157|    align-items: center;
+158|    gap: 0.25rem;
+159|    font-size: 0.75rem;
+160|    font-weight: 600;
+161|    color: #b45309;
+162|    background: #fef3c7;
+163|    border: 1px solid #fde68a;
+164|    border-radius: 4px;
+165|    padding: 1px 6px;
+166|    margin-bottom: 0.3rem;
+167|}
+168|
+169|/* Comment Content */
+170|.vibe-comment-content {
+171|    line-height: 1.6;
+172|    margin-bottom: 0.75rem;
+173|    overflow-wrap: break-word;
+174|    word-break: break-word;
+175|}
+176|
+177|.vibe-comment-content p {
+178|    margin: 0 0 0.5rem 0;
+179|}
+180|
+181|.vibe-comment-content p:last-child {
+182|    margin-bottom: 0;
+183|}
+184|
+185|/* Awaiting moderation notice */
+186|.vibe-awaiting {
+187|    display: block;
+188|    font-style: italic;
+189|    color: var(--vibe-text-muted);
+190|    margin-bottom: 0.5rem;
+191|    padding: 0.5rem;
+192|    background: var(--vibe-warn-bg);
+193|    color: var(--vibe-warn-text);
+194|    border-radius: 6px;
+195|    font-size: 0.85rem;
+196|}
+197|
+198|/* Comment Footer */
+199|.vibe-comment-footer {
+200|    display: flex;
+201|    align-items: center;
+202|    flex-wrap: wrap;
+203|    gap: 0.5rem 1rem;
+204|    padding-top: 0.75rem;
+205|}
+206|
+207|.vibe-comment-footer .comment-reply-link,
+208|.vibe-reply-trigger {
+209|    display: inline-flex;
+210|    align-items: center;
+211|    gap: 0.35rem;
+212|    padding: 0.35rem 0.75rem;
+213|    border-radius: 8px;
+214|    font-size: 0.875rem;
+215|    font-weight: 500;
+216|    cursor: pointer;
+217|    border: 1px solid transparent;
+218|    transition: all 0.2s ease;
+219|    text-decoration: none;
+220|    background: var(--vibe-surface);
+221|    color: var(--vibe-text-muted);
+222|    border-color: var(--vibe-border);
+223|}
+224|
+225|.vibe-comment-footer .comment-reply-link:hover,
+226|.vibe-reply-trigger:hover {
+227|    background: var(--vibe-info-bg);
+228|    color: var(--vibe-info-text);
+229|    border-color: var(--vibe-primary);
+230|}
+231|
+232|.vibe-comment-footer .comment-reply-link:focus-visible,
+233|.vibe-reply-trigger:focus-visible {
+234|    outline: var(--vibe-focus-ring);
+235|    outline-offset: var(--vibe-focus-offset);
+236|}
+237|
+238|/* Comment Footer - Reaction Summary */
+239|.vibe-reaction-summary {
+240|    display: flex;
+241|    align-items: center;
+242|    gap: 0.25rem;
+243|    flex-wrap: wrap;
+244|    margin-left: auto;
+245|}
+246|
+247|/* Reaction pills */
+248|.vibe-reaction-pill {
+249|    display: inline-flex;
+250|    align-items: center;
+251|    gap: 0.25rem;
+252|    padding: 0.15rem 0.5rem;
+253|    border-radius: 999px;
+254|    font-size: 0.75rem;
+255|    font-weight: 500;
+256|    background: var(--vibe-surface);
+257|    border: 1px solid var(--vibe-border);
+258|    color: var(--vibe-text-muted);
+259|    cursor: pointer;
+260|    transition: all 0.15s ease;
+261|    white-space: nowrap;
+262|}
+263|
+264|.vibe-reaction-pill:hover {
+265|    background: var(--vibe-primary);
+266|    border-color: var(--vibe-primary);
+267|    color: white;
+268|}
+269|
+270|.vibe-reaction-pill.vibe-user-reacted {
+271|    background: var(--vibe-primary);
+272|    border-color: var(--vibe-primary);
+273|    color: white;
+274|}
+275|
+276|.vibe-reaction-pill svg {
+277|    width: 1rem;
+278|    height: 1rem;
+279|    flex-shrink: 0;
+280|}
+281|
+282|.vibe-reaction-count {
+283|    min-width: 1.25rem;
+284|    text-align: center;
+285|}
+286|
+287|/* Reaction Picker */
+288|.vibe-reaction-picker {
+289|    display: none;
+290|    flex-wrap: wrap;
+291|    gap: 0.35rem;
+292|    margin-top: 0.5rem;
+293|    padding-top: 0.5rem;
+294|    border-top: 1px solid var(--vibe-border);
+295|}
+296|
+297|.vibe-reaction-picker.open {
+298|    display: flex;
+299|}
+300|
+301|.vibe-reaction-btn {
+302|    display: inline-flex;
+303|    align-items: center;
+304|    justify-content: center;
+305|    width: 2.25rem;
+306|    height: 2.25rem;
+307|    border-radius: 50%;
+308|    background: var(--vibe-surface);
+309|    border: 1px solid var(--vibe-border);
+310|    cursor: pointer;
+311|    transition: all 0.15s ease;
+312|313|    color: var(--vibe-text-muted);
+314|}
+315|
+316|317|.vibe-comment-footer .comment-reply-link:hover,
+318|.vibe-reply-trigger:hover {
+319|    background: var(--vibe-info-bg);
+320|    color: var(--vibe-info-text);
+321|    border-color: var(--vibe-primary);
+322|}
+323|
+324|.vibe-comment-footer .comment-reply-link:focus-visible,
+325|.vibe-reply-trigger:focus-visible {
+326|    outline: var(--vibe-focus-ring);
+327|    outline-offset: var(--vibe-focus-offset);
+328|}
+329|
+330|/* Comment Footer - Reaction Summary — is a <button>, not a container */
+331|.vibe-reaction-summary {
+332|    display: inline-flex;
+333|    align-items: center;
+334|    gap: 0.35rem;
+335|    padding: 0.25rem 0.65rem;
+336|    border-radius: 8px;
+337|    font-size: 0.8rem;
+338|    font-weight: 600;
+339|    background: var(--vibe-surface);
+340|    border: 1px solid var(--vibe-border);
+341|    color: var(--vibe-text-muted);
+342|    cursor: pointer;
+343|    transition: all 0.15s ease;
+344|    font-family: inherit;
+345|    margin-left: auto;
+346|}
+347|
+348|.vibe-reaction-summary:hover {
+349|    background: var(--vibe-primary);
+350|    border-color: var(--vibe-primary);
+351|    color: white;
+352|}
+353|
+354|/* Summary inner elements */
+355|.vibe-rx-stack {
+356|    display: inline-flex;
+357|    align-items: center;
+358|    gap: 0;
+359|}
+360|
+361|.vibe-rx-stack .vibe-rx-bubble {
+362|    display: inline-flex;
+363|    align-items: center;
+364|    justify-content: center;
+365|    width: 1.35rem;
+366|    height: 1.35rem;
+367|    font-size: 0.8rem;
+368|    margin-left: -0.2rem;
+369|}
+370|
+371|.vibe-rx-stack .vibe-rx-bubble:first-child {
+372|    margin-left: 0;
+373|}
+374|
+375|.vibe-rx-total {
+376|    font-weight: 700;
+377|    min-width: 1rem;
+378|    text-align: center;
+379|    font-size: 0.75rem;
+380|}
+381|
+382|.vibe-rx-icon {
+383|    font-size: 1rem;
+384|    line-height: 1;
+385|}
+386|
+387|.vibe-rx-label {
+388|    font-size: 0.75rem;
+389|    font-weight: 600;
+390|}
+391|
+392|/* Reactions wrapper */
+393|.vibe-reactions {
+394|    display: inline-flex;
+395|    align-items: center;
+396|    margin-left: auto;
+397|}
+398|
+399|/* Reaction Picker — option buttons */
+400|.vibe-reaction-picker {
+401|    display: none;
+402|    flex-wrap: wrap;
+403|    gap: 0.35rem;
+404|    margin-top: 0.5rem;
+405|    padding-top: 0.5rem;
+406|    border-top: 1px solid var(--vibe-border);
+407|}
+408|
+409|.vibe-reaction-picker.open {
+410|    display: flex;
+411|}
+412|
+413|.vibe-reaction-option {
+414|    display: inline-flex;
+415|    align-items: center;
+416|    gap: 0.25rem;
+417|    padding: 0.35rem 0.6rem;
+418|    border-radius: 8px;
+419|    background: var(--vibe-surface);
+420|    border: 1px solid var(--vibe-border);
+421|    cursor: pointer;
+422|    transition: all 0.15s ease;
+423|    color: var(--vibe-text-muted);
+424|    font-family: inherit;
+425|    font-size: 0.85rem;
+426|}
+427|
+428|.vibe-reaction-option:hover {
+429|    background: var(--vibe-primary);
+430|    border-color: var(--vibe-primary);
+431|    color: white;
+432|    transform: scale(1.05);
+433|}
+434|
+435|.vibe-reaction-option.vibe-active-reaction {
+436|    background: var(--vibe-primary);
+437|    border-color: var(--vibe-primary);
+438|    color: white;
+439|}
+440|
+441|.vibe-rx-picker-emoji {
+442|    font-size: 1.15rem;
+443|    line-height: 1;
+444|}
+445|
+446|.vibe-rx-picker-n {
+447|    font-size: 0.7rem;
+448|    font-weight: 600;
+449|    min-width: 0.75rem;
+450|451|.vibe-reaction-btn:hover {
+452|    background: var(--vibe-primary);
+453|    border-color: var(--vibe-primary);
+454|    color: white;
+455|    transform: scale(1.1);
+456|}
+457|
+458|.vibe-reaction-btn.vibe-user-reacted {
+459|    background: var(--vibe-primary);
+460|    border-color: var(--vibe-primary);
+461|    color: white;
+462|}
+463|
+464|.vibe-reaction-btn svg {
+465|    width: 1.25rem;
+466|    height: 1.25rem;
+467|}
+468|
+469|.vibe-reaction-btn .vibe-reaction-count {
+470|    font-size: 0.65rem;
+471|    font-weight: 600;
+472|    margin-left: 0.25rem;
+473|474|}
+475|
+476|/* Form */
+477|.vibe-comment-form-wrapper {
+478|    margin-top: 2rem;
+479|    padding-top: 2rem;
+480|    border-top: 2px solid var(--vibe-border);
+481|}
+482|
+483|.vibe-comment-form {
+484|    display: flex;
+485|    flex-direction: column;
+486|    gap: 1rem;
+487|}
+488|
+489|.vibe-field {
+490|    display: flex;
+491|    flex-direction: column;
+492|    gap: 0.35rem;
+493|}
+494|
+495|.vibe-field label {
+496|    font-size: 0.85rem;
+497|    font-weight: 500;
+498|    color: var(--vibe-text-muted);
+499|}
+500|
+501|

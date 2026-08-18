@@ -16,6 +16,13 @@ Types of changes:
 
 ---
 
+## [3.5.9] — 2026-08-18
+
+### Fixed
+- **Reactions silently failing on SQLite hosts** — the official WordPress SQLite Database Integration plugin's `dbDelta()` records every non-primary-key column of `wp_vibe_comment_likes` with `EXTRA = 'auto_increment'` in its MySQL `INFORMATION_SCHEMA` mirror. The driver's INSERT translator trusts that flag and rewrites inserted values as `NULLIF(CAST(x AS INTEGER), 0)`, so guest reactions (`user_id = 0`) and the `guest_token` / `reaction_type` strings became `NULL` → `NOT NULL constraint failed` → `toggle_reaction()` returned "Failed to save reaction." The real SQLite table was always correct; only the mirror was corrupted. New `Vibe_Comments_Activator::maybe_repair_sqlite_schema()` (called from `maybe_upgrade()` on every request, idempotent, no-op on MySQL) detects and repairs the mirror in place without touching stored reaction data.
+- **Repair detection case-bug** — the driver's `fetchAll(PDO::FETCH_ASSOC)` returns UPPERCASE keys (`COLUMN_NAME`, `EXTRA`); detection now normalises each row with `array_change_key_case($col, CASE_LOWER)` before the lookup, so the repair actually fires.
+- **Version-drift cleanup** — header said 3.5.8 while CHANGELOG/README still documented 3.5.7; both now align at 3.5.9.
+
 ## [Unreleased]
 
 ---

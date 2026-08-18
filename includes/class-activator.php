@@ -41,6 +41,14 @@ class Vibe_Comments_Activator {
      * cached comment JSON never survives an upgrade.
      */
     public static function maybe_upgrade() {
+        // Self-heal the reaction table's information_schema mirror when the
+        // site runs on the SQLite Database Integration plugin. This runs on
+        // every request (idempotent, one cheap indexed SELECT) and is
+        // intentionally independent of DB_VERSION, so it also re-repairs the
+        // mirror after a deactivate/reactivate re-runs dbDelta() and corrupts
+        // it again. See maybe_repair_sqlite_schema() for the full explanation.
+        self::maybe_repair_sqlite_schema();
+
         $installed = get_option('vibe_comments_db_version', '0');
         if (version_compare($installed, self::DB_VERSION, '>=')) {
             return;
@@ -162,6 +170,90 @@ class Vibe_Comments_Activator {
 
         if ( $ok ) {
             update_option('vibe_comments_db_version', self::DB_VERSION);
+        }
+    }
+
+    /**
+     * Repair the reaction table's MySQL information_schema mirror on SQLite.
+     *
+     * The SQLite Database Integration plugin (the official WordPress SQLite
+     * driver) stores a mirror of MySQL's INFORMATION_SCHEMA in SQLite tables
+     * (_wp_sqlite_mysql_information_schema_*). Its dbDelta() mishandles this
+     * plugin's CREATE TABLE statement and records EVERY non-PK column
+     * (comment_id, user_id, guest_token, reaction_type, created_at) with
+     * EXTRA = 'auto_increment' in that mirror — a systemic driver bug that
+     * also corrupts other plugins' tables, not just ours.
+     *
+     * The driver's INSERT translator trusts that flag and rewrites every
+     * inserted value for those columns as `NULLIF(CAST(x AS INTEGER), 0)`,
+     * so a guest reaction (user_id = 0), and the guest_token / reaction_type
+     * strings, all become NULL → `NOT NULL constraint failed` → toggle_reaction()
+     * returns "Failed to save reaction." The REAL SQLite table is correct; only
+     * the mirror is wrong, so repairing the mirror columns in place fixes it
+     * without touching any stored reaction data.
+     *
+     * No-op on MySQL (and any non-SQLite driver).
+     */
+    public static function maybe_repair_sqlite_schema() {
+        global $wpdb;
+
+        if ( ! class_exists( 'WP_SQLite_DB' ) || ! ( $wpdb instanceof WP_SQLite_DB ) ) {
+            return;
+        }
+
+        try {
+            $driver = $wpdb->get_driver();
+        } catch ( Throwable $e ) {
+            return;
+        }
+
+        $table = $wpdb->prefix . 'vibe_comment_likes';
+
+        try {
+            $stmt = $driver->execute_sqlite_query(
+                'SELECT column_name, extra FROM _wp_sqlite_mysql_information_schema_columns WHERE table_name = ? ORDER BY ordinal_position',
+                array( $table )
+            );
+            $columns = $stmt->fetchAll( \PDO::FETCH_ASSOC );
+        } catch ( Throwable $e ) {
+            // Mirror tables missing or a different driver version — nothing we
+            // can safely repair here, so bail quietly rather than fatal.
+            return;
+        }
+
+        // The SQLite driver's fetchAll() returns UPPERCASE keys (COLUMN_NAME,
+        // EXTRA, ...), not the lowercase aliases used in the SELECT. Normalise
+        // each row to lowercase keys so the lookup below is case-insensitive —
+        // without this, isset($col['column_name']) is always false and the
+        // corrupted mirror is never detected.
+        $needs_repair = false;
+        foreach ( $columns as $col ) {
+            $col = array_change_key_case( $col, CASE_LOWER );
+            if ( isset( $col['column_name'], $col['extra'] )
+                && 'id' !== $col['column_name']
+                && false !== strpos( (string) $col['extra'], 'auto_increment' ) ) {
+                $needs_repair = true;
+                break;
+            }
+        }
+
+        if ( ! $needs_repair ) {
+            return;
+        }
+
+        try {
+            $driver->execute_sqlite_query(
+                "UPDATE _wp_sqlite_mysql_information_schema_columns SET
+                    extra = CASE WHEN column_name = 'id' THEN 'auto_increment' ELSE '' END,
+                    is_nullable = CASE WHEN column_name IN ('comment_id','user_id','guest_token','reaction_type') THEN 'NO' ELSE is_nullable END,
+                    column_default = CASE column_name WHEN 'user_id' THEN '0' WHEN 'guest_token' THEN '' WHEN 'reaction_type' THEN 'like' ELSE column_default END,
+                    column_type = CASE column_name WHEN 'guest_token' THEN 'varchar(64)' WHEN 'reaction_type' THEN 'varchar(20)' ELSE column_type END
+                WHERE table_name = ?",
+                array( $table )
+            );
+            error_log( '[Vibe Comments] Repaired SQLite information_schema mirror for ' . $table );
+        } catch ( Throwable $e ) {
+            error_log( '[Vibe Comments] Failed to repair SQLite information_schema mirror for ' . $table . ': ' . $e->getMessage() );
         }
     }
 }

@@ -12,7 +12,14 @@ Types of changes:
 - `Removed` — removed features
 - `Deprecated` — features that will be removed in a future release
 - `Security` — changes that address vulnerabilities
-### Added- **Nginx FastCGI cache auto-purge on comment events** -- purge_comments_data_cache() now fires do_action('nginx_helper_purge_url', $url) when the Nginx Helper plugin is active with FastCGI purge enabled. This busts the Nginx page cache for the specific post URL immediately when a comment is approved, trashed, deleted, or reacted to -- keeping comment counts and content fresh without manual intervention.  - Requires: Nginx Helper plugin active, 'Enable Purge' checked, 'Purge Method: FastCGI' selected.  - Works alongside existing LiteSpeed tag purge, Cloudflare Cache-Tag purge, and transient invalidation.
+
+---
+
+## [3.5.10] — 2026-08-19
+
+### Fixed
+- **Stale asset cache-buster** — `VIBE_COMMENTS_VERSION` was still `3.5.8` after the v3.5.9 release (the version header was bumped but the constant wasn't), so every enqueued JS/CSS URL served `?ver=3.5.8` and browsers with cached 3.5.8 assets would never fetch newer files after future releases. Constant now matches the header at 3.5.10.
+- **Version-drift cleanup** — plugin header, `VIBE_COMMENTS_VERSION` constant, CHANGELOG and README all now align at 3.5.10.
 
 ---
 

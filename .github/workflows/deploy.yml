@@ -27,9 +27,9 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
             cd /var/www &&
-            sudo git -C wp-content/themes/gwill-starter-theme pull origin main &&
+            sudo git -C wp-content/themes/gwill-tech-theme pull origin main &&
             sudo git -C wp-content/plugins/vibe-comments pull origin main &&
-            sudo chown -R www-data:www-data wp-content/themes/gwill-starter-theme wp-content/plugins/vibe-comments &&
+            sudo chown -R www-data:www-data wp-content/themes/gwill-tech-theme wp-content/plugins/vibe-comments &&
             sudo wp cache flush --allow-root --path=/var/www &&
             echo 'Deploy complete'
           "

@@ -15,11 +15,14 @@ Types of changes:
 
 ---
 
-## [3.5.10] — 2026-08-19
+## [3.6.0] — 2026-08-19
+
+### Changed
+- **Version re-numbered 3.5.10 → 3.6.0** — a two-digit patch ("3.5.10") parses ambiguously as "3.5.1", which naive readers and parsers rank *lower* than 3.5.8. The tenth patch in the 3.5 line is a minor release by any convention, so the line continues as 3.6.0.
 
 ### Fixed
-- **Stale asset cache-buster** — `VIBE_COMMENTS_VERSION` was still `3.5.8` after the v3.5.9 release (the version header was bumped but the constant wasn't), so every enqueued JS/CSS URL served `?ver=3.5.8` and browsers with cached 3.5.8 assets would never fetch newer files after future releases. Constant now matches the header at 3.5.10.
-- **Version-drift cleanup** — plugin header, `VIBE_COMMENTS_VERSION` constant, CHANGELOG and README all now align at 3.5.10.
+- **Stale asset cache-buster** — `VIBE_COMMENTS_VERSION` was still `3.5.8` after the v3.5.9 release (the version header was bumped but the constant wasn't), so every enqueued JS/CSS URL served `?ver=3.5.8` and browsers with cached 3.5.8 assets would never fetch newer files after future releases. Constant now matches the header at 3.6.0.
+- **Version-drift cleanup** — plugin header, `VIBE_COMMENTS_VERSION` constant, CHANGELOG and README all now align at 3.6.0.
 
 ---
 

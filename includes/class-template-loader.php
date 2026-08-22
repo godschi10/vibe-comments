@@ -38,14 +38,27 @@ class Vibe_Comments_Template_Loader {
      * own count display a few lines further into that file.
      */
     public function load_template( $template ) {
-        if ( ! is_singular() ) {
-            return $template;
-        }
-        if ( ! comments_open() && (int) get_comments_number() === 0 ) {
+        if ( ! self::should_render() ) {
             return $template;
         }
         $plugin_template = VIBE_COMMENTS_PLUGIN_DIR . 'templates/comments.php';
         return file_exists( $plugin_template ) ? $plugin_template : $template;
+    }
+
+    /**
+     * Single source of truth for "does this singular view use the Vibe UI?"
+     *
+     * TRUE when commenting is open OR the post already has approved comments
+     * (closed-but-has-comments posts still render the Vibe list). Consumed by
+     * load_template() above AND by the enqueue_assets() condition in the main
+     * plugin file — keep exactly ONE copy of this logic (v3.6.1 dedup; these
+     * two previously drifted apart once and broke CSS/JS loading).
+     */
+    public static function should_render() {
+        if ( ! is_singular() ) {
+            return false;
+        }
+        return comments_open() || (int) get_comments_number() > 0;
     }
 
     /**

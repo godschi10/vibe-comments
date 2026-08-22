@@ -15,6 +15,12 @@ Types of changes:
 
 ---
 
+## [3.6.1] — 2026-08-22
+
+### Changed
+
+- **Deduplicated the "should Vibe render on this singular view?" condition.** The identical logic existed in `Vibe_Comments_Template_Loader::load_template()` (negated form) and `vibe-comments.php::enqueue_assets()` (positive form). These two copies drifted apart once before (pre-3.5.0: template rendered but CSS/JS never loaded). Both now call one shared static method, `Vibe_Comments_Template_Loader::should_render()` — single source of truth, found via the 2026-08-22 plugin/theme conflict audit.
+
 ## [3.6.0] — 2026-08-19
 
 ### Changed

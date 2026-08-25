@@ -15,6 +15,12 @@ Types of changes:
 
 ---
 
+## [3.6.2] — 2026-08-24
+
+### Fixed
+
+- **Stale asset cache-buster regression** — `VIBE_COMMENTS_VERSION` was left at `3.6.0` when the header bumped to 3.6.1 (the same drift fixed in 3.6.0, reintroduced by the 3.6.1 commit which edited the header line only). Enqueued JS/CSS URLs still served `?ver=3.6.0`. Constant now matches the header at **3.6.1→3.6.2**, both aligned. Found via the 2026-08-24 plugin/theme conflict audit.
+
 ## [3.6.1] — 2026-08-22
 
 ### Changed

@@ -47,6 +47,10 @@ class Vibe_Comments_Ajax_Handler {
         if ($was_public === $is_public || $new_status === $old_status) return;
         $this->sync_and_purge(intval($comment->comment_post_ID));
         $this->purge_reply_cache_if_needed($comment);
+        // Reply push (v3.7.0): an approval making a REPLY public is the
+        // notify event for the parent's author. The class self-guards:
+        // unavailable rail, non-reply, self-reply, dedup — all no-op.
+        Vibe_Comments_Reply_Push::notify_parent($comment);
     }
 
     /**
@@ -70,6 +74,10 @@ class Vibe_Comments_Ajax_Handler {
         if (!$comment) return;
         $this->sync_and_purge(intval($comment->comment_post_ID));
         $this->purge_reply_cache_if_needed($comment);
+        // Reply push (v3.7.0): wp_set_comment_status('approve') is the
+        // moderated-approval path (admin queue). Same self-guards; the
+        // class's per-process dedup makes the dual-hook overlap safe.
+        Vibe_Comments_Reply_Push::notify_parent($comment);
     }
 
     /**
@@ -1098,6 +1106,30 @@ class Vibe_Comments_Ajax_Handler {
             if ($approved == 1) {
                 $this->sync_and_purge($post_id);
                 $this->purge_reply_cache_if_needed($comment);
+                // Reply push (v3.7.0) — INSTANT-APPROVAL path. wp_new_comment()
+                // does NOT fire transition_comment_status on first save (that
+                // hook only runs on later admin status changes), so an
+                // immediately-public reply is handled HERE. The class dedup
+                // makes the overlap with the status hooks double-push-proof.
+                Vibe_Comments_Reply_Push::notify_parent($comment);
+            }
+
+            // ── Reply push opt-in (v3.7.0) ─────────────────────────────
+            // The client only sends this when the user ticked "Notify me
+            // about replies" AND the browser subscription was successfully
+            // created/confirmed before submit. Everything is re-validated
+            // server-side (https endpoint, key round-trip); a failure here
+            // is swallowed — the comment itself is already saved and must
+            // never be disturbed by a push-storage problem.
+            if ( ! empty( $_POST['vibe_reply_push'] )
+                && is_array( $_POST['vibe_reply_push'] ) ) {
+                $rp = wp_unslash( $_POST['vibe_reply_push'] );
+                Vibe_Comments_Reply_Push::store(
+                    $comment_id,
+                    isset( $rp['endpoint'] ) && is_string( $rp['endpoint'] ) ? $rp['endpoint'] : '',
+                    isset( $rp['p256dh'] )   && is_string( $rp['p256dh'] )   ? $rp['p256dh']   : '',
+                    isset( $rp['auth'] )     && is_string( $rp['auth'] )     ? $rp['auth']     : ''
+                );
             }
 
             wp_send_json_success(array(

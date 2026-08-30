@@ -164,7 +164,107 @@
         restoreGuestIdentity();
         initGuestAutoSave();
         initCharCounter();
+        initReplyPush();
     });
+
+    /* ══════════════════════════════════════════════════════════════════════
+     * REPLY PUSH OPT-IN (v3.7.0) — "Notify me about replies"
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * Flow (the dead-bell law enforced: requestPermission() ALWAYS before
+     * pushManager.subscribe() — subscribing without asking NEVER shows the
+     * OS prompt and silently fails with NotAllowedError):
+     *   1. User ticks the checkbox → permission prompt (user gesture).
+     *   2. Granted → subscribe with the theme's VAPID key (the SAME
+     *      subscription the site bell uses — one per origin + sw.js; the
+     *      routing happens server-side, see class-reply-push.php).
+     *   3. The subscription object is held in memory and attached to the
+     *      submit payload as vibe_reply_push{endpoint,p256dh,auth}.
+     *   4. Server stores it on the comment; a reply's approval pushes.
+     *
+     * Un-tick → drop the in-memory subscription (server meta is only ever
+     * written on submit, so an un-tick before posting stores nothing — the
+     * honest opt-out; after posting, the site bell's own unsubscribe
+     * governs the browser side and 410-prune cleans the comment meta).
+     *
+     * The feature only arms when config.replyPush is truthy (theme rail
+     * present). On denial the checkbox un-checks itself with an inline
+     * note — never a dead-looking UI.
+     */
+    var replyPushSub = null;
+
+    function urlBase64ToUint8Array(b64) {
+        var padding = '='.repeat((4 - (b64.length % 4)) % 4);
+        var base64 = (b64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+        var raw = window.atob(base64);
+        var output = new Uint8Array(raw.length);
+        for (var i = 0; i < raw.length; i++) {
+            output[i] = raw.charCodeAt(i);
+        }
+        return output;
+    }
+
+    function initReplyPush() {
+        var box = document.getElementById('vibe-reply-push-checkbox');
+        var note = document.getElementById('vibe-reply-push-note');
+        if (!box || !config.replyPush || !config.replyPush.publicKey) {
+            return; // feature unarmed — markup is already absent server-side
+        }
+
+        box.addEventListener('change', function() {
+            if (!box.checked) {
+                replyPushSub = null;
+                if (note) note.hidden = true;
+                return;
+            }
+            // Only browsers that can push at all.
+            if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+                box.checked = false;
+                if (note) {
+                    note.textContent = 'This browser does not support notifications.';
+                    note.hidden = false;
+                }
+                return;
+            }
+            Notification.requestPermission().then(function(permission) {
+                if (permission !== 'granted') {
+                    box.checked = false;
+                    if (note) {
+                        note.textContent = permission === 'denied'
+                            ? 'Notifications are blocked for this site in your browser settings.'
+                            : 'Permission not granted — the checkbox stays off.';
+                        note.hidden = false;
+                    }
+                    return;
+                }
+                navigator.serviceWorker.ready.then(function(reg) {
+                    // Reuse the existing subscription when the browser already
+                    // has one for this origin — subscribing again on an active
+                    // subscription is a no-op that can race the bell.
+                    return reg.pushManager.getSubscription().then(function(existing) {
+                        if (existing) return existing;
+                        return reg.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array(config.replyPush.publicKey)
+                        });
+                    });
+                }).then(function(sub) {
+                    replyPushSub = sub;
+                    if (note) {
+                        note.textContent = 'You will get a push notification on this device when someone replies to your comment.';
+                        note.hidden = false;
+                    }
+                }).catch(function() {
+                    box.checked = false;
+                    replyPushSub = null;
+                    if (note) {
+                        note.textContent = 'Could not enable notifications on this device.';
+                        note.hidden = false;
+                    }
+                });
+            });
+        });
+    }
 
     /**
      * Single source of truth for "N Comments" heading text — localized via
@@ -1011,6 +1111,23 @@
                         submitBtn.classList.remove('vibe-loading');
                     }
                     return;
+                }
+            }
+
+            // Reply push opt-in (v3.7.0): attach the browser subscription
+            // when the user ticked the checkbox AND the subscribe succeeded.
+            // PHP's bracket notation (vibe_reply_push[endpoint]) is REQUIRED —
+            // URLSearchParams stringifies a nested object to "[object Object]";
+            // bracket keys rebuild the array server-side. The server
+            // re-validates everything; absence = plain comment.
+            if (replyPushSub) {
+                try {
+                    var rpk = replyPushSub.toJSON().keys || {};
+                    data['vibe_reply_push[endpoint]'] = replyPushSub.endpoint;
+                    data['vibe_reply_push[p256dh]']   = rpk.p256dh;
+                    data['vibe_reply_push[auth]']    = rpk.auth;
+                } catch (e) {
+                    // Malformed subscription object — post the comment plain.
                 }
             }
 

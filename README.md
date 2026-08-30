@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.6.3  
+**Version:** 3.7.0  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later
@@ -307,6 +307,44 @@ On every singular post, the plugin outputs a `Schema.org` JSON-LD block in `<hea
 ## Uninstall Safety
 
 `uninstall.php` checks whether `vibe-comments/vibe-comments.php` is still in `active_plugins` (and `active_sitewide_plugins` on multisite) before touching any data. If the canonical plugin is still active, the file exits immediately. This prevents data loss when an off-slug copy of the plugin (e.g. uploaded under a wrong directory name) is deleted while the main plugin is still running.
+
+## Reply Push Notifications (v3.7.0)
+
+Commenters can tick **"Notify me about replies"** under the form and get a web-push notification on their device the moment someone replies to their comment. Fully self-hosted — no email server, no OneSignal, no third parties.
+
+### Requirements
+
+The feature arms automatically when the active theme provides a push rail (both GWill themes do):
+
+- `gwill_push_vapid()` — VAPID keys
+- `gwill_push_stream()` — a `Minishlink\WebPush\WebPush` instance
+- `gwill_push_obfuscate()` / `gwill_push_deobfuscate()` — key-at-rest helpers
+- A service worker with a `push` handler honoring the `{ title, body, icon, badge, url }` payload
+
+On any other theme the checkbox is never rendered and every code path no-ops — no fatal, no dead UI.
+
+### How it works
+
+1. **Opt-in**: tick the checkbox → the browser permission prompt fires (only on the user's gesture) → the subscription is created with the theme's VAPID public key. It is the SAME origin subscription the site's notification bell uses — one per browser; only the server-side routing differs.
+2. **Storage**: the subscription is stored on the comment itself (`_vibe_reply_push` commentmeta, keys obfuscated at rest). Lifecycle is automatic — the comment is deleted → the subscription dies with it. No new tables, no new options.
+3. **Delivery**: when a reply is approved — instantly on submit or by a moderator — the plugin queues one notification through the theme's stream: *"Chidi replied to your comment"* + an excerpt, tapping lands on the reply's anchor. A `410 Gone` push report prunes the stored meta automatically.
+4. **Guards**: top-level comments, self-replies, unapproved replies, and unsubscribed parents never notify. Every failure path is silent-safe — a broken push can never disturb the comment flow that triggered it.
+
+### Server-side validation
+
+`http://` endpoints are rejected (https-only, same guard as the theme's REST route); malformed keys are rejected by a `Subscription::create()` round-trip before anything touches the database.
+
+### Site-owner controls (filters)
+
+```php
+// Turn the feature off:
+add_filter( 'vibe_comments_reply_push_enabled', '__return_false' );
+
+// Point the notification icon at your own asset:
+add_filter( 'vibe_comments_push_icon', function () {
+    return get_template_directory_uri() . '/assets/brand/my-icon.png';
+} );
+```
 
 ## Changelog
 

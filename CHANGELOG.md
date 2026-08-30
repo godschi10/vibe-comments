@@ -15,6 +15,25 @@ Types of changes:
 
 ---
 
+## [3.7.0] — 2026-08-30
+
+### Added — Reply Push Notifications (self-hosted, zero third parties)
+
+A commenter can tick **"Notify me about replies"** under the form and receive a **web-push notification on their device** the moment someone replies to their comment — no email server, no OneSignal, no external service. The notification carries the replier's name, an excerpt of their reply, and tapping it lands directly on the new reply's anchor.
+
+- **New class `includes/class-reply-push.php`** — the whole feature in one self-contained class (`Vibe_Comments_Reply_Push`): availability check, storage, notify, send, prune.
+- **Storage**: the browser subscription lives on the comment itself — `_vibe_reply_push` commentmeta (JSON blob; keys obfuscated with the theme's `gwill_push_obfuscate()` + base64'd, the identical at-rest treatment the site-wide subscriber table uses). Perfect 1:1 mapping with automatic lifecycle: comment deleted → subscription dies; plugin uninstalled → the meta sweep (added to `uninstall.php`) removes it. No new tables, no new options.
+- **Integration contract, not duplication**: the plugin ships NO push stack of its own. It arms only when the active theme provides the existing GWill rail — `gwill_push_vapid()`, `gwill_push_stream()`, the obfuscation helpers, and a sw.js `push` handler with the `{title, body, icon, badge, url}` payload contract. On any other theme the checkbox never renders and every method no-ops. `vibe_comments_reply_push_enabled` filter for site owners; `vibe_comments_push_icon` filter for the notification icon.
+- **Client flow** (`vibe-comments.js`): tick → `Notification.requestPermission()` FIRST (the dead-bell law — subscribing without asking silently fails with NotAllowedError and never shows the OS prompt) → subscribe with the theme's VAPID public key (localized via `config.replyPush.publicKey`), reusing the origin's existing subscription when present → subscription attached to the submit payload as PHP bracket notation (`vibe_reply_push[endpoint]` etc. — `URLSearchParams` stringifies nested objects to `[object Object]`; bracket keys rebuild the array server-side). Un-tick before posting stores nothing — the honest opt-out; after posting, the site bell's unsubscribe governs the browser side and a 410/404 push report prunes the comment meta server-side.
+- **Three approval paths all wired, one notification**: instant approval (inline in `submit_comment` — `wp_new_comment()` does NOT fire `transition_comment_status` on first save), moderated approval (`transition_comment_status`), and admin status-set (`wp_set_comment_status`). Per-process static dedup makes the overlaps double-push-proof.
+- **Guards**: top-level comments never notify; self-replies (same author email) never notify; unapproved replies never notify; rail-absent sites never arm; every push failure is silent-safe (logged via `vibe_log()` when debug tools are on) — a broken push can never disturb the comment flow that triggered it.
+- **Validation mirrors the theme's REST route**: https-only endpoints, library `Subscription::create()` round-trip before anything is stored.
+- **Styles**: brand-neutral `.vibe-reply-push-*` rules using the plugin's own `--vibe-*` tokens; 44px touch target; theme override files re-token automatically.
+
+**Battery (10/10, standalone shim harness)**: happy path (queued once, correct title, `#comment-N` anchor), rail-absent, top-level, self-reply, unsubscribed parent, unapproved reply, http-endpoint rejection, 410 prune, dedup, obfuscate round-trip.
+
+**Harness lesson**: a namespaced vendor stub cannot mix with bracketed namespace declarations in one file — provide it via a tiny separate namespaced file `require`d from the harness.
+
 ## [3.6.3] — 2026-08-30
 
 ### Fixed

@@ -202,6 +202,18 @@ if ($vibe_count === 0) {
                     <input type="text" name="vibe_hp" value="" class="vibe-hp-field"
                            aria-hidden="true" tabindex="-1" autocomplete="off" />
 
+                    <?php if ( Vibe_Comments_Reply_Push::is_available() ) : ?>
+                    <div class="vibe-reply-push-optin" id="vibe-reply-push-optin">
+                        <label for="vibe-reply-push-checkbox" class="vibe-reply-push-label">
+                            <input type="checkbox" id="vibe-reply-push-checkbox" name="vibe_reply_push_optin" value="1" />
+                            <span><?php esc_html_e( 'Notify me about replies', 'vibe-comments' ); ?></span>
+                        </label>
+                        <p class="vibe-reply-push-note" id="vibe-reply-push-note" hidden>
+                            <?php esc_html_e( 'You will get a push notification on this device when someone replies to your comment.', 'vibe-comments' ); ?>
+                        </p>
+                    </div>
+                    <?php endif; ?>
+
                     <div class="vibe-form-actions">
                         <button type="submit" class="vibe-btn vibe-btn-primary" id="vibe-submit-btn">
                             <?php _e('Post Comment', 'vibe-comments'); ?>

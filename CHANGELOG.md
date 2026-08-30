@@ -15,6 +15,13 @@ Types of changes:
 
 ---
 
+## [3.6.3] — 2026-08-30
+
+### Fixed
+
+- **README version line drift** — the README still declared `3.6.0` through the 3.6.1 and 3.6.2 releases (the header/constant were bumped but the README line was missed both times). README now carries the true version, and the release checklist in the repo notes that all four version carriers (header, `VIBE_COMMENTS_VERSION`, README, this CHANGELOG) must move together.
+- **Docs release** — version alignment verified against live sites after deployment; no code changes in this release.
+
 ## [3.6.2] — 2026-08-24
 
 ### Fixed

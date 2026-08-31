@@ -68,6 +68,18 @@ $wpdb->delete(
     array( '%s' )
 );
 
+// ── 3c. Remove _vibe_owner + _vibe_edited commentmeta (v3.13.0 edit window) ──
+$wpdb->delete(
+    $wpdb->commentmeta,
+    array( 'meta_key' => '_vibe_owner' ),
+    array( '%s' )
+);
+$wpdb->delete(
+    $wpdb->commentmeta,
+    array( 'meta_key' => '_vibe_edited' ),
+    array( '%s' )
+);
+
 // ── 4. Delete plugin settings and version option ──────────────────────────
 delete_option( 'vibe_comments_db_version' );
 delete_option( 'vibe_comments_google_settings' );

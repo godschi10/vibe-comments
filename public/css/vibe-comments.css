@@ -361,6 +361,119 @@
     color: white;
 }
 
+/* ── v3.13.0 — 5-minute edit window ─────────────────────────────────────
+   Edit mirrors the Reply pill exactly (kinship of affordances); the
+   (edited) badge is deliberately quieter — a muted meta-line hint, not a
+   loud status. The inline editor is compact: textarea + one row of
+   actions, styled to match the reply form's field treatment. */
+.vibe-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--vibe-primary);
+    text-decoration: none;
+    background: none;
+    border: 1px solid var(--vibe-primary);
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.vibe-edit-btn:hover {
+    background: var(--vibe-primary);
+    color: white;
+}
+
+.vibe-edited-badge {
+    font-size: 0.75rem;
+    color: var(--vibe-muted, #646970);
+    font-style: italic;
+    white-space: nowrap;
+}
+
+.vibe-edit-box {
+    margin: 0.5rem 0;
+    display: grid;
+    gap: 0.5rem;
+}
+
+.vibe-edit-textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 0.6rem 0.75rem;
+    font: inherit;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: inherit;
+    background: var(--vibe-surface, rgba(127, 127, 127, 0.08));
+    border: 1px solid var(--vibe-border, rgba(127, 127, 127, 0.35));
+    border-radius: 8px;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.vibe-edit-textarea:focus {
+    outline: 2px solid var(--vibe-primary);
+    outline-offset: 1px;
+}
+
+.vibe-edit-textarea.vibe-edit-error {
+    border-color: #d63638;
+}
+
+.vibe-edit-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.vibe-edit-save,
+.vibe-edit-cancel {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.85rem;
+    border-radius: 999px;
+    padding: 0.35rem 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.vibe-edit-save {
+    background: var(--vibe-primary);
+    color: white;
+}
+
+.vibe-edit-save:hover {
+    filter: brightness(1.1);
+}
+
+.vibe-edit-save:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.vibe-edit-cancel {
+    color: var(--vibe-muted, #646970);
+    border-color: var(--vibe-border, rgba(127, 127, 127, 0.35));
+    background: none;
+}
+
+.vibe-edit-cancel:hover {
+    background: var(--vibe-surface, rgba(127, 127, 127, 0.08));
+}
+
+.vibe-edit-note {
+    font-size: 0.75rem;
+    color: var(--vibe-muted, #646970);
+    white-space: nowrap;
+}
+
+
 /* View/Hide Replies — a disclosure toggle, not an action, so it's deliberately
    quieter than the Reply button: no border/pill treatment, just a text link
    with an underline-on-hover, matching how Instagram/Reddit-style UIs treat

@@ -3,6 +3,13 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 class Vibe_Comments_Ajax_Handler {
+
+    /**
+     * v3.13.0 — self-edit window in seconds (5 minutes). Anchored to the
+     * ORIGINAL comment_date_gmt; an edit never extends it. Admin edits via
+     * wp-admin bypass this entirely (moderate_comments is a different path).
+     */
+    const EDIT_WINDOW = 300;
     public function __construct() {
         add_action('wp_ajax_vibe_submit_comment',           array($this, 'submit_comment'));
         add_action('wp_ajax_nopriv_vibe_submit_comment',    array($this, 'submit_comment'));
@@ -18,7 +25,9 @@ class Vibe_Comments_Ajax_Handler {
         add_action('wp_ajax_vibe_get_comment_count',        array($this, 'get_comment_count'));
         add_action('wp_ajax_nopriv_vibe_get_comment_count', array($this, 'get_comment_count'));
         add_action('wp_ajax_vibe_load_replies',              array($this, 'load_replies'));
-        add_action('wp_ajax_nopriv_vibe_load_replies',       array($this, 'load_replies'));
+        add_action('wp_ajax_nopriv_vibe_load_replies',      array($this, 'load_replies'));
+        add_action('wp_ajax_vibe_edit_comment',             array($this, 'edit_comment')); // v3.13.0 5-min edit window
+        add_action('wp_ajax_nopriv_vibe_edit_comment',      array($this, 'edit_comment'));
 
         // Purge page cache when a pending comment is approved in WP admin.
         // This covers the case where a guest comment goes to moderation and an
@@ -379,6 +388,7 @@ class Vibe_Comments_Ajax_Handler {
             $cached    = get_transient($cache_key);
             if (false !== $cached) {
                 $this->apply_user_reactions_overlay($cached, $user_id, $guest_token);
+                $this->apply_edit_window_overlay($cached, $user_id, $guest_token);
                 $this->set_public_cache_headers();
                 wp_send_json_success($cached);
                 return;
@@ -517,6 +527,7 @@ class Vibe_Comments_Ajax_Handler {
         // See apply_user_reactions_overlay() docblock for why this must never
         // be baked into the cached blob itself.
         $this->apply_user_reactions_overlay($result, $user_id, $guest_token);
+        $this->apply_edit_window_overlay($result, $user_id, $guest_token);
 
         if (!$is_polling) {
             $this->set_public_cache_headers();
@@ -592,6 +603,7 @@ class Vibe_Comments_Ajax_Handler {
         $cached    = get_transient($cache_key);
         if (false !== $cached) {
             $this->apply_user_reactions_overlay($cached, $user_id, $guest_token, 'replies');
+            $this->apply_edit_window_overlay($cached, $user_id, $guest_token, 'replies');
             $this->set_public_cache_headers();
             wp_send_json_success($cached);
             return;
@@ -634,6 +646,7 @@ class Vibe_Comments_Ajax_Handler {
         // at this point) BEFORE overlaying this specific requester's real state.
         set_transient($cache_key, $result, 120);
         $this->apply_user_reactions_overlay($result, $user_id, $guest_token, 'replies');
+        $this->apply_edit_window_overlay($result, $user_id, $guest_token, 'replies');
         $this->set_public_cache_headers();
         wp_send_json_success($result);
     }
@@ -709,6 +722,93 @@ class Vibe_Comments_Ajax_Handler {
             }
         }
         unset($c); // break the reference — defensive, prevents accidental reuse below
+    }
+
+    /**
+     * v3.13.0 — Edit-window overlay (requester-specific, NEVER cached).
+     *
+     * Marks each comment with `can_edit` for THIS requester: true only when
+     * the comment is inside the 5-minute window AND this browser/user owns
+     * it (user_id match for members, _vibe_owner token match for guests —
+     * the same rail reactions use). Mirrors apply_user_reactions_overlay()'s
+     * never-in-the-cached-blob contract: it runs on every response after
+     * the cache layer, fresh or hit.
+     *
+     * Zero-cost when idle: the age check runs on payload data alone (no
+     * queries); DB/meta lookups happen ONLY for comments actually inside
+     * the window — on a normal page that's zero or one comment, and on a
+     * cached-blob hit for an old post it's a pure loop over dates.
+     *
+     * Recurses into children (replies are the most typo-prone comments;
+     * a guest must be able to edit their reply just like their top-level).
+     */
+    private function apply_edit_window_overlay(array &$data, $user_id, $guest_token, $list_key = 'comments') {
+        if (empty($data[$list_key])) {
+            return;
+        }
+        $now = current_time('timestamp', true);
+        $candidates = array(); // id => age (in-window only)
+
+        foreach ($data[$list_key] as $c) {
+            $this->collect_edit_candidates($c, $now, $candidates);
+        }
+        if (empty($candidates)) {
+            return;
+        }
+
+        // Prime commentmeta in ONE batch for every in-window comment
+        // (_vibe_owner lookups below then hit the in-memory cache).
+        update_meta_cache('comment', array_keys($candidates));
+
+        // Prime comment objects (user_id check) — one batched call.
+        _prime_comment_caches(array_keys($candidates));
+
+        foreach ($data[$list_key] as &$c) {
+            $this->patch_edit_flag($c, $user_id, $guest_token, $candidates);
+        }
+        unset($c);
+    }
+
+    /** Walk a comment + its children, collecting in-window ids => ages. */
+    private function collect_edit_candidates($c, $now, array &$candidates) {
+        if (!is_array($c) || empty($c['id']) || empty($c['date_gmt'])) {
+            return;
+        }
+        $age = $now - strtotime($c['date_gmt']);
+        if ($age >= 0 && $age <= self::EDIT_WINDOW) {
+            $candidates[(int) $c['id']] = $age;
+        }
+        if (!empty($c['children'])) {
+            foreach ($c['children'] as $child) {
+                $this->collect_edit_candidates($child, $now, $candidates);
+            }
+        }
+    }
+
+    /** Patch can_edit (and recurse) for one comment subtree. */
+    private function patch_edit_flag(&$c, $user_id, $guest_token, array $candidates) {
+        if (!is_array($c) || empty($c['id'])) {
+            return;
+        }
+        $cid = (int) $c['id'];
+        $c['can_edit'] = false;
+        if (isset($candidates[$cid])) {
+            if ($user_id > 0) {
+                $comment = get_comment($cid);
+                $c['can_edit'] = $comment && intval($comment->user_id) === $user_id;
+            } else {
+                $owner = get_comment_meta($cid, '_vibe_owner', true);
+                $c['can_edit'] = !empty($owner)
+                    && is_string($guest_token)
+                    && hash_equals((string) $owner, (string) $guest_token);
+            }
+        }
+        if (!empty($c['children'])) {
+            foreach ($c['children'] as &$child) {
+                $this->patch_edit_flag($child, $user_id, $guest_token, $candidates);
+            }
+            unset($child);
+        }
     }
 
     /**
@@ -918,6 +1018,11 @@ class Vibe_Comments_Ajax_Handler {
             'approved'      => $comment->comment_approved,
             'is_author'     => ($post_author_id && intval($comment->user_id) === $post_author_id),
             'is_pinned'     => (bool) get_comment_meta($comment_id, '_vibe_pinned', true),
+            // v3.13.0 edit window — is_edited is cache-safe (universal truth,
+            // same for every visitor, baked here like is_pinned); can_edit is
+            // requester-specific and patched per-request in
+            // apply_edit_window_overlay(), never inside the cached blob.
+            'is_edited'     => (bool) get_comment_meta($comment_id, '_vibe_edited', true),
             'children'      => $children,
         );
     }
@@ -1091,6 +1196,22 @@ class Vibe_Comments_Ajax_Handler {
                 return;
             }
 
+            // ── Edit-window ownership (v3.13.0) ─────────────────────────
+            // Store the SAME token the reaction rail uses to identify this
+            // browser, so "may this requester edit this comment?" is answered
+            // by exact-match against a value only the original author's
+            // browser can produce. Logged-in users already match via user_id
+            // (comment row), so only guests need the meta. This is storage-
+            // only — authorization is ALWAYS re-derived server-side at edit
+            // time from comment_date_gmt (the window) + this token; the client
+            // merely decides whether to RENDER the Edit affordance.
+            if ( ! is_user_logged_in() && ! empty( $_POST['vibe_guest_id'] ) ) {
+                $gid = sanitize_text_field( wp_unslash( $_POST['vibe_guest_id'] ) );
+                if ( preg_match( '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $gid ) ) {
+                    update_comment_meta( $comment_id, '_vibe_owner', Vibe_Comments_Database::get_guest_token( $gid ) );
+                }
+            }
+
             $comment  = get_comment( $comment_id );
             if ( ! $comment || ! is_object( $comment ) ) {
                 wp_send_json_error( array( 'message' => __('Comment created but could not be retrieved.', 'vibe-comments') ) );
@@ -1179,6 +1300,12 @@ class Vibe_Comments_Ajax_Handler {
                     'approved'  => $comment->comment_approved,
                     'is_author' => (is_user_logged_in() && intval(get_current_user_id()) === intval(get_post_field('post_author', $post_id))),
                     'is_pinned' => false,
+                    // v3.13.0 — the author just created this comment, so the
+                    // window is open by construction. The JS renders the Edit
+                    // affordance from this; the server still re-validates on
+                    // every actual edit attempt.
+                    'is_edited' => false,
+                    'can_edit'  => true,
                 ),
                 'awaiting_moderation' => ($approved != 1),
             ));
@@ -1198,6 +1325,121 @@ class Vibe_Comments_Ajax_Handler {
             return substr(sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'])), 0, 254);
         }
         return '';
+    }
+
+    /**
+     * Edit a comment within the 5-minute window (v3.13.0).
+     *
+     * Authorization — all server-side, all re-derived on every call:
+     *   1. nonce (wp_rest, same as every other endpoint)
+     *   2. comments_open on the post
+     *   3. ownership: logged-in → comment.user_id matches; guest → the
+     *      SHA256 token from THIS browser matches the _vibe_owner meta
+     *      stored at submit time (same rail reactions use)
+     *   4. the 5-minute window, anchored to the ORIGINAL comment_date_gmt —
+     *      editing never extends it; an edit at 4:59 stays a 4:59 comment
+     *   5. content length (same 1–2000 bounds as submit)
+     *
+     * The edit does NOT re-run wp_new_comment() filters (it's not a new
+     * comment) but wp_update_comment() fires edit_comment + the standard
+     * cache invalidation, and we purge the load/replies transients + edge
+     * caches ourselves.
+     */
+    public function edit_comment() {
+        if (!check_ajax_referer('wp_rest', 'nonce', false)) {
+            wp_send_json_error(array('message' => __('Security check failed.', 'vibe-comments')), 403);
+            return;
+        }
+
+        $comment_id = isset($_POST['comment_id']) ? absint($_POST['comment_id']) : 0;
+        $content    = isset($_POST['content']) ? sanitize_textarea_field(wp_unslash($_POST['content'])) : '';
+        $client_id  = isset($_POST['vibe_guest_id']) ? sanitize_text_field(wp_unslash($_POST['vibe_guest_id'])) : '';
+
+        if (!$comment_id) {
+            wp_send_json_error(array('message' => __('Invalid comment.', 'vibe-comments')));
+            return;
+        }
+
+        $comment = get_comment($comment_id);
+        // Pending ('0') comments ARE editable within the window — the author
+        // fixing a typo before moderation ever sees it is a feature, and the
+        // fresh-submit response already promises can_edit for them. Only
+        // spam/trash states are barred (they never render for the author).
+        if (!$comment || !in_array($comment->comment_approved, array('1', '0'), true)) {
+            wp_send_json_error(array('message' => __('Comment not found.', 'vibe-comments')));
+            return;
+        }
+
+        $post_id = intval($comment->comment_post_ID);
+        if (!comments_open($post_id)) {
+            wp_send_json_error(array('message' => __('Comments are closed for this post.', 'vibe-comments')));
+            return;
+        }
+
+        // ── Ownership ────────────────────────────────────────────────
+        $user_id = get_current_user_id();
+        if ($user_id > 0) {
+            if (intval($comment->user_id) !== $user_id) {
+                wp_send_json_error(array('message' => __('You can only edit your own comments.', 'vibe-comments')), 403);
+                return;
+            }
+        } else {
+            $owner = get_comment_meta($comment_id, '_vibe_owner', true);
+            if (empty($owner) || !hash_equals((string) $owner, (string) Vibe_Comments_Database::get_guest_token($client_id))) {
+                wp_send_json_error(array('message' => __('You can only edit your own comments.', 'vibe-comments')), 403);
+                return;
+            }
+        }
+
+        // ── The 5-minute window — anchored to the ORIGINAL date ───────
+        $age = current_time('timestamp', true) - strtotime($comment->comment_date_gmt);
+        if ($age < 0) $age = 0; // clock skew safety
+        if ($age > self::EDIT_WINDOW) {
+            wp_send_json_error(array('message' => __('The 5-minute edit window has closed.', 'vibe-comments')), 403);
+            return;
+        }
+
+        // ── Same content bounds as submit ────────────────────────────
+        $max_length = (int) apply_filters('vibe_comments_max_length', 2000);
+        if (mb_strlen(trim($content)) < 1) {
+            wp_send_json_error(array('message' => __('Comment cannot be empty.', 'vibe-comments')));
+            return;
+        }
+        if (mb_strlen($content) > $max_length) {
+            /* translators: %d: maximum allowed comment length in characters. */
+            wp_send_json_error(array('message' => sprintf(__('Comment exceeds the %d character limit.', 'vibe-comments'), $max_length)));
+            return;
+        }
+
+        // ── Apply the edit ───────────────────────────────────────────
+        // comment_date is NOT touched — the window stays anchored to the
+        // original submission, so editing cannot extend it. wp_update_comment()
+        // expects SLASHED data (same contract as wp_new_comment) — matching
+        // the submit path's wp_slash() pattern exactly.
+        $updated = wp_update_comment(wp_slash(array(
+            'comment_ID'      => $comment_id,
+            'comment_content' => $content,
+        )));
+
+        if (is_wp_error($updated) || !$updated) {
+            wp_send_json_error(array('message' => __('Failed to save the edit. Please try again.', 'vibe-comments')));
+            return;
+        }
+
+        update_comment_meta($comment_id, '_vibe_edited', 1);
+
+        // Purge every cache layer that serves this content: the post's
+        // load_comments snapshots, this comment's thread (if a reply), and
+        // the edge caches via the proven sync_and_purge rail.
+        $this->purge_comments_data_cache($post_id);
+        $this->purge_reply_cache_if_needed(get_comment($comment_id));
+        $this->sync_and_purge($post_id);
+
+        wp_send_json_success(array(
+            'comment_id' => $comment_id,
+            'content'    => $content,
+            'edited'     => true,
+        ));
     }
 
     /**

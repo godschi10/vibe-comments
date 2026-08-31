@@ -146,6 +146,7 @@
         if (!config.isLoggedIn) { refreshNonce(); }
         initReactions();
         initReplies();
+        initEditWindow();
         initViewReplies();
         initPinComment();
         initRelativeTime();
@@ -990,6 +991,19 @@
         const authorBadge = comment.is_author ? ' <span class="vibe-author-badge">Author</span>'            : '';
         const pinnedBadge = comment.is_pinned ? '<span class="vibe-pinned-badge">&#128204; Pinned</span>' : '';
         const dateIso     = comment.date_gmt  ? comment.date_gmt.replace(' ', 'T') + 'Z'                   : '';
+        // v3.13.0 — "· edited" rides the meta line (subtle, universal truth);
+        // the Edit button rides the footer and is only rendered while the
+        // requester's 5-minute window is open (can_edit is re-derived
+        // server-side on every load/reply-fetch; the button self-removes).
+        const editedBadge = comment.is_edited ? ' <span class="vibe-edited-badge">(edited)</span>' : '';
+        // Deadline = original submission + 5 min (the server re-validates on
+        // every attempt; this only lets the UI retire the button itself).
+        const editDeadline = comment.date_gmt
+            ? (Date.parse(comment.date_gmt.replace(' ', 'T') + 'Z') + 300000)
+            : 0;
+        const editBtnHtml  = comment.can_edit
+            ? '<button type="button" class="vibe-edit-btn" data-comment-id="' + cid + '" data-deadline="' + editDeadline + '">Edit</button>'
+            : '';
 
         li.innerHTML =
             '<article class="vibe-comment-body" id="div-comment-' + cid + '">' +
@@ -1001,9 +1015,10 @@
                         pinnedBadge +
                         '<cite class="vibe-comment-author">' + escapeHtml(comment.author) + authorBadge + '</cite>' +
                         '<time class="vibe-comment-time" datetime="' + escapeHtml(dateIso) + '" title="' + escapeHtml(comment.date || '') + '">' + escapeHtml(comment.date) + '</time>' +
+                        editedBadge +
                     '</div>' +
                 '</header>' +
-                '<div class="vibe-comment-content">' + pillifyMentions(linkify(renderMarkdown(comment.content))) + '</div>' +
+                '<div class="vibe-comment-content" data-raw="' + escapeHtml(comment.content) + '">' + pillifyMentions(linkify(renderMarkdown(comment.content))) + '</div>' +
                 // Picker lives here — outside the footer flex row — so it can never
                 // push Reply or Pin off screen on mobile when it opens.
                 rxBar.pickerHtml +
@@ -1012,6 +1027,7 @@
                     replyHtml +
                     viewRepliesHtml +
                     pinHtml +
+                    editBtnHtml +
                 '</footer>' +
             '</article>';
 
@@ -1134,6 +1150,173 @@
 
             moveFormToComment(commentId);
         });
+    }
+
+    /**
+     * v3.13.0 — 5-minute edit window.
+     *
+     * Edit button → inline editor (textarea + Save/Cancel) swaps in for the
+     * content div; Save POSTs vibe_edit_comment (nonce + vibe_guest_id for
+     * guests, mirroring submit); the server alone decides authorization
+     * (ownership + window + length) — the client's can_edit only gates the
+     * affordance. On success the content re-renders through the SAME
+     * markdown/pillify/linkify pipeline as createCommentElement, the
+     * "(edited)" badge appears, and every other comment's expired Edit
+     * button is swept. A timer self-removes the button at window expiry.
+     */
+    function initEditWindow() {
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.vibe-edit-btn');
+            if (!btn) return;
+            e.preventDefault();
+
+            var li = btn.closest('li.comment');
+            if (!li) return;
+            if (li.querySelector('.vibe-edit-box')) return; // already open
+
+            var article   = li.querySelector('article.vibe-comment-body');
+            var contentEl = li.querySelector('.vibe-comment-content');
+            if (!article || !contentEl) return;
+
+            // Raw source: the server stores the raw text; the DOM shows the
+            // rendered markdown. Send back what the server gave us — rebuild
+            // from the data attr stamped at render time (below).
+            var raw = contentEl.getAttribute('data-raw') || contentEl.textContent || '';
+            var maxLength = 2000;
+
+            var box = document.createElement('div');
+            box.className = 'vibe-edit-box';
+            box.innerHTML =
+                '<textarea class="vibe-edit-textarea" rows="3" maxlength="' + maxLength + '">' + escapeHtml(raw) + '</textarea>' +
+                '<div class="vibe-edit-actions">' +
+                    '<button type="button" class="vibe-edit-save">Save</button>' +
+                    '<button type="button" class="vibe-edit-cancel">Cancel</button>' +
+                    '<span class="vibe-edit-note">5-minute window</span>' +
+                '</div>';
+
+            contentEl.style.display = 'none';
+            contentEl.insertAdjacentElement('afterend', box);
+
+            var ta = box.querySelector('.vibe-edit-textarea');
+            ta.focus();
+            ta.setSelectionRange(ta.value.length, ta.value.length);
+
+            // Esc cancels; Enter (no shift) saves — matches comment-entry feel.
+            ta.addEventListener('keydown', function(ev) {
+                if (ev.key === 'Escape') {
+                    ev.preventDefault();
+                    closeEdit(li, contentEl, box);
+                } else if (ev.key === 'Enter' && !ev.shiftKey) {
+                    ev.preventDefault();
+                    saveEdit();
+                }
+            });
+
+            box.querySelector('.vibe-edit-cancel').addEventListener('click', function() {
+                closeEdit(li, contentEl, box);
+            });
+            box.querySelector('.vibe-edit-save').addEventListener('click', saveEdit);
+
+            function saveEdit() {
+                var val = ta.value.trim();
+                if (!val) {
+                    ta.classList.add('vibe-edit-error');
+                    ta.focus();
+                    return;
+                }
+
+                var saveBtn = box.querySelector('.vibe-edit-save');
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+
+                var params = new URLSearchParams({
+                    action: 'vibe_edit_comment',
+                    nonce: config.nonce,
+                    comment_id: btn.dataset.commentId,
+                    content: val
+                });
+                if (!config.isLoggedIn) {
+                    var gid = getGuestId();
+                    if (gid) params.append('vibe_guest_id', gid);
+                }
+
+                fetchWithTimeout(config.ajaxUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params
+                }, 15000)
+                .then(function(res) { return res.json(); })
+                .then(function(result) {
+                    if (result.success && result.data && result.data.edited) {
+                        // Re-render through the full pipeline so markdown,
+                        // mentions and links all behave like a fresh comment.
+                        contentEl.innerHTML = pillifyMentions(linkify(renderMarkdown(result.data.content)));
+                        contentEl.setAttribute('data-raw', result.data.content);
+                        contentEl.style.display = '';
+                        box.remove();
+
+                        // The "(edited)" badge — idempotent.
+                        var meta = li.querySelector('.vibe-comment-meta');
+                        if (meta && !meta.querySelector('.vibe-edited-badge')) {
+                            var span = document.createElement('span');
+                            span.className = 'vibe-edited-badge';
+                            span.textContent = '(edited)';
+                            meta.appendChild(span);
+                        }
+
+                        sweepExpiredEditButtons();
+                    } else {
+                        var msg = (result.data && result.data.message) || 'Edit failed.';
+                        showError(msg);
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = 'Save';
+                        // Window may have just closed server-side — sweep.
+                        sweepExpiredEditButtons();
+                    }
+                })
+                .catch(function(err) {
+                    console.error('Edit failed:', err);
+                    showError('Something went wrong. Please try again.');
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save';
+                });
+            }
+        });
+
+        // Sweep at boot: any button whose window already closed (e.g. tab was
+        // left open past the 5 minutes) disappears without a server round-trip.
+        scheduleEditSweep();
+    }
+
+    function closeEdit(li, contentEl, box) {
+        contentEl.style.display = '';
+        if (box && box.parentElement) box.remove();
+    }
+
+    /**
+     * Every Edit button carries its window-deadline; this removes all whose
+     * deadline has passed. Cheap (no queries), runs on boot + after each
+     * successful save, and is scheduled again at the next deadline.
+     */
+    function sweepExpiredEditButtons() {
+        var next = Infinity;
+        var now = Date.now();
+        document.querySelectorAll('.vibe-edit-btn').forEach(function(b) {
+            var dl = parseInt(b.getAttribute('data-deadline') || '0', 10);
+            if (dl && now >= dl) {
+                b.remove();
+            } else if (dl) {
+                next = Math.min(next, dl - now);
+            }
+        });
+        if (next < Infinity) {
+            setTimeout(sweepExpiredEditButtons, Math.max(1000, next + 50));
+        }
+    }
+
+    function scheduleEditSweep() {
+        // Initial sweep after the DOM settles; further sweeps self-schedule.
+        setTimeout(sweepExpiredEditButtons, 1200);
     }
 
     function moveFormToComment(commentId) {

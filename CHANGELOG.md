@@ -15,6 +15,22 @@ Types of changes:
 
 ---
 
+## [3.13.0] — 2026-08-31
+
+### Added — 5-minute comment edit window (Feature #5)
+
+Commenters can fix typos in their own comments for **5 minutes** after posting — guests and members alike, top-level comments and replies. After the window the comment is immutable, exactly like every classic comment system.
+
+- **Ownership rail**: guests get `_vibe_owner` commentmeta at submit — the SAME SHA256 browser token the reaction system uses (zero new identity infrastructure); members match via `user_id`. Authorization is re-derived server-side on every edit attempt; `hash_equals` timing-safe comparison.
+- **Window**: anchored to the ORIGINAL `comment_date_gmt` — an edit at 4:59 never extends the window. Clock-skew clamp included.
+- **Pending comments are editable** (author fixing a typo before moderation sees it — a feature, not a hole); spam/trash are barred.
+- **Payload**: `is_edited` baked at format time (cache-safe, like `is_pinned`); `can_edit` patched per-request via `apply_edit_window_overlay()` — the same never-cached contract as the reactions overlay, riding all 4 response sites (fresh + cache-hit × comments + replies). Zero DB cost when no comment is in-window.
+- **UI**: subtle Edit pill (kin of Reply) in the footer; inline textarea with Save/Cancel (Enter saves, Esc cancels); content re-renders through the same markdown/mentions/linkify pipeline; italic "(edited)" badge on the meta line; the button self-removes at window expiry without a server round-trip.
+- **Cache purges**: full rail on every edit (vc_load_* snapshots, thread transients, sync_and_purge edge caches).
+- **uninstall.php**: sweeps `_vibe_owner` + `_vibe_edited` meta.
+
+**Proof**: PHP shim battery **12/12** (window math incl. skew, overlay ownership matrix incl. children recursion, fresh-shape contract). Live E2E on the real site: guest submit → Edit rendered with deadline → live save → "(edited)" badge → still-editable; **window-closed 403** ("The 5-minute edit window has closed."); **stranger-token 403** ("You can only edit your own comments."). Probe comments cleaned from the DB.
+
 ## [3.12.0] — 2026-08-31
 
 ### Fixed — Analytics dashboard mobile layout blowout (King-reported)

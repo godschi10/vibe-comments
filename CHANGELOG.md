@@ -15,6 +15,16 @@ Types of changes:
 
 ---
 
+## [3.12.0] — 2026-08-31
+
+### Fixed — Analytics dashboard mobile layout blowout (King-reported)
+
+The **"Most-reacted comments" table blew the whole dashboard to ~972px on a 375px phone** (2.6x viewport): its two `.vibe-an-excerpt` columns were each capped at `max-width:420px` with `white-space:nowrap`, and long unbreakable tokens (URLs in excerpts) set the table's min-content width past the viewport — stretching EVERY section (cards, charts, leaderboards, engagement) with horizontal scroll.
+
+**Fix (surgical, mobile-scoped `@media (max-width: 782px)`):** `.vibe-an-table { width:100%; max-width:100% }` + `overflow-wrap:anywhere` on cells/excerpts (wraps long URLs) + text wrapping replaces the nowrap-ellipsis cap on phones. Desktop ≥783px untouched.
+
+**Proof (real Chrome, real admin login, real data):** measured at 375px — `scrollWidth` 972px → **375px exact** (zero page overflow, zero elements beyond viewport, all 5 tables at container width); regression sweep desktop 1185px (2-col intact) / 600px / 320px — all clean; 16 cards, 4 SVG charts, all sections render; visual screenshot verified clean.
+
 ## [3.11.0] — 2026-08-31
 
 ### Added — "Top" sort mode (total reactions ranking)

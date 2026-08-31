@@ -457,6 +457,17 @@ class Vibe_Comments_Analytics {
 		.vibe-an-count-pill { display:inline-block; min-width:34px; text-align:center; background:#2271b1; color:#fff; border-radius:10px; padding:1px 8px; font-size:12px; }
 		.vibe-an-excerpt { color:#646970; max-width:420px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:bottom; }
 		@media (max-width: 960px) { .vibe-an-two { grid-template-columns:1fr; } }
+		/* v3.12.0 mobile fix — the "Most-reacted comments" table blew out to
+		   ~962px on a 375px phone: two .vibe-an-excerpt columns each capped at
+		   420px + white-space:nowrap forced them side-by-side past the viewport,
+		   stretching the whole dashboard ~3x and making EVERY section overflow.
+		   On phones we drop the nowrap cap and let text wrap so the table never
+		   exceeds its container. (Measured at 375px: scrollWidth 972px → fit.) */
+		@media (max-width: 782px) {
+			.vibe-an-table { width:100%; max-width:100%; table-layout:auto; }
+			.vibe-an-table th, .vibe-an-table td { padding:7px 9px; overflow-wrap:anywhere; word-break:break-word; }
+			.vibe-an-excerpt { max-width:100%; white-space:normal; display:block; overflow-wrap:anywhere; word-break:break-word; }
+		}
 		</style>
 		<?php
 	}

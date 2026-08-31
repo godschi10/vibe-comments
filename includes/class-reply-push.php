@@ -291,6 +291,30 @@ class Vibe_Comments_Reply_Push {
     }
 
     /**
+     * v3.8.0 — Public door for the mentions class to reuse the private
+     * send() + prune contract (same stream, same sw.js payload, same
+     * 410/404 self-cleaning). Nothing new is invented here — it is the
+     * reply-push rail with a mention-shaped payload.
+     *
+     * @param array $subscription { endpoint, p256dh, auth }
+     * @param array $payload      sw.js contract { title, body, icon, badge, url }
+     * @param int   $comment_id   Meta owner for pruning.
+     * @return bool
+     */
+    public static function send_mention( $subscription, $payload, $comment_id ) {
+        // Mention payloads carry the same icon/badge as reply pushes —
+        // normalize anything the caller left blank so sw.js renders a
+        // complete notification every time.
+        if ( empty( $payload['icon'] ) ) {
+            $payload['icon'] = self::icon();
+        }
+        if ( empty( $payload['badge'] ) ) {
+            $payload['badge'] = self::icon();
+        }
+        return self::send( $subscription, $payload, $comment_id );
+    }
+
+    /**
      * Queue + flush one notification through the theme's stream.
      *
      * Prunes the stored meta on 410 Gone / 404 — a revoked subscription

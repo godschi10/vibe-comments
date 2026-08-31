@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.7.0
+ * Version:           3.8.0
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.7.0');
+define('VIBE_COMMENTS_VERSION', '3.8.0');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -50,6 +50,7 @@ require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-template-loader.php';
 
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-ajax-handler.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-reply-push.php';
+require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-mentions.php';
 
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-admin.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-schema.php';
@@ -224,6 +225,10 @@ class Vibe_Comments {
                 'replyPush'        => Vibe_Comments_Reply_Push::is_available() ? array(
                     'publicKey' => Vibe_Comments_Reply_Push::public_key(),
                 ) : false,
+                // v3.8.0: mentionable authors for this post (autocomplete +
+                // pill rendering). Client merges this seed list with a live
+                // DOM scan of rendered comments — always current even mid-poll.
+                'mentions'         => Vibe_Comments_Mentions::localize_data( get_the_ID() ),
                 'googleEnabled'    => $google_on,
                 'maxCommentLength' => (int) apply_filters('vibe_comments_max_length', 2000),
                 // Mirrors templates/comments.php's exact 3-way branch (0/1/many) so the

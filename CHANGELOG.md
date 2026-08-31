@@ -15,6 +15,21 @@ Types of changes:
 
 ---
 
+## [3.8.0] — 2026-08-31
+
+### Added — @Mentions with autocomplete (guests included)
+
+Type `@` in the comment box → a GitHub-style autocomplete opens with this post's commenters (and the post author). Pick one → a green-ish brand-token pill renders in the comment body. **Notifications ride the exact same self-hosted push rail as v3.7.0** (zero new storage, zero third parties): when a comment containing `@Name` is approved, the mentioned author gets *"X mentioned you in a comment"* — **if and only if they have a live reply-push subscription** on that post (subscribed via "Notify me about replies" on any of their comments there).
+
+**Design decisions:**
+- **Plaintext storage**: the DB keeps plain `@Name` text. Pills are render-time only (client-side pass between the markdown renderer and linkify, split-on-tags so attributes/URLs/code spans are never touched). Feeds, admin, no-JS, other themes — all degrade to natural text.
+- **Zero new storage**: no new table, no new meta. The notification resolves at approval-time: parse `@Name` → the mentioned author's newest subscribed comment on that post → its `_vibe_reply_push` subscription → the theme's stream (same send + 410-prune contract).
+- **Longest-name-first matching** (PHP + JS, mirrored logic): "Ada Lovelace" always wins over "Ada"; terminator + pre-boundary guards mean "email@Ada" and "@Adaeze extra" never false-match. Multi-word names work; fragments may contain spaces.
+- **Mentionable set** = approved commenters on the post + post author, deduped case-insensitively; the seed is localized and the client merges a live DOM scan — the dropdown stays current even mid-poll. Self-mention is filtered from the dropdown (a no-op event).
+- **Guards on notify**: rail absent → silent skip; no subscription → skip (never invented notifications); self-mention → skip; mentioned-parent double-buzz guard (the direct parent's author already got the reply push — the pill renders, no second buzz); cap 5 pushes per comment (mention-storm safety).
+- **Dropdown UX**: arrow keys navigate, Enter/Tab select, Escape closes, click-away closes, `mousedown` (not click) so the textarea never blurs mid-pick. Dropdown never inserts raw HTML — `textContent` only. `role="listbox"`/`role="option"` + active-descendant semantics.
+- **Portability**: pill rendering works on any theme (client-side). Notifications require the theme's push rail (both GWill themes ship it) — otherwise pills render, pushes silently skip.
+
 ## [3.7.0] — 2026-08-30
 
 ### Added — Reply Push Notifications (self-hosted, zero third parties)

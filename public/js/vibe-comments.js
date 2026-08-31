@@ -165,6 +165,7 @@
         initGuestAutoSave();
         initCharCounter();
         initReplyPush();
+        initMentions();
     });
 
     /* ══════════════════════════════════════════════════════════════════════
@@ -263,6 +264,248 @@
                     }
                 });
             });
+        });
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+     * MENTIONS (v3.8.0) — @Name pills + autocomplete dropdown.
+     *
+     * Pills are render-time only: comment_content keeps plain "@Name" in
+     * the DB, so feeds/admin/no-JS renderers show natural plaintext. The
+     * pillify pass runs between renderMarkdown() and linkify() and never
+     * touches tag segments (split-on-tags) — hrefs/attributes are safe.
+     *
+     * The author set merges the server seed (config.mentions.authors, with
+     * comment ids) with a live DOM scan of .vibe-comment-author cites, so
+     * the dropdown is current even mid-poll, before any server round-trip.
+     * ════════════════════════════════════════════════════════════════════ */
+    var mentionDrop = null;   // live dropdown element (or null)
+    var mentionIdx  = 0;      // highlighted row while open
+    var mentionRows = [];     // current candidate rows
+
+    /**
+     * Merged, deduped, longest-name-first author list for pill rendering
+     * and the dropdown. Server seed first (fresh page), then a DOM scan
+     * (picks up authors added since page load / mid-poll).
+     */
+    function mentionAuthors() {
+        var seen = {};
+        var list = [];
+        function add(name) {
+            name = (name || '').trim();
+            if (!name) return;
+            var k = name.toLowerCase();
+            if (seen[k]) return;
+            seen[k] = true;
+            list.push(name);
+        }
+        if (config.mentions && config.mentions.authors) {
+            config.mentions.authors.forEach(function(a) { add(a.name); });
+        }
+        // Live DOM scan — rendered cites are the freshest source.
+        var cites = document.querySelectorAll('.vibe-comment-author');
+        for (var i = 0; i < cites.length; i++) add(cites[i].textContent);
+        // Longest first so "Ada Lovelace" wins over "Ada".
+        list.sort(function(a, b) { return b.length - a.length; });
+        return list;
+    }
+
+    function mentionIsWordChar(c) {
+        if (!c) return false;
+        return /[A-Za-z0-9_]/.test(c) || c.charCodeAt(0) > 127;
+    }
+
+    function mentionPillHtml(name) {
+        return '<span class="vibe-mention" data-name="' + escapeHtml(name) + '">@'
+            + escapeHtml(name) + '</span>';
+    }
+
+    /**
+     * Pillify one text segment (between tags). Per-@ position, try tokens
+     * longest-first; both boundary guards must hold (mirrors the PHP
+     * parser exactly — server and client see the same mentions).
+     */
+    function mentionTransformSegment(text, tokens) {
+        if (text.indexOf('@') === -1) return text;
+        var out = '';
+        var pos = 0;
+        while (pos < text.length) {
+            var at = text.indexOf('@', pos);
+            if (at === -1) { out += text.slice(pos); break; }
+            var hit = null;
+            for (var t = 0; t < tokens.length; t++) {
+                var tok = tokens[t];
+                if (text.substr(at, tok.token.length) !== tok.token) continue;
+                var after = at + tok.token.length;
+                var beforeOk = at === 0 || !mentionIsWordChar(text.charAt(at - 1));
+                var afterOk  = after >= text.length || !mentionIsWordChar(text.charAt(after));
+                if (beforeOk && afterOk) { hit = tok; break; }
+            }
+            if (hit) {
+                out += text.slice(pos, at) + mentionPillHtml(hit.name);
+                pos = at + hit.token.length;
+            } else {
+                out += text.slice(pos, at + 1);
+                pos = at + 1;
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Pillify @mentions in already-escaped comment HTML. Splits on tags
+     * so nothing inside attributes/URLs is ever rewritten; skips <code>
+     * spans (a mention inside backticks is code, not a social pill).
+     */
+    function pillifyMentions(html) {
+        var names = mentionAuthors();
+        if (!names.length || html.indexOf('@') === -1) return html;
+        // Pre-build token variants: the raw name and its escapeHtml() form
+        // (the segment text is post-escape, so "&" in a name is "&amp;").
+        var tokens = [];
+        names.forEach(function(name) {
+            var esc = escapeHtml(name);
+            if (esc !== name) {
+                tokens.push({ token: '@' + esc, name: name });
+            }
+            tokens.push({ token: '@' + name, name: name });
+        });
+        tokens.sort(function(a, b) { return b.token.length - a.token.length; });
+
+        var parts = html.split(/(<[^>]*>)/);
+        var inCode = false;
+        for (var i = 0; i < parts.length; i++) {
+            if (i % 2 === 1) {
+                // Tag segment — track code-span state only.
+                if (/^<code[\s>]/i.test(parts[i])) inCode = true;
+                else if (/^<\/code/i.test(parts[i])) inCode = false;
+            } else if (!inCode) {
+                parts[i] = mentionTransformSegment(parts[i], tokens);
+            }
+        }
+        return parts.join('');
+    }
+
+    /* ── Autocomplete dropdown ─────────────────────────────────────────── */
+
+    function mentionCloseDrop() {
+        if (mentionDrop) {
+            mentionDrop.remove();
+            mentionDrop = null;
+            mentionRows = [];
+        }
+    }
+
+    /**
+     * The @-fragment the caret sits in, or null. Fragment may contain
+     * spaces (multi-word names) but no newlines; the char before @ must
+     * not be a word char (so emails never trigger the dropdown).
+     */
+    function mentionFragment(textarea) {
+        var upto = textarea.value.slice(0, textarea.selectionStart);
+        var m = upto.match(/@([^\n@]*)$/);
+        if (!m) return null;
+        var atPos = upto.length - m[0].length;
+        if (atPos > 0 && mentionIsWordChar(textarea.value.charAt(atPos - 1))) return null;
+        return m[1];
+    }
+
+    function mentionCandidates(frag) {
+        var self = '';
+        var authorInput = document.getElementById('vibe-author');
+        if (authorInput) self = authorInput.value.trim().toLowerCase();
+        var fl = frag.toLowerCase();
+        var out = [];
+        mentionAuthors().forEach(function(name) {
+            if (out.length >= 8) return;
+            if (self && name.toLowerCase() === self) return; // self-mention is a no-op
+            if (name.toLowerCase().indexOf(fl) === 0) out.push(name);
+        });
+        return out;
+    }
+
+    function mentionOpenDrop(textarea, frag) {
+        var candidates = mentionCandidates(frag);
+        mentionCloseDrop();
+        if (!candidates.length) return;
+
+        mentionDrop = document.createElement('div');
+        mentionDrop.className = 'vibe-mention-drop';
+        mentionDrop.setAttribute('role', 'listbox');
+        mentionDrop.id = 'vibe-mention-drop';
+
+        candidates.forEach(function(name, i) {
+            var row = document.createElement('button');
+            row.type = 'button';
+            row.className = 'vibe-mention-row' + (i === 0 ? ' vibe-mention-active' : '');
+            row.setAttribute('role', 'option');
+            row.textContent = '@' + name; // textContent — never innerHTML
+            row.addEventListener('mousedown', function(e) {
+                // mousedown (not click) fires before the textarea blurs.
+                e.preventDefault();
+                mentionInsert(textarea, name);
+            });
+            mentionDrop.appendChild(row);
+        });
+
+        mentionIdx = 0;
+        mentionRows = Array.prototype.slice.call(mentionDrop.children);
+
+        var rect = textarea.getBoundingClientRect();
+        mentionDrop.style.left = Math.max(8, rect.left) + 'px';
+        mentionDrop.style.top  = (rect.bottom + (window.scrollY || 0) + 4) + 'px';
+        document.body.appendChild(mentionDrop);
+    }
+
+    function mentionInsert(textarea, name) {
+        var upto = textarea.value.slice(0, textarea.selectionStart);
+        var from = upto.lastIndexOf('@');
+        // Guard: the char before @ must still pass the boundary check.
+        if (from > 0 && mentionIsWordChar(textarea.value.charAt(from - 1))) return;
+        var after = textarea.value.slice(textarea.selectionStart);
+        textarea.value = textarea.value.slice(0, from) + '@' + name + ' ' + after;
+        var caret = from + name.length + 2;
+        textarea.setSelectionRange(caret, caret);
+        textarea.focus();
+        mentionCloseDrop();
+        textarea.dispatchEvent(new Event('input', { bubbles: true })); // char counter etc.
+    }
+
+    function mentionHighlight() {
+        mentionRows.forEach(function(r, i) {
+            r.classList.toggle('vibe-mention-active', i === mentionIdx);
+        });
+        var active = mentionRows[mentionIdx];
+        if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest' });
+    }
+
+    function initMentions() {
+        var textarea = document.getElementById('vibe-comment-content');
+        if (!textarea) return;
+
+        textarea.addEventListener('input', function() {
+            var frag = mentionFragment(textarea);
+            if (frag === null) { mentionCloseDrop(); return; }
+            mentionOpenDrop(textarea, frag);
+        });
+
+        textarea.addEventListener('keydown', function(e) {
+            if (!mentionDrop) return;
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                mentionIdx = (mentionIdx + (e.key === 'ArrowDown' ? 1 : -1) + mentionRows.length) % mentionRows.length;
+                mentionHighlight();
+            } else if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                if (mentionRows[mentionIdx]) mentionInsert(textarea, mentionRows[mentionIdx].textContent.slice(1));
+            } else if (e.key === 'Escape') {
+                mentionCloseDrop();
+            }
+        });
+
+        // Click anywhere outside closes the dropdown.
+        document.addEventListener('click', function(e) {
+            if (mentionDrop && !mentionDrop.contains(e.target)) mentionCloseDrop();
         });
     }
 
@@ -760,7 +1003,7 @@
                         '<time class="vibe-comment-time" datetime="' + escapeHtml(dateIso) + '" title="' + escapeHtml(comment.date || '') + '">' + escapeHtml(comment.date) + '</time>' +
                     '</div>' +
                 '</header>' +
-                '<div class="vibe-comment-content">' + linkify(renderMarkdown(comment.content)) + '</div>' +
+                '<div class="vibe-comment-content">' + pillifyMentions(linkify(renderMarkdown(comment.content))) + '</div>' +
                 // Picker lives here — outside the footer flex row — so it can never
                 // push Reply or Pin off screen on mobile when it opens.
                 rxBar.pickerHtml +

@@ -51,6 +51,9 @@ class Vibe_Comments_Ajax_Handler {
         // notify event for the parent's author. The class self-guards:
         // unavailable rail, non-reply, self-reply, dedup — all no-op.
         Vibe_Comments_Reply_Push::notify_parent($comment);
+        // Mentions (v3.8.0): same approval event, mention-shaped payloads
+        // to @mentioned authors. Self-guards mirror notify_parent()'s.
+        Vibe_Comments_Mentions::notify_mentioned($comment);
     }
 
     /**
@@ -78,6 +81,8 @@ class Vibe_Comments_Ajax_Handler {
         // moderated-approval path (admin queue). Same self-guards; the
         // class's per-process dedup makes the dual-hook overlap safe.
         Vibe_Comments_Reply_Push::notify_parent($comment);
+        // Mentions (v3.8.0): same moderated-approval path, mention-shaped.
+        Vibe_Comments_Mentions::notify_mentioned($comment);
     }
 
     /**
@@ -1112,6 +1117,8 @@ class Vibe_Comments_Ajax_Handler {
                 // immediately-public reply is handled HERE. The class dedup
                 // makes the overlap with the status hooks double-push-proof.
                 Vibe_Comments_Reply_Push::notify_parent($comment);
+                // Mentions (v3.8.0) — same instant-approval path.
+                Vibe_Comments_Mentions::notify_mentioned($comment);
             }
 
             // ── Reply push opt-in (v3.7.0) ─────────────────────────────

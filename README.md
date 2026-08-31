@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.7.0  
+**Version:** 3.8.0  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later
@@ -307,6 +307,10 @@ On every singular post, the plugin outputs a `Schema.org` JSON-LD block in `<hea
 ## Uninstall Safety
 
 `uninstall.php` checks whether `vibe-comments/vibe-comments.php` is still in `active_plugins` (and `active_sitewide_plugins` on multisite) before touching any data. If the canonical plugin is still active, the file exits immediately. This prevents data loss when an off-slug copy of the plugin (e.g. uploaded under a wrong directory name) is deleted while the main plugin is still running.
+
+## @Mentions with autocomplete (v3.8.0)
+
+Type `@` in the comment box → a GitHub-style autocomplete opens listing this post's commenters (and the post author). Pick a name → it inserts as plain text and renders as a brand-pill. When the comment is approved, the mentioned author gets a web-push notification — *"X mentioned you in a comment"* — through the same self-hosted rail as Reply Push (they receive it only if they opted in via "Notify me about replies" on that post; guests included). Multi-word names work; longest-name-first matching; mention notifications cap at 5 per comment. Everything degrades to plain text where JS can't run — the DB stores `@Name` as-is.
 
 ## Reply Push Notifications (v3.7.0)
 

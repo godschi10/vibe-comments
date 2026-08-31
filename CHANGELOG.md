@@ -15,6 +15,16 @@ Types of changes:
 
 ---
 
+## [3.11.0] — 2026-08-31
+
+### Added — "Top" sort mode (total reactions ranking)
+
+The comment-list sort toggle's third mode is now **⭐ Top** — comments ranked by **total reactions** (like + heart + fire + laugh — the same live number the reaction engine maintains on `data-total-reactions`), with newest-first as the tiebreaker. Supersedes the v3.4 "liked ♥" mode: likes are included in the total, so every ranking that mode produced is preserved; hearts/fires/laughs now count too. Client-side only (zero server changes) and scoped to direct children of the list — nested reply threads are never flattened out of their parents.
+
+### Fixed — Settings submenu callable (review finding)
+
+The v3.10.0 dashboard's Settings submenu registered `array( 'Vibe_Comments_Admin', 'render_page' )` — a **non-static** method passed as a class-string callable, which PHP 8.3 rejects in isolation. WordPress only tolerated it because the duplicate `vibe-comments` slug resolved to the legacy Settings registration's valid instance callable. Now it's a proper delegate: `array( $this, 'render_settings_page' )` on the analytics instance, rendering through a real `Vibe_Comments_Admin` instance — valid whichever registration wins the slug.
+
 ## [3.10.0] — 2026-08-31
 
 ### Added — Comment Analytics Dashboard (pure SVG, zero dependencies)

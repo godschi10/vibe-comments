@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.10.0  
+**Version:** 3.11.0  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later
@@ -307,6 +307,10 @@ On every singular post, the plugin outputs a `Schema.org` JSON-LD block in `<hea
 ## Uninstall Safety
 
 `uninstall.php` checks whether `vibe-comments/vibe-comments.php` is still in `active_plugins` (and `active_sitewide_plugins` on multisite) before touching any data. If the canonical plugin is still active, the file exits immediately. This prevents data loss when an off-slug copy of the plugin (e.g. uploaded under a wrong directory name) is deleted while the main plugin is still running.
+
+## "Top" Sort (v3.11.0)
+
+The sort toggle's third mode ranks comments by **total reactions** (like + heart + fire + laugh) with newest-first tiebreaker — the community's favorites rise to the top without a single server round-trip. Fully client-side; nested reply threads stay intact in their parents.
 
 ## Comment Analytics Dashboard (v3.10.0)
 

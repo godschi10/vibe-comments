@@ -2072,12 +2072,31 @@
             // Reuses the same chronological sort already proven correct for
             // the unpin-snaps-back-into-place behavior below.
             restoreChronologicalOrder(list);
-        } else if (modeId === 'liked') {
+        } else if (modeId === 'top') {
+            // v3.11.0 "Top" — total reactions (all 4 types) descending,
+            // newest-first tiebreaker. Scoped to direct children ONLY —
+            // list.children never reaches into nested reply threads (the
+            // subtree-flattening trap the newest branch's note documents).
+            // Zero-reaction comments are not penalized by age beyond the
+            // tiebreaker — they simply rank after reacted ones.
+            const rxOf = function(el) {
+                var wrap = el.querySelector('.vibe-reactions');
+                return wrap && wrap.dataset ? parseInt(wrap.dataset.totalReactions || '0', 10) || 0 : 0;
+            };
+            const tsOf = function(el) {
+                var t = el.querySelector('time.vibe-comment-time[datetime]');
+                return t ? t.getAttribute('datetime') : '';
+            };
             Array.from(list.children)
                 .sort(function(a, b) {
-                    const aL = parseInt(((a.querySelector('.vibe-reactions') || {}).dataset || {}).totalReactions || '0', 10);
-                    const bL = parseInt(((b.querySelector('.vibe-reactions') || {}).dataset || {}).totalReactions || '0', 10);
-                    return bL - aL;
+                    const d = rxOf(b) - rxOf(a);
+                    if (d !== 0) return d;
+                    const aT = tsOf(a), bT = tsOf(b);
+                    if (aT > bT) return -1;
+                    if (aT < bT) return  1;
+                    const aId = parseInt((a.id || '').replace('comment-', ''), 10) || 0;
+                    const bId = parseInt((b.id || '').replace('comment-', ''), 10) || 0;
+                    return bId - aId;
                 })
                 .forEach(function(el) { list.appendChild(el); });
         } else {
@@ -2115,10 +2134,14 @@
 
         // v3.4.0: load_comments() default order flipped to DESC (newest first,
         // see class-ajax-handler.php). "Newest" is therefore mode index 0.
+        // v3.11.0: mode 3 is "Top" — total reactions (like+heart+fire+laugh,
+        // the same number the reaction engine keeps on data-total-reactions),
+        // newest-first as the tiebreaker. Supersedes the v3.4 "liked ♥" mode:
+        // likes are included in the total, so nothing ranked before is lost.
         const modes = [
             { id: 'newest', label: '\u2193', title: 'Newest first' },
             { id: 'oldest', label: '\u2191', title: 'Oldest first' },
-            { id: 'liked',  label: '\u2665', title: 'Most liked' },
+            { id: 'top',    label: '\u2b50', title: 'Top — most reacted' },
         ];
         let idx = 0;  // current mode index — reassigned on each click
 

@@ -70,8 +70,22 @@ class Vibe_Comments_Analytics {
 			__( 'Settings', 'vibe-comments' ),
 			'manage_options',
 			'vibe-comments',
-			array( 'Vibe_Comments_Admin', 'render_page' )
+			array( $this, 'render_settings_page' )
 		);
+	}
+
+	/**
+	 * v3.11.0 — Settings submenu delegate. The old registration passed
+	 * array( 'Vibe_Comments_Admin', 'render_page' ) — a NON-static method as
+	 * a class-string callable, which PHP 8.3 rejects in isolation. WP only
+	 * tolerated it because the duplicate 'vibe-comments' slug resolved to
+	 * the legacy Settings registration's valid instance callable. This
+	 * delegate is a real instance method on $this, and it renders through
+	 * an actual Vibe_Comments_Admin instance — valid regardless of which
+	 * registration wins the slug.
+	 */
+	public function render_settings_page() {
+		( new Vibe_Comments_Admin() )->render_page();
 	}
 
 	/* ══════════════════════════════════════════════════════════════════════

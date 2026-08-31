@@ -1374,6 +1374,15 @@
                 }
             }
 
+            // Reply EMAIL opt-in (v3.9.0): send the consent flag when the
+            // user ticked "Email me about replies". The server stores it on
+            // the comment; the notification address is the comment's own
+            // author email — nothing else is ever transmitted.
+            var emailBox = document.getElementById('vibe-reply-email-checkbox');
+            if (emailBox && emailBox.checked) {
+                data['vibe_reply_email'] = '1';
+            }
+
             fetchWithTimeout(config.ajaxUrl, {
                 method: 'POST',
                 headers: {

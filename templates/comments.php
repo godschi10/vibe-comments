@@ -214,6 +214,19 @@ if ($vibe_count === 0) {
                     </div>
                     <?php endif; ?>
 
+                    <?php /* v3.9.0 — email opt-in: rides wp_mail(), works on any
+                           server (server mail or the themes' SMTP rail). Consent
+                           flag on the comment; address = the comment's own email. */ ?>
+                    <div class="vibe-reply-push-optin vibe-reply-email-optin" id="vibe-reply-email-optin">
+                        <label for="vibe-reply-email-checkbox" class="vibe-reply-push-label">
+                            <input type="checkbox" id="vibe-reply-email-checkbox" name="vibe_reply_email_optin" value="1" />
+                            <span><?php esc_html_e( 'Email me about replies', 'vibe-comments' ); ?></span>
+                        </label>
+                        <p class="vibe-reply-push-note" id="vibe-reply-email-note" hidden>
+                            <?php esc_html_e( 'You will get an email at the address above when someone replies to your comment.', 'vibe-comments' ); ?>
+                        </p>
+                    </div>
+
                     <div class="vibe-form-actions">
                         <button type="submit" class="vibe-btn vibe-btn-primary" id="vibe-submit-btn">
                             <?php _e('Post Comment', 'vibe-comments'); ?>

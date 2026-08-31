@@ -1050,6 +1050,11 @@
     color: var(--vibe-text-muted);
     line-height: 1.45;
 }
+/* v3.9.0 — email opt-in reuses the push row's layout; tighter when stacked
+   directly under it so the two options read as a pair. */
+.vibe-reply-email-optin {
+    margin-top: -0.35rem;
+}
 
 /* ── Mentions (v3.8.0) ──────────────────────────────────────────────
    Brand-neutral pills + dropdown via --vibe-* tokens. The pill inherits

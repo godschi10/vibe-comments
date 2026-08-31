@@ -61,6 +61,13 @@ $wpdb->delete(
     array( '%s' )
 );
 
+// ── 3b. Remove _vibe_reply_email commentmeta (v3.9.0 email notifications) ──
+$wpdb->delete(
+    $wpdb->commentmeta,
+    array( 'meta_key' => '_vibe_reply_email' ),
+    array( '%s' )
+);
+
 // ── 4. Delete plugin settings and version option ──────────────────────────
 delete_option( 'vibe_comments_db_version' );
 delete_option( 'vibe_comments_google_settings' );

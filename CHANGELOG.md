@@ -15,6 +15,21 @@ Types of changes:
 
 ---
 
+## [3.9.0] — 2026-08-31
+
+### Added — Reply notifications via EMAIL: free, unlimited, any-server
+
+A second checkbox under the form — **"Email me about replies"** — sends a branded email the moment someone's reply is approved. **Free and unlimited by architecture**: the plugin rides `wp_mail()`, the universal WordPress mail channel — zero paid APIs, zero per-email services, zero third parties. It works on ANY server by definition:
+
+- **Hosts with server mail** (cPanel/Exim/LiteSpeed): zero config, works out of the box.
+- **Hosts with port 25 blocked** (like this VPS on Oracle Cloud): the `GWILL_SMTP_*` constants any GWill theme already supports (`phpmailer_init` rail in `inc/forms.php`; e.g. Brevo relay, 300/day free) — plug in the constants, everything lights up. The plugin itself never touches SMTP.
+
+**Design decisions:**
+- **Consent flag, not a stored address**: commentmeta `_vibe_reply_email` stores only `'1'` on the comment. The notification address is ALWAYS the comment's own `comment_author_email` — the feature can never be used to email a stranger, and comment deleted → consent gone. `uninstall.php` sweeps it.
+- **Anti-abuse by construction** + **anti-storm cap**: per-process dedup across all 3 approval paths (instant, transition, status-set); self-reply skip; 3-per-hour cap per parent thread (brigade-proof — the inbox never gets buried).
+- **Branded email**: inline-styled HTML (email clients strip `<style>`), dark header strip, reply excerpt card, one CTA to the reply anchor, honest consent footer.
+- **Failure isolation**: a transport failure is swallowed and logged (`wp_mail returned false`) — the comment flow is never disturbed.
+
 ## [3.8.0] — 2026-08-31
 
 ### Added — @Mentions with autocomplete (guests included)

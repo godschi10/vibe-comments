@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.8.0  
+**Version:** 3.9.0  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later
@@ -307,6 +307,10 @@ On every singular post, the plugin outputs a `Schema.org` JSON-LD block in `<hea
 ## Uninstall Safety
 
 `uninstall.php` checks whether `vibe-comments/vibe-comments.php` is still in `active_plugins` (and `active_sitewide_plugins` on multisite) before touching any data. If the canonical plugin is still active, the file exits immediately. This prevents data loss when an off-slug copy of the plugin (e.g. uploaded under a wrong directory name) is deleted while the main plugin is still running.
+
+## Reply Notifications via Email (v3.9.0)
+
+A second checkbox under the form — **"Email me about replies"** — sends a branded email the moment someone's reply is approved. **Free and unlimited by architecture**: the plugin rides `wp_mail()`, the universal WordPress mail channel — no paid APIs, no per-email services, no third parties. On hosts with server mail (cPanel/Exim/LiteSpeed) it works with zero configuration; where outbound port 25 is blocked (like this VPS), the `GWILL_SMTP_*` constants any GWill theme supports (Brevo relay, 300/day free) light it up. The consent flag lives on the comment itself; the notification address is always the comment's own author email — the feature can never be used to email a stranger. Anti-storm: one email per reply (dedup across all approval paths), 3 per hour per thread. Fully uninstallable — `uninstall.php` sweeps the meta.
 
 ## @Mentions with autocomplete (v3.8.0)
 

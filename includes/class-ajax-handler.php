@@ -51,6 +51,9 @@ class Vibe_Comments_Ajax_Handler {
         // notify event for the parent's author. The class self-guards:
         // unavailable rail, non-reply, self-reply, dedup — all no-op.
         Vibe_Comments_Reply_Push::notify_parent($comment);
+        // Reply email (v3.9.0): same approval event through wp_mail() —
+        // free, unlimited, any-server (SMTP constants or server mail).
+        Vibe_Comments_Reply_Email::notify_parent($comment);
         // Mentions (v3.8.0): same approval event, mention-shaped payloads
         // to @mentioned authors. Self-guards mirror notify_parent()'s.
         Vibe_Comments_Mentions::notify_mentioned($comment);
@@ -81,6 +84,8 @@ class Vibe_Comments_Ajax_Handler {
         // moderated-approval path (admin queue). Same self-guards; the
         // class's per-process dedup makes the dual-hook overlap safe.
         Vibe_Comments_Reply_Push::notify_parent($comment);
+        // Reply email (v3.9.0) — moderated-approval path, wp_mail().
+        Vibe_Comments_Reply_Email::notify_parent($comment);
         // Mentions (v3.8.0): same moderated-approval path, mention-shaped.
         Vibe_Comments_Mentions::notify_mentioned($comment);
     }
@@ -1117,6 +1122,8 @@ class Vibe_Comments_Ajax_Handler {
                 // immediately-public reply is handled HERE. The class dedup
                 // makes the overlap with the status hooks double-push-proof.
                 Vibe_Comments_Reply_Push::notify_parent($comment);
+                // Reply email (v3.9.0) — instant-approval path, wp_mail().
+                Vibe_Comments_Reply_Email::notify_parent($comment);
                 // Mentions (v3.8.0) — same instant-approval path.
                 Vibe_Comments_Mentions::notify_mentioned($comment);
             }
@@ -1137,6 +1144,17 @@ class Vibe_Comments_Ajax_Handler {
                     isset( $rp['p256dh'] )   && is_string( $rp['p256dh'] )   ? $rp['p256dh']   : '',
                     isset( $rp['auth'] )     && is_string( $rp['auth'] )     ? $rp['auth']     : ''
                 );
+            }
+
+            // ── Reply EMAIL opt-in (v3.9.0) ────────────────────────────
+            // Consent flag only — the notification address is always the
+            // comment's own author email (anti-abuse by construction).
+            // Guest submits carry it as '1'; the JS never sends it unless
+            // the user ticked the box. Logged-in users always have their
+            // profile email on the comment.
+            if ( isset( $_POST['vibe_reply_email'] )
+                && '1' === (string) wp_unslash( $_POST['vibe_reply_email'] ) ) {
+                Vibe_Comments_Reply_Email::store( $comment_id );
             }
 
             wp_send_json_success(array(

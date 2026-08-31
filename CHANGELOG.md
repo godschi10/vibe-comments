@@ -15,6 +15,26 @@ Types of changes:
 
 ---
 
+## [3.10.0] — 2026-08-31
+
+### Added — Comment Analytics Dashboard (pure SVG, zero dependencies)
+
+A top-level **Vibe Comments** menu in wp-admin (capability `moderate_comments` — editors see it too; it's comment data, not plugin settings) with the full analytics screen: **every comment stat on one page.**
+
+**Stat cards (16):** all comments by status (approved / awaiting moderation / spam / trash), approved, unique commenters (deduped by email), reactions given, threaded replies, top-level comments, push subscriptions, email opt-ins, pinned, guest vs member split, deepest thread, avg comment length, avg time to first reply.
+
+**Charts (4, hand-built SVG — no chart libraries):** comments per month (12-month bars), reactions split (donut with totals + percentages), comments by hour of day (UTC), comments by weekday.
+
+**Leaderboards:** top 10 posts by comments (linked), top 10 commenters (deduped by email), most-reacted comments (excerpt + post).
+
+**Engagement quality:** % of top-level comments that received a reply, avg time from comment to first reply, deepest thread, avg comments per post, total notification-rail subscribers (push + email).
+
+**Engineering decisions:**
+- **Driver-portable by construction**: the time-series, threading and velocity stats derive from ONE bulk fetch of approved comments, parsed in PHP — no `DATE_FORMAT`/`strftime` (the SQLite dropin dialect trap). SQL is used only for `GROUP BY` leaderboards, which both drivers share.
+- **Cached 5 minutes** in a transient; the "Refresh data" link busts it with a nonce.
+- **Escaped everything**: all output through `esc_html`/`esc_attr`/`esc_url` — the SVG is built with `sprintf` + escaping, never raw user content.
+- The Settings page keeps its legacy home under Settings (back-compat) and gains a submenu link here.
+
 ## [3.9.0] — 2026-08-31
 
 ### Added — Reply notifications via EMAIL: free, unlimited, any-server

@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.9.0  
+**Version:** 3.10.0  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later
@@ -307,6 +307,10 @@ On every singular post, the plugin outputs a `Schema.org` JSON-LD block in `<hea
 ## Uninstall Safety
 
 `uninstall.php` checks whether `vibe-comments/vibe-comments.php` is still in `active_plugins` (and `active_sitewide_plugins` on multisite) before touching any data. If the canonical plugin is still active, the file exits immediately. This prevents data loss when an off-slug copy of the plugin (e.g. uploaded under a wrong directory name) is deleted while the main plugin is still running.
+
+## Comment Analytics Dashboard (v3.10.0)
+
+A top-level **Vibe Comments** menu in wp-admin (visible to anyone with `moderate_comments`) carrying every comment stat on one screen: 16 stat cards (status counts, unique commenters, reactions, threading depth, notification-rail subscribers, guest/member split, avg length, reply velocity), 4 hand-built SVG charts (12-month trend, reactions donut, hour-of-day, weekday), leaderboards (top posts, top commenters, most-reacted comments), and engagement-quality tables (% answered, avg time to first reply). Zero dependencies — no chart libraries, no external assets. Data cached 5 minutes with a nonce-gated refresh link. Driver-portable: all time-series parse in PHP from one bulk fetch (no SQL date functions — works identically on MySQL and the SQLite dropin).
 
 ## Reply Notifications via Email (v3.9.0)
 

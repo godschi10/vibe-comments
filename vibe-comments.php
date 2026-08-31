@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.9.0
+ * Version:           3.10.0
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.9.0');
+define('VIBE_COMMENTS_VERSION', '3.10.0');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -52,6 +52,7 @@ require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-ajax-handler.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-reply-push.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-reply-email.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-mentions.php';
+require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-analytics.php';
 
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-admin.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-schema.php';
@@ -163,6 +164,14 @@ class Vibe_Comments {
         } catch (Throwable $e) {
             error_log('[Vibe Comments] Admin failed to load: ' . $e->getMessage());
             if ($debug) { vibe_log('Admin ERROR: ' . $e->getMessage()); }
+        }
+
+        try {
+            Vibe_Comments_Analytics::instance();
+            if ($debug) { vibe_log('Analytics instantiated'); }
+        } catch (Throwable $e) {
+            error_log('[Vibe Comments] Analytics failed to load: ' . $e->getMessage());
+            if ($debug) { vibe_log('Analytics ERROR: ' . $e->getMessage()); }
         }
 
         add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'));

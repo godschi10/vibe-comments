@@ -15,6 +15,19 @@ Types of changes:
 
 ---
 
+## [3.16.0] — 2026-09-01
+
+### Added — In-thread search (Feature #7): whole-thread, server-side
+
+The search box now queries the ENTIRE thread server-side — every top-level comment AND every reply at any depth — not just the first 10 comments loaded in the DOM. The old client-side filter (which silently missed the other 90% of a long thread and could never surface a matched reply inside a collapsed thread) remains as an automatic fallback when the endpoint is unreachable.
+
+- **New endpoint** `vibe_search_comments` — DB-backed LIKE with `esc_like()`-escaped wildcards (SQLite-portable — no MATCH...AGAINST), searches content + author name, approved comments only, post-visibility gate (draft/private/protected threads are not searchable), hard cap 50 results newest-first.
+- **Cache-before-ratelimit** — results cached 60s per (post, term); a cached answer serves without touching the 1-fresh-search-per-2s-per-IP gate (so repeat queries within the debounce window never 429 — found live during the E2E and fixed before ship).
+- **Reply context** — matched replies render flat with an "in reply to @author" chip (one batched parent query, chip suppressed when the parent is unapproved/deleted so the reply stands alone).
+- **Client** — the existing box (B6-fixed) upgraded: 300ms debounce, out-of-order response guard (a newer keystroke always wins), thread snapshot + clean restore on clear, "Type at least 2 characters…" hint, graceful fallback to the local filter on endpoint error, reactions carried on results.
+
+**Proofs**: live endpoint battery — 'lazy' 2 results correct authors; immediate repeat serves from cache (no 429); 'thanks' found a planted reply with correct `reply_to` parent-author; rate-limit gate verified firing on fresh-burst only. Browser E2E (Obscura CDP): typed 'lazy' → 2 flat results + "2 found" status; cleared → thread restored intact (3 comments, no residue); reply chip rendered "in reply to Amaka" live. `php -l` + `node --check` + CSS brace-balance all clean.
+
 ## [3.15.0] — 2026-09-01
 
 ### Added — Q&A mode per post (Feature #3, minimal cut)

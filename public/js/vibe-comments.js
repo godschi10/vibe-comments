@@ -2412,26 +2412,118 @@
         wrap.appendChild(status);
         toolbar.appendChild(wrap); // sits beside the sort select on the same row
 
-        let timer; // reassigned on every input event for debounce
+        // v3.15.0 — server-backed whole-thread search. The old client-side
+        // filter could only match what was loaded (first 10 top-level
+        // comments); this queries the ENTIRE thread server-side, including
+        // replies inside collapsed threads. Falls back to the old local
+        // filter if the endpoint errors, so search never silently dies.
+        let searchTimer;
+        let searchSeq = 0;          // guards against out-of-order responses
+        let originalListHtml = null; // snapshot for restore on clear
+
+        function restoreThread() {
+            if (originalListHtml === null) return;
+            list.innerHTML = originalListHtml;
+            originalListHtml = null;
+            // Re-bind per-element handlers the rebuild just destroyed.
+            hoistPinnedComments();
+            initViewReplies();
+            // Accept buttons + badges survive via markup, but the pinned
+            // hoist above already restored order.
+        }
+
+        function renderResults(results, total, truncated) {
+            list.innerHTML = '';
+            const fragment = document.createDocumentFragment();
+            results.forEach(function(item) {
+                const li = document.createElement('li');
+                li.className = 'comment vibe-search-result';
+                li.id = 'comment-' + item.id;
+
+                const email = item.avatar || '';
+                const dateIso = item.date_gmt ? item.date_gmt.replace(' ', 'T') + 'Z' : '';
+                const replyChip = item.reply_to_author
+                    ? '<span class="vibe-reply-context">in reply to ' + escapeHtml(item.reply_to_author) + '</span>'
+                    : '';
+
+                li.innerHTML =
+                    '<article class="vibe-comment-body" id="div-comment-' + item.id + '">' +
+                        '<header class="vibe-comment-header">' +
+                            '<div class="vibe-comment-avatar">' +
+                                '<img src="' + escapeHtml(email) + '" alt="" width="48" height="48" style="border-radius:50%">' +
+                            '</div>' +
+                            '<div class="vibe-comment-meta">' +
+                                replyChip +
+                                '<cite class="vibe-comment-author">' + escapeHtml(item.author) + '</cite>' +
+                                '<time class="vibe-comment-time" datetime="' + escapeHtml(dateIso) + '">' + escapeHtml(item.date_gmt || '') + '</time>' +
+                            '</div>' +
+                        '</header>' +
+                        '<div class="vibe-comment-content">' + pillifyMentions(linkify(renderMarkdown(item.content))) + '</div>' +
+                    '</article>';
+
+                fragment.appendChild(li);
+            });
+            if (results.length === 0) {
+                list.innerHTML =
+                    '<li class="vibe-empty-state">' +
+                        '<p class="vibe-empty-title">No comments found</p>' +
+                        '<p class="vibe-empty-sub">Try a different search term \uD83D\uDD0E</p>' +
+                    '</li>';
+            } else {
+                list.appendChild(fragment);
+            }
+            status.textContent = total + ' found' + (truncated ? ' (showing first 50)' : '');
+        }
+
+        function runServerSearch(q) {
+            const seq = ++searchSeq;
+            const url = config.ajaxUrl + '?action=vibe_search_comments&post_id=' + config.postId
+                      + '&q=' + encodeURIComponent(q) + '&_=' + Date.now();
+            fetchWithTimeout(url, {}, 10000)
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (seq !== searchSeq) return; // a newer keystroke won the race
+                if (!res.success || !res.data) throw new Error('bad response');
+                if (originalListHtml === null) originalListHtml = list.innerHTML;
+                renderResults(res.data.results, res.data.total, res.data.truncated);
+            })
+            .catch(function() {
+                if (seq !== searchSeq) return;
+                // Fallback: the old local filter over loaded comments.
+                // Silently degrades when the endpoint is unreachable.
+                if (originalListHtml === null) originalListHtml = list.innerHTML;
+                localFilter(q);
+            });
+        }
+
+        function localFilter(q) {
+            let count = 0;
+            list.querySelectorAll('li.comment').forEach(function(li) {
+                const content  = li.querySelector('.vibe-comment-content');
+                const author   = li.querySelector('.vibe-comment-author');
+                const haystack = (content ? content.textContent : '') + ' ' + (author ? author.textContent : '');
+                const match    = haystack.toLowerCase().includes(q);
+                li.style.display = match ? '' : 'none';
+                if (match) count++;
+            });
+            status.textContent = q ? count + ' found (loaded comments only)' : '';
+        }
+
         input.addEventListener('input', function() {
-            clearTimeout(timer);
-            timer = setTimeout(function() {
-                const q = input.value.trim().toLowerCase();
-                let count = 0; // incremented in the loop below
-                list.querySelectorAll('li.comment').forEach(function(li) {
-                    // B6 fix: search was matching li.textContent, which includes
-                    // "Reply", "Pin", reaction counts, and timestamps — so searching
-                    // "Reply" matched every single comment. Now scoped to just the
-                    // comment body and author name, which is what "search" should mean.
-                    const content  = li.querySelector('.vibe-comment-content');
-                    const author   = li.querySelector('.vibe-comment-author');
-                    const haystack = (content ? content.textContent : '') + ' ' + (author ? author.textContent : '');
-                    const match    = !q || haystack.toLowerCase().includes(q);
-                    li.style.display = match ? '' : 'none';
-                    if (match) count++;
-                });
-                status.textContent = q ? count + ' found' : '';
-            }, 200);
+            clearTimeout(searchTimer);
+            const q = input.value.trim().toLowerCase();
+            if (!q) {
+                // cleared — restore the real thread
+                searchSeq++;
+                restoreThread();
+                status.textContent = '';
+                return;
+            }
+            if (q.length < 2) {
+                status.textContent = 'Type at least 2 characters\u2026';
+                return;
+            }
+            searchTimer = setTimeout(function() { runServerSearch(q); }, 300);
         });
     }
 

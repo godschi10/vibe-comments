@@ -994,6 +994,24 @@
     padding: 1px 6px;
     margin-right: 0.4rem;
 }
+
+/* ── v3.15.0 in-thread search — reply-context chip on flat results ────── */
+.vibe-reply-context {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--vibe-text-muted, #888);
+    background: var(--vibe-bg-soft, #f3f4f6);
+    border: 1px solid var(--vibe-border, #e5e7eb);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-right: 0.4rem;
+}
+.vibe-search-result .vibe-comment-content {
+    font-size: 0.92rem;   /* slightly tighter than live comments — results are
+                             for scanning, not conversing */
+}
 #vibe-comment-list li.comment[data-accepted="1"] > article {
     border-left: 3px solid #22c55e;
     padding-left: 0.75rem;

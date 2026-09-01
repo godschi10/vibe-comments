@@ -28,6 +28,8 @@ class Vibe_Comments_Ajax_Handler {
         add_action('wp_ajax_nopriv_vibe_load_replies',      array($this, 'load_replies'));
         add_action('wp_ajax_vibe_edit_comment',             array($this, 'edit_comment')); // v3.13.0 5-min edit window
         add_action('wp_ajax_nopriv_vibe_edit_comment',      array($this, 'edit_comment'));
+        add_action('wp_ajax_vibe_search_comments',          array($this, 'search_comments')); // v3.15.0 in-thread search
+        add_action('wp_ajax_nopriv_vibe_search_comments',   array($this, 'search_comments'));
 
         // Purge page cache when a pending comment is approved in WP admin.
         // This covers the case where a guest comment goes to moderation and an
@@ -670,6 +672,171 @@ class Vibe_Comments_Ajax_Handler {
         $this->apply_edit_window_overlay($result, $user_id, $guest_token, 'replies');
         $this->set_public_cache_headers();
         wp_send_json_success($result);
+    }
+
+    /**
+     * v3.15.0 — In-thread search (Feature #7).
+     *
+     * Server-side search across the ENTIRE thread — every top-level comment
+     * AND every reply at any depth — not just the comments currently loaded
+     * in the DOM. The old client-side filter (initSearch, kept as fallback)
+     * could only match what the visitor had loaded (first 10 top-level
+     * comments), silently missing the other 90% of a long thread, and a
+     * matched reply inside a collapsed thread could never appear at all.
+     *
+     * Design:
+     *   - LIKE '%term%' with esc_like()-escaped wildcards — the term is a
+     *     human phrase, not a regex; LIKE is the honest tool, and it stays
+     *     SQLite-portable (this plugin's DB layer must never use
+     *     MySQL-only syntax like MATCH...AGAINST).
+     *   - Content + author name both searchable — a search for a person
+     *     finds their words.
+     *   - Matched REPLIES render flat with an "in reply to @author" chip —
+     *     collapsing the tree is the only sane way to show scattered hits
+     *     without forcing the user to expand five threads by hand.
+     *   - Results cached 60s per (post, term) — a hot query repeated by
+     *     keystrokes within the debounce window costs one DB hit, not N.
+     *   - Rate-limited 1/2s per IP, mirroring refresh_nonce's pattern.
+     *   - Hard cap 50 results — search is for finding, not re-listing.
+     */
+    public function search_comments() {
+        global $wpdb;
+
+        $post_id = isset($_GET['post_id']) ? absint($_GET['post_id']) : 0;
+        $term    = isset($_GET['q'])        ? trim(wp_unslash($_GET['q'])) : '';
+        $term    = sanitize_text_field($term);
+
+        if (!$post_id || $term === '' || mb_strlen($term) < 2) {
+            wp_send_json_error(array('message' => __('Type at least 2 characters to search.', 'vibe-comments')), 400);
+            return;
+        }
+
+        // Post visibility gate — mirrors load_comments(): a draft/private
+        // post's comments must not be searchable by URL guessing.
+        $post = get_post($post_id);
+        $public_statuses     = get_post_stati(array('public' => true));
+        $is_publicly_viewable = $post && in_array($post->post_status, $public_statuses, true);
+        if (!$post || (!$is_publicly_viewable && !current_user_can('read_post', $post_id)) || post_password_required($post)) {
+            wp_send_json_error(array('message' => __('Invalid post.', 'vibe-comments')), 404);
+            return;
+        }
+
+        // Cache — the result set is a universal truth for (post, term); safe
+        // to share across visitors like the list cache. No per-requester
+        // overlay here: reactions shown in results are the public counts.
+        // CHECKED BEFORE the rate limit: a cached answer is free to serve —
+        // penalizing a repeat query within the same keystroke-debounce
+        // window would 429 exactly the users the cache exists to help.
+        $cache_key = 'vc_search_' . md5($post_id . '|' . $term);
+        $cached = get_transient($cache_key);
+        if ($cached !== false) {
+            wp_send_json_success($cached);
+            return;
+        }
+
+        // Rate limit — 1 FRESH search per 2s per IP (same shape as
+        // refresh_nonce). Cache hits above never reach this gate.
+        $rate_key = 'vs_' . substr(md5($this->client_ip()), 0, 16);
+        if (get_transient($rate_key)) {
+            wp_send_json_error(array('message' => __('Too many requests. Please wait a moment.', 'vibe-comments')), 429);
+            return;
+        }
+        set_transient($rate_key, 1, 2);
+
+        $like = '%' . $wpdb->esc_like($term) . '%';
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT c.comment_ID, c.comment_author, c.comment_author_email, c.comment_content,
+                    c.comment_date_gmt, c.comment_parent, c.comment_approved
+             FROM {$wpdb->comments} c
+             WHERE c.comment_post_ID = %d
+               AND c.comment_approved = '1'
+               AND (c.comment_content LIKE %s OR c.comment_author LIKE %s)
+             ORDER BY c.comment_date_gmt DESC
+             LIMIT 50",
+            $post_id, $like, $like
+        ));
+
+        // Parent authors for the "in reply to" chips — ONE batched query for
+        // all matched parents, not a get_comment() per row.
+        $parent_ids = array();
+        foreach ($rows as $r) {
+            if ((int) $r->comment_parent > 0) $parent_ids[] = (int) $r->comment_parent;
+        }
+        $parent_map = array();
+        if (!empty($parent_ids)) {
+            $parent_ids  = array_unique($parent_ids);
+            $id_placeholders = implode(',', array_fill(0, count($parent_ids), '%d'));
+            $parent_rows = $wpdb->get_results($wpdb->prepare(
+                "SELECT comment_ID, comment_author, comment_approved
+                 FROM {$wpdb->comments}
+                 WHERE comment_ID IN ($id_placeholders)",
+                $parent_ids
+            ));
+            foreach ($parent_rows as $p) {
+                $parent_map[(int) $p->comment_ID] = array(
+                    'author'   => $p->comment_author,
+                    'approved' => $p->comment_approved,
+                );
+            }
+        }
+
+        $db = new Vibe_Comments_Database();
+        $ids = array_map(function($r) { return (int) $r->comment_ID; }, $rows);
+        $reactions_map = $ids ? $db->get_reaction_counts_batch($ids) : array();
+        if (!empty($ids)) {
+            update_meta_cache('comment', $ids);
+        }
+
+        $formatted = array();
+        foreach ($rows as $r) {
+            $cid = (int) $r->comment_ID;
+            $email = !empty($r->comment_author_email)
+                ? $r->comment_author_email
+                : 'vibe.guest.' . md5('vibe_' . $cid) . '@comments.local';
+
+            $item = array(
+                'id'        => $cid,
+                'author'    => $r->comment_author,
+                'avatar'    => get_avatar_url($email, array('size' => 48)),
+                'date_gmt'  => $r->comment_date_gmt,
+                'content'   => $r->comment_content,
+                'parent'    => (int) $r->comment_parent,
+                'reactions' => isset($reactions_map[$cid]) ? $reactions_map[$cid] : Vibe_Comments_Database::REACTION_DEFAULTS,
+            );
+
+            // Reply context — only when the parent exists AND is approved:
+            // a reply to an unapproved/deleted parent shows no chip (its
+            // thread is invisible to the public; the reply stands alone).
+            $pid = (int) $r->comment_parent;
+            if ($pid > 0 && isset($parent_map[$pid]) && '1' === (string) $parent_map[$pid]['approved']) {
+                $item['reply_to_author'] = $parent_map[$pid]['author'];
+            }
+
+            $formatted[] = $item;
+        }
+
+        $result = array(
+            'results'     => $formatted,
+            'total'       => count($formatted),
+            'truncated'   => count($formatted) >= 50,
+        );
+
+        set_transient($cache_key, $result, 60);
+
+        $this->set_public_cache_headers();
+        wp_send_json_success($result);
+    }
+
+    /**
+     * Requester IP for rate limiting — proxy-aware (X-Forwarded-For from
+     * nginx/cloud front ends), falling back to REMOTE_ADDR.
+     */
+    private function client_ip() {
+        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+            return trim($ips[0]);
+        }
+        return isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
     }
 
     /**

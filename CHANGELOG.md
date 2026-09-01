@@ -15,6 +15,18 @@ Types of changes:
 
 ---
 
+## [3.17.1] — 2026-09-01
+
+### Fixed — 2026-09-01 conflict-audit findings (all resolved before next feature)
+
+1. **Uninstall hygiene — Q&A postmeta never swept** (v3.15.0 gap): `_vibe_qa_mode` + `_vibe_qa_accepted` lived on the POST, and uninstall only ever touched commentmeta — both are now exact-key swept from `$wpdb->postmeta` (no LIKE wipes).
+2. **Uninstall hygiene — digest options never swept** (v3.17.0 gap): `vibe_digest_settings` + `vibe_digest_last_run` now deleted alongside the other plugin options.
+3. **Stale-nonce 403s for logged-in users on cached pages**: `refreshNonce()` now fires for EVERY visitor at boot, not guests only. Nginx page cache serves the same stale-baked nonce to logged-in users as to guests — the old guest-only gate left them with expired nonces and hard 403s on pin/accept/edit. (The endpoint is rate-capped at 1/2s/IP and returns a fresh user-bound nonce either way.)
+
+**Audit verdicts honored**: the activator-migration finding was retracted as STALE (the guards already existed — per-statement existence probes + $ok tracking + error_log were shipped in an earlier hardening); the `!important` and schema-interplay findings were no-action by design. Sections 3 (JS) and 5 (Hooks) audited CLEAN.
+
+**Proofs**: audit-fix battery 9/9 (uninstall sweeps present + exact-key scoped + transient LIKEs unregressed + refreshNonce unconditional in comment-stripped code + no phantom identifiers); served-bytes proof — the live site's `vibe-comments.js?ver=3.17.0` (pre-bump cache-buster) already carries the unconditional boot call, old gate absent from code; `php -l` + `node --check` clean.
+
 ## [3.17.0] — 2026-09-01
 
 ### Added — Daily Digest Email (Feature #9): the admin's morning paper

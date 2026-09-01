@@ -80,9 +80,28 @@ $wpdb->delete(
     array( '%s' )
 );
 
+// ── 3d. Remove _vibe_qa_mode + _vibe_qa_accepted POSTMETA (v3.15.0 Q&A) ────
+// Found by the 2026-09-01 conflict audit: uninstall touched commentmeta only —
+// these two postmeta keys (the Q&A toggle + accepted-answer pointer, stored
+// on the POST, not the comment) survived uninstall as orphans on every post
+// that ever ran Q&A mode.
+$wpdb->delete(
+    $wpdb->postmeta,
+    array( 'meta_key' => '_vibe_qa_mode' ),
+    array( '%s' )
+);
+$wpdb->delete(
+    $wpdb->postmeta,
+    array( 'meta_key' => '_vibe_qa_accepted' ),
+    array( '%s' )
+);
+
 // ── 4. Delete plugin settings and version option ──────────────────────────
 delete_option( 'vibe_comments_db_version' );
 delete_option( 'vibe_comments_google_settings' );
+// v3.17.0 digest settings + last-run marker (audit finding: never swept).
+delete_option( 'vibe_digest_settings' );
+delete_option( 'vibe_digest_last_run' );
 
 // ── 5. Delete all plugin transients ──────────────────────────────────────
 // Covers: vibe_count_{id}, vc_load_{id}, vn_{hash}, vs_{hash}, vr_{hash},

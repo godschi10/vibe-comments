@@ -143,7 +143,9 @@
         // this replaced a full-page purge on every comment.
         fetchCommentCount();
         initCommentsTrigger();
-        if (!config.isLoggedIn) { refreshNonce(); }
+        // 2026-09-01 audit fix: nonce refresh for EVERYONE (logged-in users
+        // on nginx-cached pages got stale baked nonces → 403s with no recovery).
+        refreshNonce();
         initReactions();
         initReplies();
         initEditWindow();
@@ -2041,6 +2043,14 @@
      * Silently fetch a fresh nonce to replace the one baked into the page cache.
      * WP nonces last 24h but a cached page can serve a nonce that is already 12h old.
      * Fires in parallel with initComments — no blocking.
+     *
+     * 2026-09-01 audit fix: fires for EVERYONE now, not guests only. The old
+     * `if (!config.isLoggedIn) { refreshNonce(); }` gate assumed logged-in
+     * users always render fresh pages — false under nginx page cache, which
+     * serves the SAME cached HTML (with its stale baked nonce) to logged-in
+     * visitors too. A logged-in user on a >24h-cached page got 403s on
+     * pin/accept/edit with no recovery. The endpoint is cheap (2s rate cap)
+     * and returns a fresh user-bound nonce either way.
      */
     function refreshNonce() {
         fetchWithTimeout(config.ajaxUrl, {

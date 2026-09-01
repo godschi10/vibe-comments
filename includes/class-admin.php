@@ -8,6 +8,15 @@ class Vibe_Comments_Admin {
     public function __construct() {
         add_action( 'admin_menu', array( $this, 'add_menu_page' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
+        // v3.14.0 — Spam-score column in the WP admin comments list
+        // (Feature #6: heuristic scorer, display-only).
+        add_filter( 'manage_edit-comments_columns',        array( $this, 'spam_column_header' ) );
+        add_filter( 'manage_edit-comments_sortable_columns', array( $this, 'spam_column_sortable' ) );
+        add_action( 'manage_comments_custom_column',      array( $this, 'spam_column_render' ), 10, 2 );
+        add_action( 'admin_print_styles-edit-comments.php', array( $this, 'spam_column_css' ) );
+        // Bulk-level convenience on pending: sort queue by score via
+        // pre_get_comments is NOT added — WP has no score field to sort on;
+        // the column itself carries the info (sortable = false, honest).
     }
 
     public function add_menu_page() {
@@ -161,6 +170,78 @@ class Vibe_Comments_Admin {
                 ?>
             </form>
         </div>
+        <?php
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+     * v3.14.0 — Spam-score column (Feature #6)
+     * Display-only heuristic badge on every comment row in wp-admin.
+     * ══════════════════════════════════════════════════════════════════════ */
+
+    /**
+     * Add the "Spam" column header after "In Response To".
+     */
+    public function spam_column_header( $columns ) {
+        $new = array();
+        foreach ( $columns as $k => $v ) {
+            $new[ $k ] = $v;
+            if ( 'in_response_to' === $k ) {
+                $new['vibe_spam'] = __( 'Spam', 'vibe-comments' );
+            }
+        }
+        // Edge: some WP versions use 'response_to'; if the anchor never
+        // matched, append at the end so the column always exists.
+        if ( ! isset( $new['vibe_spam'] ) ) {
+            $new['vibe_spam'] = __( 'Spam', 'vibe-comments' );
+        }
+        return $new;
+    }
+
+    /**
+     * Not sortable — WP has no persisted score field to ORDER BY; a fake
+     * sort would lie. The badge alone carries the information.
+     */
+    public function spam_column_sortable( $columns ) {
+        return $columns; // deliberately unchanged
+    }
+
+    /**
+     * Render the badge for one comment row.
+     */
+    public function spam_column_render( $column, $comment_id ) {
+        if ( 'vibe_spam' !== $column ) {
+            return;
+        }
+        $comment = get_comment( $comment_id );
+        if ( ! $comment ) {
+            echo '&mdash;';
+            return;
+        }
+        // phpcs:ignore WordPress.Security.EscapeOutput -- badge_html() escapes internally.
+        echo Vibe_Comments_Spam_Score::badge_html( $comment );
+    }
+
+    /**
+     * Column styles: fixed narrow width + the three band colors, matching
+     * WP admin badge aesthetics (subtle tints, not loud blocks).
+     */
+    public function spam_column_css() {
+        ?>
+        <style>
+        .column-vibe_spam { width: 90px; }
+        .vibe-spam-badge {
+            display: inline-block;
+            font-size: 11px;
+            line-height: 1;
+            padding: 4px 7px;
+            border-radius: 10px;
+            white-space: nowrap;
+            cursor: help;
+        }
+        .vibe-spam-clean        { background: #edf7ed; color: #1a7a1a; }
+        .vibe-spam-suspicious   { background: #fcf0e1; color: #9a6700; }
+        .vibe-spam-likely-spam  { background: #fbeaea; color: #c62828; }
+        </style>
         <?php
     }
 }

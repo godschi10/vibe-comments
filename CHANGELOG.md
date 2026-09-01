@@ -15,6 +15,20 @@ Types of changes:
 
 ---
 
+## [3.14.0] — 2026-08-31
+
+### Added — Heuristic spam scorer for the moderation queue (Feature #6)
+
+A **Spam** column in the WP admin comments list & moderation queue scores every comment 0–100 with a colored badge: **Clean** (green, <30) / **Suspicious** (amber, 30–59) / **Likely spam** (red, ≥60). Hovering shows exactly WHY (the matched heuristics).
+
+- **Pure + stateless**: computed from the comment's own fields on render — zero DB reads, zero writes, zero network, nothing stored, no drift. Score is reproducible forever.
+- **Language-neutral heuristics only** (structural tells, never vocabulary — pidgin and mixed-English comments stay clean): link count (the classic blog-spam tell, 1→5+ weighted), link-to-word ratio (stuffing), ALL-CAPS ratio, repeated-character runs, punctuation-run frequency, 28 known spam phrase families (capped at 2), space-less 60+ char blobs (gibberish/data-URI), author-name signals (all-caps, keyword-stuffed).
+- **Display-only by design** — never changes a comment's status, never auto-deletes. The site's own moderation settings remain the sole judge; the badge gives the human moderator a why-flagged score at a glance. Auto-action was rejected in design: a false positive hiding a real reader's comment costs more than a false negative already in review.
+- **Column plumbing**: `manage_edit-comments_columns` + `manage_comments_custom_column` + scoped `admin_print_styles-edit-comments.php` CSS; not marked sortable (WP has no persisted score field — a fake sort would lie). `vibe_comments_spam_score` filter for custom tuning.
+- **Portability**: badge HTML escapes everything (XSS-safe with hostile author names — battery-proven); works on any WP install, SQLite included (no DB at all).
+
+**Proof**: battery **23/23** (clean prose, pidgin neutrality, link ladder 1→5, stuffing ratio, caps bands, char/punct runs, phrase hits incl. cap, no-space blob, author signals, band edges 29/30/59/60, clamp 100, XSS escape). Live admin E2E: logged-in admin saw the Spam column + 28 green badges on real comments (one honest "Clean 10% — heavy caps"); a planted spam comment rendered **red "Likely spam 100%"** with all 5 reasons in the tooltip (server score 100: 3 links, repeated characters, 4 spam phrases, ALL-CAPS name, keyword name). Probe cleaned up.
+
 ## [3.13.0] — 2026-08-31
 
 ### Added — 5-minute comment edit window (Feature #5)

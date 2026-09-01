@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.13.0  
+**Version:** 3.14.0  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later
@@ -307,6 +307,10 @@ On every singular post, the plugin outputs a `Schema.org` JSON-LD block in `<hea
 ## Uninstall Safety
 
 `uninstall.php` checks whether `vibe-comments/vibe-comments.php` is still in `active_plugins` (and `active_sitewide_plugins` on multisite) before touching any data. If the canonical plugin is still active, the file exits immediately. This prevents data loss when an off-slug copy of the plugin (e.g. uploaded under a wrong directory name) is deleted while the main plugin is still running.
+
+## Spam Scorer (v3.14.0)
+
+The WP admin comments list and moderation queue gain a **Spam** column: every comment scored 0–100 — **Clean** (green) / **Suspicious** (amber) / **Likely spam** (red) — with the reasons in the hover tooltip. The heuristics are structural and language-neutral (link counts and stuffing, ALL-CAPS, character/punctuation runs, known spam phrases, gibberish blobs, author-name signals), computed fresh on every render from the comment alone: no storage, no drift, nothing to configure. Display-only by design — it flags for the human moderator, never auto-deletes; your own moderation settings stay the sole judge. `vibe_comments_spam_score` filter for custom tuning.
 
 ## 5-Minute Edit Window (v3.13.0)
 

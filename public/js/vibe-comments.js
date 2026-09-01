@@ -452,10 +452,29 @@
         mentionIdx = 0;
         mentionRows = Array.prototype.slice.call(mentionDrop.children);
 
+        // v3.14.1 FIX (King-reported "never saw" the mention dropdown): the
+        // old code did `rect.bottom + window.scrollY` on a position:fixed
+        // element. getBoundingClientRect() is VIEWPORT space; position:fixed
+        // anchors to the VIEWPORT. Adding scrollY pushed the dropdown that
+        // many pixels below the caret — on a long page scrolled to the
+        // comments it rendered thousands of pixels off-screen, invisible.
+        // Correct math: anchor at the textarea's viewport rect, flip up when
+        // the dropdown would clip the bottom edge, clamp to the sides.
         var rect = textarea.getBoundingClientRect();
-        mentionDrop.style.left = Math.max(8, rect.left) + 'px';
-        mentionDrop.style.top  = (rect.bottom + (window.scrollY || 0) + 4) + 'px';
+        var vh = window.innerHeight || document.documentElement.clientHeight;
+        // measure AFTER append (fixed elements size once in the DOM)
         document.body.appendChild(mentionDrop);
+        var dh = mentionDrop.offsetHeight || 120;
+        var top;
+        if (rect.bottom + dh + 12 <= vh) {
+            top = rect.bottom + 4;            // below the caret, fully visible
+        } else if (rect.top - dh - 12 >= 0) {
+            top = rect.top - dh - 4;          // flip above the caret
+        } else {
+            top = Math.max(8, vh - dh - 12);  // last resort: bottom of viewport
+        }
+        mentionDrop.style.top  = top + 'px';
+        mentionDrop.style.left = Math.max(8, Math.min(rect.left, (window.innerWidth || document.documentElement.clientWidth) - mentionDrop.offsetWidth - 12)) + 'px';
     }
 
     function mentionInsert(textarea, name) {

@@ -97,11 +97,12 @@ A reaction toggle purges the same `vc_load_*` cache via the same function (`purg
 - User's own reaction indicated by blue count number only — pill border stays neutral
 - Pinned comment (admin-only, survives page refresh, instant unpin restore)
 - Sort by newest (default) / oldest / most liked
-- Comment search (client-side, 200ms debounce, zero requests) — scoped to comment text and author name only
+- Comment search (v3.16.0: server-side whole-thread search with reply-context chips, 300ms debounce, cached + rate-limited; client-side filter as automatic fallback)
 - Relative timestamps refreshed every 60s
 - Author badge on post-author comments
 - Collapse long comments (>300 chars) with Read more / Show less
 - Basic Markdown: `**bold**`, `*italic*`, `` `code` ``, `> blockquote`
+- Daily digest email (v3.17.0: admin morning paper — stat cards, spam-scored moderation queue, most-reacted, per-post breakdown; SMTP-free preview in Settings)
 - Auto-link bare URLs (XSS-safe)
 - Empty state CTA when no comments exist
 - Live comment count update after submission, decoupled from page cache — see Database section below

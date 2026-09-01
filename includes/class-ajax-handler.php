@@ -828,15 +828,17 @@ class Vibe_Comments_Ajax_Handler {
     }
 
     /**
-     * Requester IP for rate limiting — proxy-aware (X-Forwarded-For from
-     * nginx/cloud front ends), falling back to REMOTE_ADDR.
+     * Requester IP for rate limiting — SECURITY FIX (2026-09-01 mega-audit):
+     * this previously trusted X-Forwarded-For unconditionally, re-importing
+     * the exact spoofable-header vulnerability that class-database.php's
+     * resolve_client_ip() was already hardened against (XFF ignored there;
+     * CF-Connecting-IP honored only when the direct peer is a verified
+     * Cloudflare IP). The v3.16.0 search endpoint was the first NEW consumer
+     * of a rate-limit key since that hardening and simply never inherited it.
+     * Now delegates: ONE hardened IP resolver for the whole plugin.
      */
     private function client_ip() {
-        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-            return trim($ips[0]);
-        }
-        return isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
+        return Vibe_Comments_Database::resolve_client_ip();
     }
 
     /**
@@ -1614,6 +1616,24 @@ class Vibe_Comments_Ajax_Handler {
         // original submission, so editing cannot extend it. wp_update_comment()
         // expects SLASHED data (same contract as wp_new_comment) — matching
         // the submit path's wp_slash() pattern exactly.
+        //
+        // 2026-09-01 mega-audit race note (documented + tightened): the
+        // window check above and this write are two statements, so a request
+        // validated at 4:59.99 could execute the UPDATE at 5:00.0x — a
+        // few-hundred-ms theoretical overhang, plus a concurrent double-
+        // submit of two different edits both passing validation (last write
+        // wins). Full lock semantics (commentmeta mutex) are overkill for an
+        // author racing themselves; the tightened re-check below re-derives
+        // the age immediately before the write, shrinking the overhang to
+        // sub-millisecond. Residual exposure: an author racing two tabs in
+        // the final second — accepted by audit verdict.
+        $age_now = current_time('timestamp', true) - strtotime($comment->comment_date_gmt);
+        if ($age_now < 0) $age_now = 0;
+        if ($age_now > self::EDIT_WINDOW) {
+            wp_send_json_error(array('message' => __('The 5-minute edit window has closed.', 'vibe-comments')), 403);
+            return;
+        }
+
         $updated = wp_update_comment(wp_slash(array(
             'comment_ID'      => $comment_id,
             'comment_content' => $content,

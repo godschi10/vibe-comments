@@ -15,6 +15,19 @@ Types of changes:
 
 ---
 
+## [3.17.2] — 2026-09-01
+
+### Fixed — Mega security audit findings (all four resolved before next work)
+
+1. **XFF-spoofable rate limiting on search (MEDIUM)** — the v3.16.0 search endpoint's `client_ip()` trusted `X-Forwarded-For` unconditionally, re-importing the exact vulnerability that `class-database.php::resolve_client_ip()` had already been hardened against (XFF ignored; CF-Connecting-IP honored only when the peer is a verified Cloudflare IP). The new endpoint was the first rate-limit consumer since that hardening and never inherited it. Now delegates to the ONE hardened resolver — zero XFF trust remains anywhere in the plugin.
+2. **Google sign-up role inflation (NICE-TO-HAVE, config-error path)** — account creation used the site's `default_role` setting verbatim; a misconfigured default_role (contributor/author/editor) would have silently minted elevated accounts via Google sign-up. Now hard-capped: any configured role whose capability set exceeds Subscriber's clamps to subscriber (lower/custom roles pass through; unknown role names fall back to subscriber). Verified against REAL WP role objects: contributor's elevation (edit_posts, level_1, delete_posts) detected → clamped.
+3. **Draft persistence on shared computers (LOW)** — comment drafts lived in localStorage for 7 days; on a shared device the next user's page-load resurrected the previous user's half-written comment. MAX_AGE now 24 hours — preserves "recover what I was writing today", bounds the exposure window.
+4. **Edit-window boundary race (MEDIUM, documented + tightened)** — the 5-minute window was validated before the write; a request straddling the boundary could execute milliseconds late, and a concurrent double-submit raced last-write-wins. Added an immediate pre-write age re-check (shrinks overhang to sub-ms) + a full race-note docblock with the audit verdict (full mutex rejected as overkill for an author racing themselves).
+
+**Audit verdicts honored**: XSS/SQLi/Authz/Filesystem/Supply-chain sections audited CLEAN; Sections 3, 4, 5, 6, 7, 10 CLEAN outright. Remaining exposure: the accepted theoretical edit race (documented).
+
+**Proofs**: security-fix battery 8/8 (delegation present, zero XFF strings, role-clamp driven against real WP roles via wp-cli — contributor clamps, subscriber/readonly pass, ghost falls back; draft 24h; double window-check) + `php -l` × 2 + `node --check` clean.
+
 ## [3.17.1] — 2026-09-01
 
 ### Fixed — 2026-09-01 conflict-audit findings (all resolved before next feature)

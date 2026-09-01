@@ -220,7 +220,25 @@ class Vibe_Comments_OAuth_Google {
             $username    = sanitize_user( $base . '_' . $suffix );
 
             // L3 fix: respect the site's configured default_role, not hardcoded 'subscriber'.
+            // 2026-09-01 mega-audit hard-cap: default_role can only LOWER the
+            // privilege, never raise it. If a future admin misconfigures
+            // default_role to contributor/author/editor, Google sign-up must
+            // never silently mint those accounts — the comment form needs
+            // exactly Subscriber and nothing more. Clamp to subscriber unless
+            // the setting names something with FEWER capabilities (a custom
+            // read-only role), in which case the setting wins.
             $default_role = get_option( 'default_role', 'subscriber' );
+            $role_caps    = get_role( $default_role );
+            $sub_caps     = get_role( 'subscriber' );
+            if ( ! $role_caps || ! $sub_caps ) {
+                $default_role = 'subscriber'; // unknown role name — safe default
+            } else {
+                // Any capability the configured role has that Subscriber lacks = elevated.
+                $elevated = array_diff_key( $role_caps->capabilities, array_filter( $sub_caps->capabilities ) );
+                if ( ! empty( $elevated ) ) {
+                    $default_role = 'subscriber';
+                }
+            }
 
             $user_id = wp_insert_user( array(
                 'user_login'   => $username,

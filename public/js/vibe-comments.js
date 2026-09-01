@@ -1450,7 +1450,12 @@
         if (!form || !textarea || !config.postId) return null;
 
         const DRAFT_KEY = 'vibe_draft_' + config.postId;
-        const MAX_AGE   = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+        // 2026-09-01 mega-audit: 7 days → 24 hours. Drafts are unfinished
+        // thoughts — on a shared computer the 7-day window meant the next
+        // user's page-load resurrected the previous user's half-written
+        // comment into the textarea. 24h preserves the "recover what I was
+        // writing today" value while bounding the shared-device exposure.
+        const MAX_AGE   = 24 * 60 * 60 * 1000; // 24 hours in ms
 
         // Restore on page load
         try {

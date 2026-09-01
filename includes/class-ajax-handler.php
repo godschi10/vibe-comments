@@ -475,6 +475,27 @@ class Vibe_Comments_Ajax_Handler {
         $now            = current_time('timestamp', true);
         $post_author_id = intval(get_post_field('post_author', $post_id));
 
+        // v3.15.0 Q&A mode: accepted answer hoisted to the top of the list
+        // (a reader must see THE answer first, before chronology). The hoist
+        // happens BEFORE formatting so the accepted answer leads the array
+        // regardless of which page it would naturally fall on — an accepted
+        // answer on page 2 still appears at position 1 of page 1.
+        $qa_mode       = Vibe_Comments_QA::is_qa_post($post_id);
+        $accepted_id   = $qa_mode ? Vibe_Comments_QA::accepted_answer_id($post_id) : 0;
+        if ($qa_mode && $accepted_id) {
+            $acc = get_comment($accepted_id);
+            // Only hoist a comment that still exists and is approved —
+            // an accepted answer later deleted or unapproved must not
+            // resurrect as a phantom first row.
+            if ($acc && '1' === (string) $acc->comment_approved) {
+                $others = array();
+                foreach ($comments as $c) {
+                    if ((int) $c->comment_ID !== $accepted_id) $others[] = $c;
+                }
+                $comments = array_merge(array($acc), $others);
+            }
+        }
+
         // v3.4.0: replies are no longer embedded in the initial payload — only
         // a reply_count per thread. Actual reply content is fetched on demand
         // via vibe_load_replies when the user clicks "View N replies" (see
@@ -1018,6 +1039,16 @@ class Vibe_Comments_Ajax_Handler {
             'approved'      => $comment->comment_approved,
             'is_author'     => ($post_author_id && intval($comment->user_id) === $post_author_id),
             'is_pinned'     => (bool) get_comment_meta($comment_id, '_vibe_pinned', true),
+            // v3.15.0 Q&A mode — both universal truths (same for every
+            // visitor), so they bake safely into the shared 120s cache:
+            //   is_qa        = this post runs in Q&A mode (once per list,
+            //                 but per-comment too so the client never needs
+            //                 to cross-reference a second object)
+            //   is_accepted = this comment is THE accepted answer (0 when
+            //                 post not in Q&A mode or not the accepted one)
+            'is_qa'         => Vibe_Comments_QA::is_qa_post($comment->comment_post_ID) ? 1 : 0,
+            'is_accepted'   => (Vibe_Comments_QA::is_qa_post($comment->comment_post_ID)
+                                && Vibe_Comments_QA::accepted_answer_id($comment->comment_post_ID) === $comment_id) ? 1 : 0,
             // v3.13.0 edit window — is_edited is cache-safe (universal truth,
             // same for every visitor, baked here like is_pinned); can_edit is
             // requester-specific and patched per-request in

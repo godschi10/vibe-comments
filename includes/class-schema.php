@@ -65,6 +65,21 @@ class Vibe_Comments_Schema {
         }
 
         $post_url = get_permalink( $post_id );
+
+        // ── v3.15.0 Q&A mode: QAPage replaces WebPage+Comment ──────────
+        // When the post runs in Q&A mode, the comment section IS a question
+        // thread — serving Comment entities would tell Google "page with
+        // comments" while the page itself now renders (and is intended, by
+        // the author's explicit toggle) as a question with answers. QAPage
+        // is the schema.org type for exactly this shape and is eligible for
+        // rich results. Replaces, not augments: mixing WebPage+Comment AND
+        // QAPage+Answer for the same discussion would be two contradictory
+        // descriptions of the same content to the same crawler.
+        if ( Vibe_Comments_QA::is_qa_post( $post_id ) ) {
+            self::output_qa( $post_id, $post_url, $comments );
+            return;
+        }
+
         $graph    = [];
 
         // ── WebPage entity with commentCount ──────────────────────────────
@@ -151,6 +166,123 @@ class Vibe_Comments_Schema {
         // JSON_UNESCAPED_SLASHES avoids \/  noise in URLs — safe to keep
         // purely for readability now that JSON_HEX_TAG independently handles
         // the actual angle-bracket risk regardless of slash-escaping.
+        echo "\n<script type=\"application/ld+json\">\n"
+            . wp_json_encode( $schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP )
+            . "\n</script>\n";
+    }
+
+    /**
+     * v3.15.0 — QAPage schema for Q&A-mode posts.
+     *
+     * Shape (schema.org QAPage):
+     *   QAPage
+     *     └ mainEntity: Question
+     *         ├ name        = post title
+     *         ├ text        = post excerpt (the question body)
+     *         ├ upvoteCount = total reactions across answers (proxy; each
+     *         │              Answer carries its own upvoteCount too)
+     *         ├ answerCount = approved top-level comments
+     *         ├ acceptedAnswer = the marked answer (comment_ID in meta), if any
+     *         └ suggestedAnswer[] = every other approved answer
+     *
+     * Why upvoteCount proxies from reactions: this minimal cut has no
+     * separate vote table — reactions ARE the vote UI (design decision,
+     * agreed with the King). Sums are computed once per request from the
+     * reactions map, not per-comment queries.
+     */
+    private static function output_qa( $post_id, $post_url, $comments ) {
+        $accepted_id = Vibe_Comments_QA::accepted_answer_id( $post_id );
+        $accepted    = null;
+        $answers     = [];
+
+        // Reaction totals in ONE batch query (not per-comment get_reaction_counts
+        // calls — that would be N queries for N answers on every page load).
+        $db            = new Vibe_Comments_Database();
+        $top_ids       = array_map( function( $c ) { return (int) $c->comment_ID; },
+            array_filter( $comments, function( $c ) { return 0 === (int) $c->comment_parent; } ) );
+        $reaction_map  = $db->get_reaction_counts_batch( $top_ids );
+
+        foreach ( $comments as $comment ) {
+            // Top-level comments only: in Q&A mode, replies attach to
+            // answers (and to the accepted answer's own thread) — they are
+            // discussion, not answers. Schema-wise each answer stands alone.
+            if ( (int) $comment->comment_parent > 0 ) {
+                continue;
+            }
+
+            $cid = (int) $comment->comment_ID;
+            $text = wp_strip_all_tags( $comment->comment_content );
+            $text = trim( preg_replace( '/\s+/', ' ', $text ) );
+            if ( mb_strlen( $text ) > 500 ) {
+                $text = mb_substr( $text, 0, 497 ) . '…';
+            }
+            if ( '' === $text ) {
+                continue;
+            }
+
+            // upvoteCount proxies from total reactions — reactions ARE the vote
+            // UI in this minimal cut (design decision, agreed with the King).
+            $total = isset( $reaction_map[ $cid ] ) ? array_sum( array_map( 'intval', (array) $reaction_map[ $cid ] ) ) : 0;
+
+            $answer = [
+                '@type'         => 'Answer',
+                '@id'           => $post_url . '#comment-' . $cid,
+                'url'           => $post_url . '#comment-' . $cid,
+                'text'          => $text,
+                'datePublished' => gmdate( 'c', strtotime( $comment->comment_date_gmt ) ),
+                'author'        => [
+                    '@type' => 'Person',
+                    'name'  => wp_strip_all_tags( $comment->comment_author ),
+                ],
+                'upvoteCount'   => $total,
+            ];
+
+            if ( $cid === $accepted_id ) {
+                $accepted = $answer;
+            } else {
+                $answers[] = $answer;
+            }
+        }
+
+        $question_text = wp_strip_all_tags( get_post_field( 'post_excerpt', $post_id ) );
+        $question_text = trim( preg_replace( '/\s+/', ' ', $question_text ) );
+        if ( '' === $question_text ) {
+            // No excerpt: fall back to the post content's first 500 chars —
+            // a Question with no body text is semantically thin for rich
+            // results, and the title alone may not carry the full question.
+            $question_text = wp_strip_all_tags( get_post_field( 'post_content', $post_id ) );
+            $question_text = trim( preg_replace( '/\s+/', ' ', $question_text ) );
+            if ( mb_strlen( $question_text ) > 500 ) {
+                $question_text = mb_substr( $question_text, 0, 497 ) . '…';
+            }
+        }
+
+        $question = [
+            '@type'      => 'Question',
+            '@id'        => $post_url . '#question',
+            'name'       => wp_strip_all_tags( get_the_title( $post_id ) ),
+            'text'       => $question_text,
+            'answerCount' => count( $answers ) + ( $accepted ? 1 : 0 ),
+        ];
+        if ( $accepted ) {
+            $question['acceptedAnswer'] = $accepted;
+        }
+        if ( ! empty( $answers ) ) {
+            $question['suggestedAnswer'] = $answers;
+        }
+
+        $schema = [
+            '@context' => 'https://schema.org',
+            '@graph'   => [
+                [
+                    '@type'      => 'QAPage',
+                    '@id'        => $post_url,
+                    'url'        => $post_url,
+                    'mainEntity' => $question,
+                ],
+            ],
+        ];
+
         echo "\n<script type=\"application/ld+json\">\n"
             . wp_json_encode( $schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP )
             . "\n</script>\n";

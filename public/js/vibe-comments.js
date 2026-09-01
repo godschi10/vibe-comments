@@ -149,6 +149,7 @@
         initEditWindow();
         initViewReplies();
         initPinComment();
+        initQAAccept();
         initRelativeTime();
 
         // Retry button inside error list items.
@@ -985,6 +986,9 @@
 
         li.id = 'comment-' + cid;
         li.className = 'comment' + (comment.is_pinned ? ' vibe-comment-pinned' : '');
+        // v3.15.0 Q&A — carries the accepted state for the CSS left-border
+        // (the green accent rail on the accepted answer's article).
+        if (comment.is_qa) li.setAttribute('data-accepted', comment.is_accepted ? '1' : '0');
 
         const rxBar     = buildReactionBar(cid, comment.reactions, comment.user_reaction || null);
         const replyHtml = '<button type="button" class="comment-reply-link vibe-reply-trigger" data-comment-id="' + cid + '">Reply</button>';
@@ -1007,8 +1011,23 @@
             ? '<button type="button" class="vibe-pin-btn" data-comment-id="' + cid + '" data-pinned="' + (comment.is_pinned ? '1' : '0') + '">' + (comment.is_pinned ? 'Unpin' : 'Pin') + '</button>'
             : '';
 
+        // v3.15.0 Q&A — Accept button, rendered only for the post author /
+        // moderators (config.qa.canAccept, fresh per page load, never cached).
+        // On the accepted answer it reads "Unaccept" (toggle semantics, same
+        // single endpoint); top-level answers only — a REPLY is never an
+        // answer (comment.parent === 0 is the answer contract).
+        const qaOn      = !!(config.qa && config.qa.mode);
+        const canAccept = qaOn && !!(config.qa && config.qa.canAccept);
+        const acceptHtml = (canAccept && comment.parent === 0)
+            ? '<button type="button" class="vibe-accept-btn" data-comment-id="' + cid + '" data-accepted="' + (comment.is_accepted ? '1' : '0') + '">' + (comment.is_accepted ? 'Unaccept' : '✓ Accept') + '</button>'
+            : '';
+
         const authorBadge = comment.is_author ? ' <span class="vibe-author-badge">Author</span>'            : '';
         const pinnedBadge = comment.is_pinned ? '<span class="vibe-pinned-badge">&#128204; Pinned</span>' : '';
+        // v3.15.0 Q&A — the green accepted-answer checkmark. Renders on the
+        // comment that IS the accepted answer (is_accepted is a universal
+        // truth from the payload; hoisting already puts it first).
+        const acceptedBadge = comment.is_accepted ? '<span class="vibe-accepted-badge">&#10003; Accepted</span>' : '';
         const dateIso     = comment.date_gmt  ? comment.date_gmt.replace(' ', 'T') + 'Z'                   : '';
         // v3.13.0 — "· edited" rides the meta line (subtle, universal truth);
         // the Edit button rides the footer and is only rendered while the
@@ -1032,6 +1051,10 @@
                     '</div>' +
                     '<div class="vibe-comment-meta">' +
                         pinnedBadge +
+                        // v3.15.0 Q&A — accepted badge leads the meta line on
+                        // the accepted answer (green check, before the author
+                        // so the eye lands on the verdict first).
+                        acceptedBadge +
                         '<cite class="vibe-comment-author">' + escapeHtml(comment.author) + authorBadge + '</cite>' +
                         '<time class="vibe-comment-time" datetime="' + escapeHtml(dateIso) + '" title="' + escapeHtml(comment.date || '') + '">' + escapeHtml(comment.date) + '</time>' +
                         editedBadge +
@@ -1046,6 +1069,7 @@
                     replyHtml +
                     viewRepliesHtml +
                     pinHtml +
+                    acceptHtml +
                     editBtnHtml +
                 '</footer>' +
             '</article>';
@@ -2521,6 +2545,88 @@
             })
             .catch(function(err) {
                 console.error('Pin toggle failed:', err);
+                btn.disabled = false;
+            });
+        });
+    }
+
+    /**
+     * v3.15.0 Q&A mode — Accept / Unaccept answer.
+     *
+     * Author or moderator only (the button only renders for them). Click:
+     * POST vibe_accept_answer → server toggles the post's _vibe_qa_accepted
+     * meta → client reflects instantly: badge swap on the affected answer,
+     * "Accept" → "Unaccept" label flip, hoist of the accepted <li> to the
+     * top of the list (mirroring pin's prepend pattern), and demotion of
+     * any previously-accepted answer back to ordinary standing.
+     */
+    function initQAAccept() {
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.vibe-accept-btn');
+            if (!btn) return;
+
+            e.preventDefault();
+            if (btn.disabled) return;
+            btn.disabled = true;
+
+            var commentId = btn.dataset.commentId;
+            var li        = btn.closest('li.comment');
+            if (!commentId || !li) { btn.disabled = false; return; }
+
+            fetch(config.ajaxUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    action:     'vibe_accept_answer',
+                    comment_id: commentId,
+                    post_id:    config.postId || '',
+                    nonce:      config.nonce
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                btn.disabled = false;
+                if (!res || !res.success) return;
+
+                var acceptedId = parseInt(res.data.acceptedId, 10) || 0;
+
+                // 1. Every answer's button + badge reflects the new truth.
+                var list = document.getElementById('vibe-comment-list');
+                if (list) {
+                    list.querySelectorAll('.vibe-accept-btn').forEach(function(b) {
+                        var isAcc = parseInt(b.dataset.commentId, 10) === acceptedId;
+                        b.dataset.accepted = isAcc ? '1' : '0';
+                        b.textContent = isAcc ? 'Unaccept' : '✓ Accept';
+                    });
+                    // The li-level data-accepted mirrors the button's — it
+                    // drives the green left-border rail via CSS.
+                    list.querySelectorAll('li.comment[data-accepted]').forEach(function(row) {
+                        var isAcc = parseInt(row.id.replace('comment-', ''), 10) === acceptedId;
+                        row.setAttribute('data-accepted', isAcc ? '1' : '0');
+                    });
+                    // Demote any stale accepted badge, then badge the winner.
+                    list.querySelectorAll('.vibe-accepted-badge').forEach(function(el) { el.remove(); });
+                    if (acceptedId) {
+                        var win = list.querySelector('#comment-' + acceptedId + ' .vibe-comment-meta');
+                        if (win) {
+                            var badge = document.createElement('span');
+                            badge.className   = 'vibe-accepted-badge';
+                            badge.textContent = '✓ Accepted';
+                            win.prepend(badge);
+                        }
+                        // Hoist the accepted answer to position 1.
+                        var winLi = list.querySelector('#comment-' + acceptedId);
+                        if (winLi) list.prepend(winLi);
+                    }
+                }
+
+                // 2. Keep the config's acceptedId current for any later
+                // re-render paths that consult it.
+                if (config.qa) config.qa.acceptedId = acceptedId;
+            })
+            .catch(function(err) {
+                console.error('Accept toggle failed:', err);
                 btn.disabled = false;
             });
         });

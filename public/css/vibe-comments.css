@@ -979,6 +979,52 @@
     border-left: 3px solid #fbbf24;
     padding-left: 0.75rem;
 }
+
+/* ── v3.15.0 Q&A mode — accepted answer + accept button ──────────────── */
+.vibe-accepted-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #15803d;               /* green-700 — verdict color, distinct from */
+    background: #dcfce7;           /* the amber pinned badge by design        */
+    border: 1px solid #86efac;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-right: 0.4rem;
+}
+#vibe-comment-list li.comment[data-accepted="1"] > article {
+    border-left: 3px solid #22c55e;
+    padding-left: 0.75rem;
+}
+.vibe-accept-btn {
+    background: none;
+    border: 1px solid var(--vibe-border, #e5e7eb);
+    border-radius: 999px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.78rem;
+    color: var(--vibe-text-muted, #888);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.vibe-accept-btn:hover:not(:disabled) {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #15803d;
+}
+.vibe-accept-btn[data-accepted="1"] {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #15803d;
+}
+.vibe-accept-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
 .vibe-pin-btn {
     background: none;
     border: 1px solid var(--vibe-border, #e5e7eb);

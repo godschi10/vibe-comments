@@ -15,6 +15,20 @@ Types of changes:
 
 ---
 
+## [3.15.0] — 2026-09-01
+
+### Added — Q&A mode per post (Feature #3, minimal cut)
+
+Stack-Overflow-style Q&A on any post, enabled by a per-post **"Enable Q&A mode"** checkbox in the editor sidebar. The post becomes the Question; top-level comments become Answers; reactions serve as upvotes; the post author (or any moderator) can mark exactly one answer as **Accepted** — green check badge, hoisted to position 1.
+
+- **New class** `includes/class-qa.php` — toggle helpers (`_vibe_qa_mode` post meta), accepted-answer pointer (`_vibe_qa_accepted` post meta — one row per question, not per comment), editor meta box (nonce + cap + autosave guarded), and the `vibe_accept_answer` AJAX endpoint with toggle semantics: accept → switch → unaccept in one endpoint; nonce + cross-post + approval + mode + permission gates (403/404/400).
+- **Schema** — Q&A posts emit schema.org **QAPage → Question (name, text, answerCount, acceptedAnswer, suggestedAnswer[])** replacing the WebPage+Comment graph for those posts only; classic posts unchanged. Answer upvoteCount proxies from total reactions (batch query, one per request).
+- **Payload** — `is_qa` + `is_accepted` universal-truth fields baked into the cached list; accepted answer hoisted server-side BEFORE formatting (an accepted answer on page 2 still leads page 1); phantom-hoist guard: a later-deleted/unapproved accepted answer is not resurrected.
+- **Client** — green "✓ Accepted" badge on the meta line (leads the author name so the eye lands on the verdict), "✓ Accept / Unaccept" pill button in the footer (author/moderator only, top-level answers only), instant hoist + badge swap + label flip on click, `data-accepted` attr on the li drives the green left-border rail via CSS.
+- **Config** — `vibeComments.qa` localize key: `{mode, acceptedId, canAccept, questionUrl}`; false on classic posts (JS renders the classic UI unchanged).
+
+**Proofs**: PHP battery 23/23 (toggle helpers round-trip, absint hygiene on the accepted pointer, permission matrix guest/stranger/author/moderator, all five endpoint rejection gates, accept→switch→unaccept semantics, localize shape). Live E2E on the real site (Obscura/browser-harness CDP): reader view — 3 answers, Amaka's hoisted first with green badge, 0 accept buttons for readers; moderator session — 3 Accept buttons with correct labels, click Accept on a second answer → hoist + badge transfer + label flip live; click Unaccept → clean neutral state, zero badges. QAPage JSON-LD parsed live: correct question, answerCount 3, acceptedAnswer = Amaka, 2 suggestedAnswer entries, zero classic Comment entities. Accepted state restored to the original test answer; temp admin deleted.
+
 ## [3.14.1] — 2026-08-31
 
 ### Fixed — @mention dropdown invisible (King-reported: "I never saw the feature")

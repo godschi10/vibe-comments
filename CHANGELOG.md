@@ -15,6 +15,18 @@ Types of changes:
 
 ---
 
+## [3.17.0] — 2026-09-01
+
+### Added — Daily Digest Email (Feature #9): the admin's morning paper
+
+One branded email per day (08:00 WAT / 07:00 UTC) to the site admin: yesterday's comment activity in a single summary — stat cards (approved / pending / comments / replies), the pending moderation queue with each comment's spam-score badge (v3.14.0 scorer integrated), most-reacted comments, per-post breakdown, top voices. Every entry deep-links to its admin row.
+
+- **New class** `includes/class-digest.php` — single-event self-chaining cron (idempotent arm, never double-schedules; survives re-activation), full-calendar-day window (yesterday 00:00–24:00 UTC), one batched query for counts, one for the comment list, one for reactions, one for post titles; 100-comment cap.
+- **Settings** — Settings → Vibe Comments: enable toggle + recipient email (defaults to admin_email), with a **Preview button** that renders the exact digest HTML in an iframe via admin-ajax (mod-cap only, wp_rest nonce) — the SMTP-free window: the preview works regardless of mail transport, and shares ONE build path with the cron so preview and inbox can never drift.
+- **Delivery law unchanged**: the plugin never touches SMTP — `wp_mail()` carries it. On this host the transport remains blocked (empty Brevo key); the worker runs, builds, attempts, and honestly error-logs. The moment `GWILL_SMTP_USER`/`GWILL_SMTP_PASS` land in wp-config.php, the already-armed cron lights up with zero further work.
+
+**Proofs**: live build — subject "[tech] Daily digest — 10 comments, 1 pending", counts {approved:10, pending:1, top_level:4, replies:7}, pending section with planted spam scored live ("suspicious 35%"), per-post table, top voices; visual render proof (screenshot): dark header + gold site name, 4 stat cards, moderation cards with colored badges, clean table — zero visual defects; cron chain live: armed for 2026-09-02 07:00 UTC, idempotent re-arm (no double-schedule), worker run recorded `last_run`, self-chained for tomorrow; send path: `wp_mail` returned false through the known-blocked rail (honest failure, no silent success). Probe comments cleaned.
+
 ## [3.16.0] — 2026-09-01
 
 ### Added — In-thread search (Feature #7): whole-thread, server-side

@@ -166,6 +166,62 @@ class Vibe_Comments_Admin {
                 <?php
                 settings_fields( 'vibe_comments' );
                 do_settings_sections( 'vibe-comments' );
+
+                // v3.17.0 — digest preview: renders the exact email HTML.
+                // The SMTP-free window: works regardless of mail transport.
+                ?>
+                <hr />
+                <h3>Digest Preview</h3>
+                <p class="description">Renders the exact digest email for yesterday — the same build path the morning cron uses. Sends nothing.</p>
+                <p>
+                    <button type="button" class="button button-secondary" id="vibe-digest-preview-btn"
+                            data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
+                            data-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>">
+                        Preview today's digest
+                    </button>
+                    <span id="vibe-digest-preview-status" style="margin-left:8px;"></span>
+                </p>
+                <div id="vibe-digest-preview-wrap" style="display:none;margin-top:12px;">
+                    <div style="margin-bottom:6px;"><strong id="vibe-digest-preview-subject"></strong></div>
+                    <iframe id="vibe-digest-preview-frame" style="width:100%;min-height:520px;border:1px solid #dcdcde;border-radius:4px;background:#fff;"></iframe>
+                </div>
+                <script>
+                document.getElementById('vibe-digest-preview-btn').addEventListener('click', function() {
+                    var btn    = this;
+                    var status = document.getElementById('vibe-digest-preview-status');
+                    btn.disabled = true;
+                    status.textContent = 'Building\u2026';
+                    var body = new URLSearchParams({
+                        action: 'vibe_digest_preview',
+                        nonce:  btn.dataset.nonce
+                    });
+                    fetch(btn.dataset.ajaxUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: body
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(res) {
+                        btn.disabled = false;
+                        if (!res || !res.success) {
+                            status.textContent = (res && res.data && res.data.message) ? res.data.message : 'Preview failed.';
+                            return;
+                        }
+                        status.textContent = '';
+                        document.getElementById('vibe-digest-preview-subject').textContent = res.data.subject;
+                        var wrap = document.getElementById('vibe-digest-preview-wrap');
+                        wrap.style.display = 'block';
+                        var frame = document.getElementById('vibe-digest-preview-frame');
+                        frame.srcdoc = res.data.html;
+                    })
+                    .catch(function(err) {
+                        btn.disabled = false;
+                        status.textContent = 'Preview failed: ' + err;
+                    });
+                });
+                </script>
+                <?php
                 submit_button();
                 ?>
             </form>

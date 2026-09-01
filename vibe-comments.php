@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.16.0
+ * Version:           3.17.0
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.16.0');
+define('VIBE_COMMENTS_VERSION', '3.17.0');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -55,6 +55,7 @@ require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-mentions.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-analytics.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-spam-score.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-qa.php';
+require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-digest.php';
 
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-admin.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-schema.php';
@@ -113,6 +114,8 @@ class Vibe_Comments {
             Vibe_Comments_Schema::init();
             // v3.15.0 — Q&A mode (meta box + accept-answer AJAX).
             Vibe_Comments_QA::init();
+            // v3.17.0 — daily digest (cron worker + settings + preview).
+            Vibe_Comments_Digest::init();
             if ($debug) { vibe_log('Schema instantiated'); }
         } catch (Throwable $e) {
             error_log('[Vibe Comments] FATAL in Schema::init(): ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());

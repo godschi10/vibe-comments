@@ -9,7 +9,7 @@
  * risk), and SQL is used only for GROUP BY leaderboards.
  *
  * Zero dependencies: charts are hand-built SVG (bars + donut), tables are
- * plain HTML, styles are a single inline <style> block scoped to the page.
+ * plain HTML, styles enqueued via vibe-admin.css scoped to admin screens.
  * Results are cached 5 minutes in a transient; the "Refresh" link busts it
  * with a nonce.
  *

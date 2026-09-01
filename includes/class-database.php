@@ -6,7 +6,7 @@ class Vibe_Comments_Database {
     private $table_name;
     private $cache_group = 'vibe_comments';
 
-    /** Allowed reaction types — whitelist checked on every write. */
+    /** Allowed reaction types - whitelist checked on every write. */
     const REACTION_TYPES = ['like', 'heart', 'fire', 'laugh'];
 
     /** Default reaction counts array returned when a comment has no reactions. */
@@ -25,13 +25,13 @@ class Vibe_Comments_Database {
      * Cloudflare's published IP ranges (https://www.cloudflare.com/ips-v4 and
      * /ips-v6), as of this writing. Verified against two independent current
      * sources before hardcoding. Cloudflare changes these infrequently and
-     * with advance notice — this is the same "refresh occasionally" approach
+     * with advance notice - this is the same "refresh occasionally" approach
      * widely used by Cloudflare-integration plugins and server configs (see
      * e.g. the official real_ip_module / mod_cloudflare patterns). If
      * Cloudflare's ranges change and this list goes stale, the practical
      * failure mode is graceful: is_cloudflare_ip() returns false for genuine
      * Cloudflare traffic, and the code falls back to trusting REMOTE_ADDR
-     * directly (Cloudflare's own edge IP) rather than CF-Connecting-IP —
+     * directly (Cloudflare's own edge IP) rather than CF-Connecting-IP -
      * rate limiting and guest identity still work, just keyed on Cloudflare's
      * edge IP instead of the real visitor IP until this list is refreshed.
      */
@@ -103,11 +103,11 @@ class Vibe_Comments_Database {
      * Resolve the real client IP.
      *
      * CF-Connecting-IP is only trusted if the ACTUAL TCP connection
-     * (REMOTE_ADDR — set by the web server from the live socket, which a
+     * (REMOTE_ADDR - set by the web server from the live socket, which a
      * client cannot spoof) genuinely originates from one of Cloudflare's own
      * published IP ranges. Without this check, any client could send an
      * arbitrary CF-Connecting-IP header directly to the origin server and
-     * have it trusted verbatim — trivially bypassing IP-based rate limiting
+     * have it trusted verbatim - trivially bypassing IP-based rate limiting
      * (rotate the header value on every request) and polluting the guest
      * identity derivation this value feeds into. The existing docblock below
      * already correctly reasoned about this exact risk for X-Forwarded-For
@@ -115,7 +115,7 @@ class Vibe_Comments_Database {
      * reasoning to CF-Connecting-IP, which is equally spoofable by anyone
      * who can reach the origin server directly.
      *
-     * X-Forwarded-For remains intentionally ignored entirely — it can be
+     * X-Forwarded-For remains intentionally ignored entirely - it can be
      * spoofed by any client and would allow rate-limit bypass.
      */
     public static function resolve_client_ip() {
@@ -139,7 +139,7 @@ class Vibe_Comments_Database {
      * (sent as `vibe_guest_id` in POST/GET by the JS). Hash it with AUTH_KEY so
      * the raw UUID is never stored, and so the same UUID produces a different
      * token on different sites. Stable across page loads for that browser until
-     * the user clears localStorage — no daily rotation needed.
+     * the user clears localStorage - no daily rotation needed.
      *
      * Fallback path (legacy / no UUID): derive from IP + AUTH_KEY + UTC date,
      * same as before. This path still collides for users behind the same NAT
@@ -153,12 +153,12 @@ class Vibe_Comments_Database {
     public static function get_guest_token( $client_id = '' ) {
         if ( ! empty( $client_id ) ) {
             // Strict UUID v4 format check (canonical hyphenated form, the only
-            // format our own getGuestId() in JS ever produces — via
+            // format our own getGuestId() in JS ever produces - via
             // crypto.randomUUID(), the manual getRandomValues() fallback, or
             // the Math.random() last resort, all three of which emit this exact
             // shape). Previously this used preg_replace() to strip non-UUID
             // characters and accepted anything left over in the 32-40 char range
-            // — which meant two DIFFERENT malformed inputs containing different
+            // - which meant two DIFFERENT malformed inputs containing different
             // disallowed characters could strip down to the IDENTICAL cleaned
             // string and collide on the same guest token. A strict format match
             // closes that off entirely: anything that isn't a well-formed UUID
@@ -184,22 +184,22 @@ class Vibe_Comments_Database {
      *
      * Race-safe without a SELECT:
      *
-     *   Step 1 — DELETE WHERE reaction_type matches the requested type.
+     *   Step 1 - DELETE WHERE reaction_type matches the requested type.
      *     • 1 row deleted  → user had this exact reaction → toggle off.
      *     • 0 rows deleted → either they have a different reaction, or none at all
      *                        → fall through to the upsert.
      *
-     *   Step 2 (if step 1 deleted nothing) — INSERT ... ON DUPLICATE KEY UPDATE.
+     *   Step 2 (if step 1 deleted nothing) - INSERT ... ON DUPLICATE KEY UPDATE.
      *     • No row exists  → inserts a new reaction (INSERT path).
      *     • Different type → triggers ON DUPLICATE KEY UPDATE; sets the new type
      *                        atomically in a single statement (no separate UPDATE).
-     *     Both are handled by one atomic SQL statement — no window for a duplicate.
+     *     Both are handled by one atomic SQL statement - no window for a duplicate.
      *
      * The UNIQUE KEY (comment_id, user_id, guest_token) in the schema is the DB-level
      * invariant that makes ON DUPLICATE KEY UPDATE target the right row.
      *
      * JS consumer note: `action` is kept in the response for potential debugging,
-     * but the frontend never reads it — it only consumes `reactions` and `user_reaction`.
+     * but the frontend never reads it - it only consumes `reactions` and `user_reaction`.
      * 'switched' is folded into 'added' since the distinction is meaningless to JS.
      *
      * @param  int    $comment_id
@@ -229,7 +229,7 @@ class Vibe_Comments_Database {
         // ── Step 1: attempt toggle-off ────────────────────────────────────────
         // Delete only if the stored reaction_type is the SAME as what was clicked.
         // $wpdb->delete() returns int (rows affected) or false (DB error).
-        // 0 rows affected is not an error here — it means "no match for this type."
+        // 0 rows affected is not an error here - it means "no match for this type."
         $deleted = $wpdb->delete(
             $this->table_name,
             [
@@ -346,7 +346,7 @@ class Vibe_Comments_Database {
         }
 
         if ( ! empty( $uncached ) ) {
-            // IDs are absint()-guaranteed PHP integers at this point — no injection
+            // IDs are absint()-guaranteed PHP integers at this point - no injection
             // vector. Direct interpolation is safe and avoids variadic-spread
             // incompatibilities across WordPress versions.
             $id_list = implode( ',', $uncached );
@@ -406,7 +406,7 @@ class Vibe_Comments_Database {
         }
 
         if ( ! empty( $uncached ) ) {
-            // IDs are absint()-guaranteed integers — safe to interpolate directly.
+            // IDs are absint()-guaranteed integers - safe to interpolate directly.
             // The WHERE predicates (user_id, guest_token) use prepare() because
             // those values come from external sources and ARE user-controlled.
             $id_list = implode( ',', $uncached );
@@ -450,8 +450,8 @@ class Vibe_Comments_Database {
     // NOTE: an object-cache-versioned comment-list caching subsystem
     // (get_comments_cache_version / increment_comments_cache_version /
     // get_comments_for_post / clear_post_comments_cache) previously lived here.
-    // Removed after a full-codebase grep confirmed get_comments_for_post() —
-    // the only function that would ever READ using that versioned scheme —
+    // Removed after a full-codebase grep confirmed get_comments_for_post() -
+    // the only function that would ever READ using that versioned scheme -
     // had zero callers anywhere in the plugin. The comment list is actually
     // served entirely through load_comments()'s own separate vc_load_* transient
     // cache in class-ajax-handler.php. The only thing this dead subsystem was
@@ -461,7 +461,7 @@ class Vibe_Comments_Database {
 
     /**
      * Fetch the full descendant subtree for a SET of root comment IDs, scoped
-     * via IN() at each level — never scans the whole post's comments.
+     * via IN() at each level - never scans the whole post's comments.
      *
      * Used two ways:
      *   1. load_comments() passes the current page's top-level IDs (e.g. 10)
@@ -476,7 +476,7 @@ class Vibe_Comments_Database {
      * how many were ever expanded. On a post with hundreds of replies spread
      * across many threads, that meant transferring full comment content
      * (text, author, email, agent string) for replies nobody would ever see
-     * unless they happened to expand that exact thread — every single time
+     * unless they happened to expand that exact thread - every single time
      * anyone loaded the comment section.
      *
      * @param  int   $post_id
@@ -484,7 +484,7 @@ class Vibe_Comments_Database {
      *                            children are level 1 of the result).
      * @param  int   $max_levels  Safety bound on recursion depth (default 4
      *                            covers this plugin's supported nesting).
-     * @return array  [parent_comment_id => [WP_Comment, ...], ...] — same
+     * @return array  [parent_comment_id => [WP_Comment, ...], ...] - same
      *                shape as the old get_children_map(), so format_comment_tree()
      *                needs zero changes to consume either one.
      */

@@ -14,7 +14,7 @@ class Vibe_Comments_Activator {
         // Each user gets exactly one reaction per comment (the UNIQUE KEY
         // covers both logged-in and guest paths without collision).
         // Existing installs: existing rows get reaction_type = 'like' via DEFAULT.
-        // guest_token is VARCHAR(64) — SHA256 produces exactly 64 hex chars.
+        // guest_token is VARCHAR(64) - SHA256 produces exactly 64 hex chars.
         $sql = "CREATE TABLE {$table_name} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             comment_id bigint(20) unsigned NOT NULL,
@@ -35,7 +35,7 @@ class Vibe_Comments_Activator {
     }
 
     /**
-     * Run on init — migrates existing installs without needing
+     * Run on init - migrates existing installs without needing
      * the user to deactivate/reactivate the plugin.
      * Also flushes vc_load_* transients on any version change so stale
      * cached comment JSON never survives an upgrade.
@@ -57,13 +57,13 @@ class Vibe_Comments_Activator {
         global $wpdb;
         $table_name = $wpdb->prefix . 'vibe_comment_likes';
         // Tracks whether EVERY step below actually succeeded. Previously none
-        // of these $wpdb->query() return values were checked — a partially
+        // of these $wpdb->query() return values were checked - a partially
         // failed migration (e.g. the ADD COLUMN succeeds but the subsequent
         // DROP INDEX fails for some reason) would silently continue to the
         // NEXT statement anyway, then still call update_option() at the end
         // regardless, permanently marking a broken migration as "done." Since
         // maybe_upgrade() only runs when the stored version is behind
-        // DB_VERSION, that means it would NEVER run again — the table stays
+        // DB_VERSION, that means it would NEVER run again - the table stays
         // in a broken, inconsistent state with no further attempt to
         // self-heal and no error surfaced to the site admin anywhere.
         $ok = true;
@@ -76,12 +76,12 @@ class Vibe_Comments_Activator {
         // Column addition and index correction are checked INDEPENDENTLY
         // (two separate guards below) rather than one "does guest_token
         // exist" check covering all three ALTER statements. With a single
-        // coarse guard, a partial failure — ADD COLUMN succeeds, but DROP
-        // INDEX or the re-ADD fails — would still correctly set $ok=false
+        // coarse guard, a partial failure - ADD COLUMN succeeds, but DROP
+        // INDEX or the re-ADD fails - would still correctly set $ok=false
         // and prevent update_option() from advancing (that part already
         // worked). But on the NEXT request, the guard would find the column
         // already exists and skip the ENTIRE block, including the index
-        // correction that never actually completed — silently leaving
+        // correction that never actually completed - silently leaving
         // unique_like without guest_token in it, forever, with no further
         // retry attempt.
         $col = $wpdb->get_results( "SHOW COLUMNS FROM `{$table_name}` LIKE 'guest_token'" );
@@ -113,7 +113,7 @@ class Vibe_Comments_Activator {
 
         // ── v1.2 → v1.3: reaction_type ───────────────────────────────────
         // Existing rows get reaction_type = 'like' via the DEFAULT clause.
-        // Only attempted if the previous step succeeded (or wasn't needed) —
+        // Only attempted if the previous step succeeded (or wasn't needed) -
         // no point trying to add reaction_type AFTER guest_token if
         // guest_token itself just failed to get created.
         if ( $ok ) {
@@ -151,7 +151,7 @@ class Vibe_Comments_Activator {
         }
 
         if ( ! $ok ) {
-            // Do NOT update_option() here — leaving the stored version behind
+            // Do NOT update_option() here - leaving the stored version behind
             // DB_VERSION means maybe_upgrade() will genuinely retry on the
             // next request, rather than permanently giving up after one
             // failed attempt. The transient flush below still runs regardless
@@ -181,7 +181,7 @@ class Vibe_Comments_Activator {
      * (_wp_sqlite_mysql_information_schema_*). Its dbDelta() mishandles this
      * plugin's CREATE TABLE statement and records EVERY non-PK column
      * (comment_id, user_id, guest_token, reaction_type, created_at) with
-     * EXTRA = 'auto_increment' in that mirror — a systemic driver bug that
+     * EXTRA = 'auto_increment' in that mirror - a systemic driver bug that
      * also corrupts other plugins' tables, not just ours.
      *
      * The driver's INSERT translator trusts that flag and rewrites every
@@ -216,14 +216,14 @@ class Vibe_Comments_Activator {
             );
             $columns = $stmt->fetchAll( \PDO::FETCH_ASSOC );
         } catch ( Throwable $e ) {
-            // Mirror tables missing or a different driver version — nothing we
+            // Mirror tables missing or a different driver version - nothing we
             // can safely repair here, so bail quietly rather than fatal.
             return;
         }
 
         // The SQLite driver's fetchAll() returns UPPERCASE keys (COLUMN_NAME,
         // EXTRA, ...), not the lowercase aliases used in the SELECT. Normalise
-        // each row to lowercase keys so the lookup below is case-insensitive —
+        // each row to lowercase keys so the lookup below is case-insensitive -
         // without this, isset($col['column_name']) is always false and the
         // corrupted mirror is never detected.
         $needs_repair = false;

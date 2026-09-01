@@ -28,7 +28,7 @@
      *     .vibe-reaction-picker    ← hidden; expands when summary is tapped
      *
      * After choosing a reaction the picker closes and the summary updates.
-     * No absolute positioning — fully inline, no overflow concerns.
+     * No absolute positioning - fully inline, no overflow concerns.
      */
     // Sort reactions by count descending, drop zeros.
     // Highest-count reaction is always first in the summary display.
@@ -45,7 +45,7 @@
     // Shows each non-zero reaction as emoji+count pair, sorted desc.
     // User's own reaction pair gets .vibe-rx-mine for a blue count accent.
     // Summary is ALWAYS: stacked emoji bubbles + one aggregate total.
-    // Per-type counts only appear inside the picker — never in this button.
+    // Per-type counts only appear inside the picker - never in this button.
     function buildSummaryInner(sorted, userReaction) {
         if (sorted.length === 0) {
             return '<span class="vibe-rx-icon">🙂</span>' +
@@ -60,7 +60,7 @@
     }
 
     /**
-     * Build the reaction component HTML — returns TWO separate strings.
+     * Build the reaction component HTML - returns TWO separate strings.
      *
      *   summaryHtml → .vibe-reactions wrapper + compact summary button
      *                 goes INSIDE the footer flex row
@@ -124,7 +124,7 @@
     let currentSortMode = 'newest'; // matches load_comments()'s server-side default order
 
     document.addEventListener('DOMContentLoaded', function() {
-        // Display OAuth redirect-back errors (L4 fix — oauth_error() redirects
+        // Display OAuth redirect-back errors (L4 fix - oauth_error() redirects
         // here with ?vibe_auth_error=message instead of calling wp_die()).
         var urlParams = new URLSearchParams(window.location.search);
         var authError = urlParams.get('vibe_auth_error');
@@ -138,7 +138,7 @@
         // Count is rendered statically by PHP from the vibe_comment_count_{id}
         // option (may be stale by up to one comment if a new one landed since
         // the page was last cached). fetchCommentCount() below patches the
-        // heading to the live value, decoupled from the page cache entirely —
+        // heading to the live value, decoupled from the page cache entirely -
         // see get_comment_count() in class-ajax-handler.php (v3.3.3) for why
         // this replaced a full-page purge on every comment.
         fetchCommentCount();
@@ -161,7 +161,7 @@
         initForm();
         initGoogleAuth();
         initGuestToggle();
-        // initLivePolling() intentionally NOT here — it starts inside
+        // initLivePolling() intentionally NOT here - it starts inside
         // initCommentsTrigger's onLoaded callback so polling only fires
         // after the user explicitly loads comments. See B1 fix.
         initLoadMore();
@@ -173,28 +173,28 @@
     });
 
     /* ══════════════════════════════════════════════════════════════════════
-     * REPLY PUSH OPT-IN (v3.7.0) — "Notify me about replies"
+     * REPLY PUSH OPT-IN (v3.7.0) - "Notify me about replies"
      * ══════════════════════════════════════════════════════════════════════
      *
      * Flow (the dead-bell law enforced: requestPermission() ALWAYS before
-     * pushManager.subscribe() — subscribing without asking NEVER shows the
+     * pushManager.subscribe() - subscribing without asking NEVER shows the
      * OS prompt and silently fails with NotAllowedError):
      *   1. User ticks the checkbox → permission prompt (user gesture).
      *   2. Granted → subscribe with the theme's VAPID key (the SAME
-     *      subscription the site bell uses — one per origin + sw.js; the
+     *      subscription the site bell uses - one per origin + sw.js; the
      *      routing happens server-side, see class-reply-push.php).
      *   3. The subscription object is held in memory and attached to the
      *      submit payload as vibe_reply_push{endpoint,p256dh,auth}.
      *   4. Server stores it on the comment; a reply's approval pushes.
      *
      * Un-tick → drop the in-memory subscription (server meta is only ever
-     * written on submit, so an un-tick before posting stores nothing — the
+     * written on submit, so an un-tick before posting stores nothing - the
      * honest opt-out; after posting, the site bell's own unsubscribe
      * governs the browser side and 410-prune cleans the comment meta).
      *
      * The feature only arms when config.replyPush is truthy (theme rail
      * present). On denial the checkbox un-checks itself with an inline
-     * note — never a dead-looking UI.
+     * note - never a dead-looking UI.
      */
     var replyPushSub = null;
 
@@ -213,7 +213,7 @@
         var box = document.getElementById('vibe-reply-push-checkbox');
         var note = document.getElementById('vibe-reply-push-note');
         if (!box || !config.replyPush || !config.replyPush.publicKey) {
-            return; // feature unarmed — markup is already absent server-side
+            return; // feature unarmed - markup is already absent server-side
         }
 
         box.addEventListener('change', function() {
@@ -244,7 +244,7 @@
                 }
                 navigator.serviceWorker.ready.then(function(reg) {
                     // Reuse the existing subscription when the browser already
-                    // has one for this origin — subscribing again on an active
+                    // has one for this origin - subscribing again on an active
                     // subscription is a no-op that can race the bell.
                     return reg.pushManager.getSubscription().then(function(existing) {
                         if (existing) return existing;
@@ -272,12 +272,12 @@
     }
 
     /* ══════════════════════════════════════════════════════════════════════
-     * MENTIONS (v3.8.0) — @Name pills + autocomplete dropdown.
+     * MENTIONS (v3.8.0) - @Name pills + autocomplete dropdown.
      *
      * Pills are render-time only: comment_content keeps plain "@Name" in
      * the DB, so feeds/admin/no-JS renderers show natural plaintext. The
      * pillify pass runs between renderMarkdown() and linkify() and never
-     * touches tag segments (split-on-tags) — hrefs/attributes are safe.
+     * touches tag segments (split-on-tags) - hrefs/attributes are safe.
      *
      * The author set merges the server seed (config.mentions.authors, with
      * comment ids) with a live DOM scan of .vibe-comment-author cites, so
@@ -306,7 +306,7 @@
         if (config.mentions && config.mentions.authors) {
             config.mentions.authors.forEach(function(a) { add(a.name); });
         }
-        // Live DOM scan — rendered cites are the freshest source.
+        // Live DOM scan - rendered cites are the freshest source.
         var cites = document.querySelectorAll('.vibe-comment-author');
         for (var i = 0; i < cites.length; i++) add(cites[i].textContent);
         // Longest first so "Ada Lovelace" wins over "Ada".
@@ -327,7 +327,7 @@
     /**
      * Pillify one text segment (between tags). Per-@ position, try tokens
      * longest-first; both boundary guards must hold (mirrors the PHP
-     * parser exactly — server and client see the same mentions).
+     * parser exactly - server and client see the same mentions).
      */
     function mentionTransformSegment(text, tokens) {
         if (text.indexOf('@') === -1) return text;
@@ -380,7 +380,7 @@
         var inCode = false;
         for (var i = 0; i < parts.length; i++) {
             if (i % 2 === 1) {
-                // Tag segment — track code-span state only.
+                // Tag segment - track code-span state only.
                 if (/^<code[\s>]/i.test(parts[i])) inCode = true;
                 else if (/^<\/code/i.test(parts[i])) inCode = false;
             } else if (!inCode) {
@@ -443,7 +443,7 @@
             row.type = 'button';
             row.className = 'vibe-mention-row' + (i === 0 ? ' vibe-mention-active' : '');
             row.setAttribute('role', 'option');
-            row.textContent = '@' + name; // textContent — never innerHTML
+            row.textContent = '@' + name; // textContent - never innerHTML
             row.addEventListener('mousedown', function(e) {
                 // mousedown (not click) fires before the textarea blurs.
                 e.preventDefault();
@@ -459,7 +459,7 @@
         // old code did `rect.bottom + window.scrollY` on a position:fixed
         // element. getBoundingClientRect() is VIEWPORT space; position:fixed
         // anchors to the VIEWPORT. Adding scrollY pushed the dropdown that
-        // many pixels below the caret — on a long page scrolled to the
+        // many pixels below the caret - on a long page scrolled to the
         // comments it rendered thousands of pixels off-screen, invisible.
         // Correct math: anchor at the textarea's viewport rect, flip up when
         // the dropdown would clip the bottom edge, clamp to the sides.
@@ -533,12 +533,12 @@
     }
 
     /**
-     * Single source of truth for "N Comments" heading text — localized via
+     * Single source of truth for "N Comments" heading text - localized via
      * config.oneCommentText / config.manyCommentsTemplate (populated from
      * PHP's __() in vibe-comments.php), matching templates/comments.php's
      * own 3-way branch exactly (0/1/many) so server and client never disagree.
      *
-     * count === 0 returns '' (empty) rather than a "No comments yet" string —
+     * count === 0 returns '' (empty) rather than a "No comments yet" string -
      * setting an empty heading auto-hides it via the
      * `.vibe-comments-title:empty { display:none }` CSS rule, AND avoids
      * duplicating the empty-state block's own "Be the first to share your
@@ -547,7 +547,7 @@
      *
      * Before this existed, FOUR separate call sites (fetchCommentCount,
      * initComments, incrementCommentHeading, plus the PHP template) each
-     * reimplemented this pluralization independently — two of them
+     * reimplemented this pluralization independently - two of them
      * (initComments, incrementCommentHeading) hardcoded English text that
      * silently overwrote whatever this function or PHP had already
      * correctly localized, the moment a user clicked Load Comments or
@@ -568,13 +568,13 @@
      * Decoupled comment-count refresh (v3.3.3).
      *
      * Fires on every page load, independent of the "Load Comments" click.
-     * Fetches the live count from get_comment_count() — a tiny, cache-backed
-     * read (see its PHP docblock for the full scalability design) — and
+     * Fetches the live count from get_comment_count() - a tiny, cache-backed
+     * read (see its PHP docblock for the full scalability design) - and
      * patches the heading text if it differs from what PHP baked into the
      * cached page.
      *
      * Setting .textContent on the heading also auto-reveals it via the
-     * `.vibe-comments-title:empty { display:none }` CSS rule — no separate
+     * `.vibe-comments-title:empty { display:none }` CSS rule - no separate
      * visibility toggle needed for the very-first-comment case (0 → 1).
      */
     function fetchCommentCount() {
@@ -593,7 +593,7 @@
             }
         })
         .catch(function(err) {
-            // Failure here is genuinely low-stakes for a normal visitor — the
+            // Failure here is genuinely low-stakes for a normal visitor - the
             // PHP-rendered count stays visible, just possibly stale by one
             // comment, so this stays silent by default. Gated behind
             // config.debug so a developer who deliberately turned on
@@ -614,7 +614,7 @@
         // 1. Escape HTML to prevent XSS (> becomes &gt; etc.)
         text = escapeHtml(text);
 
-        // 2. Block-level: blockquotes — lines starting with &gt;
+        // 2. Block-level: blockquotes - lines starting with &gt;
         var lines   = text.split('\n');
         var out     = [];
         var inBQ    = false;
@@ -636,7 +636,7 @@
         text = text.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
         text = text.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
 
-        // 4. Paragraph breaks — outside blockquote tags
+        // 4. Paragraph breaks - outside blockquote tags
         text = text.replace(/\n\n/g, '</p><p>');
         text = text.replace(/\n/g, '<br>');
 
@@ -652,7 +652,7 @@
     /** Convert bare https?:// URLs in processed HTML to clickable links. XSS-safe.
      *
      * Runs AFTER escapeHtml(), so & in URLs becomes &amp;. Removing & from the
-     * exclusion set lets the regex capture full query strings — the browser correctly
+     * exclusion set lets the regex capture full query strings - the browser correctly
      * decodes &amp; in href attributes as &, producing the correct URL. Link text
      * will display &amp; literally, which is a minor cosmetic issue but the link works.
      */
@@ -686,7 +686,7 @@
             lastPollTime = Date.now();
         }, 30000);
 
-        // Throttle visibility-triggered polls — don't fire if polled within last 30s.
+        // Throttle visibility-triggered polls - don't fire if polled within last 30s.
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden && (Date.now() - lastPollTime) >= 30000) {
                 checkNewComments();
@@ -698,7 +698,7 @@
 
     function checkNewComments() {
         // Collect all visible comment IDs so the server returns fresh
-        // reaction counts for them in the same request — no separate
+        // reaction counts for them in the same request - no separate
         // syncReactions() call needed on each poll interval.
         var bars = document.querySelectorAll('.vibe-reactions[data-comment-id]');
         var url  = config.ajaxUrl + '?action=vibe_load_comments&post_id=' + config.postId
@@ -728,7 +728,7 @@
             }
 
             // Refresh reaction counts for all visible comments.
-            // getUserReactionFromDOM() preserves whatever the user has selected —
+            // getUserReactionFromDOM() preserves whatever the user has selected -
             // the poll never overwrites their active state or closes an open picker.
             if (data.reaction_counts) {
                 Object.keys(data.reaction_counts).forEach(function(id) {
@@ -751,7 +751,7 @@
     function showNewCommentsBanner(comments) {
         var existing = document.getElementById('vibe-new-banner');
         if (existing) {
-            // Accumulate — update the count and append to pending buffer
+            // Accumulate - update the count and append to pending buffer
             var pending = existing._pendingComments || [];
             existing._pendingComments = pending.concat(comments);
             var total = existing._pendingComments.length;
@@ -767,7 +767,7 @@
         banner.id = 'vibe-new-banner';
         banner.className = 'vibe-new-banner';
         // A2 fix: without these, a screen reader user gets no notification at
-        // all that new comments arrived — the banner is purely a visual DOM
+        // all that new comments arrived - the banner is purely a visual DOM
         // insertion with nothing announcing it. role="status" + aria-live
         // means assistive tech announces the label text the moment it's set,
         // matching how sighted users notice the banner appearing.
@@ -858,7 +858,7 @@
 
         if (bar) bar.dataset.totalReactions = total;
 
-        // ── Summary — always stacked bubbles + total, never scatters ─────
+        // ── Summary - always stacked bubbles + total, never scatters ─────
         // Rebuilding innerHTML is atomic; avoids any flash of stale state.
         if (summary) {
             var wasReacted = summary.classList.contains('vibe-has-reaction');
@@ -872,7 +872,7 @@
             }
         }
 
-        // ── Picker — sync each option's count + active state, then close ─
+        // ── Picker - sync each option's count + active state, then close ─
         // The per-type counts live HERE, below each emoji, not in the summary.
         if (picker) {
             REACTION_DEFS.forEach(function(def) {
@@ -928,19 +928,19 @@
 
                 if (currentSortMode !== 'newest') {
                     // Fix: without this, a newly-fetched page (always arrives in
-                    // the server's default newest-first order — load_comments()
+                    // the server's default newest-first order - load_comments()
                     // has no sort param) would land at the bottom of an
                     // already-resorted list, breaking whatever order the user
                     // had chosen. Re-sorting the WHOLE list (existing + newly
                     // appended) fixes this. Skips the scroll-to-newest behavior
                     // below since "first new comment" isn't a coherent concept
                     // once everything gets redistributed into oldest/liked
-                    // order — the new items could end up scattered anywhere.
+                    // order - the new items could end up scattered anywhere.
                     applySort(currentSortMode);
                 } else if (firstNewLi) {
                     // B1 fix: scroll ONCE to the first new comment after the whole
                     // batch has rendered. The previous version called scrollIntoView()
-                    // inside the loop — once per comment — so a 10-comment batch fired
+                    // inside the loop - once per comment - so a 10-comment batch fired
                     // 10 competing smooth-scroll animations that visibly jittered the
                     // page instead of landing cleanly on the new content.
                     firstNewLi.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -970,25 +970,25 @@
 
         list.appendChild(li);
 
-        // Track all IDs in the appended subtree via querySelectorAll — handles
+        // Track all IDs in the appended subtree via querySelectorAll - handles
         // any depth without explicit per-level loops.
         li.querySelectorAll('.vibe-comment-body').forEach(function(el) {
             var id = parseInt(el.id.replace('div-comment-', ''), 10);
             if (id) knownCommentIds.add(id);
         });
 
-        // Scrolling intentionally removed from here — caller decides when/whether
+        // Scrolling intentionally removed from here - caller decides when/whether
         // to scroll (e.g. once after a whole batch, not once per item). See B1 fix.
         return li;
     }
 
     function createCommentElement(comment) {
         const li  = document.createElement('li');
-        const cid = parseInt(comment.id, 10); // defensive int coercion — server guarantees intval()
+        const cid = parseInt(comment.id, 10); // defensive int coercion - server guarantees intval()
 
         li.id = 'comment-' + cid;
         li.className = 'comment' + (comment.is_pinned ? ' vibe-comment-pinned' : '');
-        // v3.15.0 Q&A — carries the accepted state for the CSS left-border
+        // v3.15.0 Q&A - carries the accepted state for the CSS left-border
         // (the green accent rail on the accepted answer's article).
         if (comment.is_qa) li.setAttribute('data-accepted', comment.is_accepted ? '1' : '0');
 
@@ -996,11 +996,11 @@
         const replyHtml = '<button type="button" class="comment-reply-link vibe-reply-trigger" data-comment-id="' + cid + '">Reply</button>';
 
         // v3.4.0: top-level comments arrive with children always empty and a
-        // reply_count instead — replies are fetched on demand when this is
+        // reply_count instead - replies are fetched on demand when this is
         // clicked (see initViewReplies()). A comment already carrying actual
         // children (only true for content returned BY vibe_load_replies
         // itself, which fully expands its subtree in one response) never
-        // shows this button — there's nothing left to fetch for it.
+        // shows this button - there's nothing left to fetch for it.
         const hasReplyCount = typeof comment.reply_count === 'number' && comment.reply_count > 0;
         const alreadyExpanded = comment.children && comment.children.length > 0;
         const viewRepliesHtml = (hasReplyCount && !alreadyExpanded)
@@ -1013,10 +1013,10 @@
             ? '<button type="button" class="vibe-pin-btn" data-comment-id="' + cid + '" data-pinned="' + (comment.is_pinned ? '1' : '0') + '">' + (comment.is_pinned ? 'Unpin' : 'Pin') + '</button>'
             : '';
 
-        // v3.15.0 Q&A — Accept button, rendered only for the post author /
+        // v3.15.0 Q&A - Accept button, rendered only for the post author /
         // moderators (config.qa.canAccept, fresh per page load, never cached).
         // On the accepted answer it reads "Unaccept" (toggle semantics, same
-        // single endpoint); top-level answers only — a REPLY is never an
+        // single endpoint); top-level answers only - a REPLY is never an
         // answer (comment.parent === 0 is the answer contract).
         const qaOn      = !!(config.qa && config.qa.mode);
         const canAccept = qaOn && !!(config.qa && config.qa.canAccept);
@@ -1026,12 +1026,12 @@
 
         const authorBadge = comment.is_author ? ' <span class="vibe-author-badge">Author</span>'            : '';
         const pinnedBadge = comment.is_pinned ? '<span class="vibe-pinned-badge">&#128204; Pinned</span>' : '';
-        // v3.15.0 Q&A — the green accepted-answer checkmark. Renders on the
+        // v3.15.0 Q&A - the green accepted-answer checkmark. Renders on the
         // comment that IS the accepted answer (is_accepted is a universal
         // truth from the payload; hoisting already puts it first).
         const acceptedBadge = comment.is_accepted ? '<span class="vibe-accepted-badge">&#10003; Accepted</span>' : '';
         const dateIso     = comment.date_gmt  ? comment.date_gmt.replace(' ', 'T') + 'Z'                   : '';
-        // v3.13.0 — "· edited" rides the meta line (subtle, universal truth);
+        // v3.13.0 - "· edited" rides the meta line (subtle, universal truth);
         // the Edit button rides the footer and is only rendered while the
         // requester's 5-minute window is open (can_edit is re-derived
         // server-side on every load/reply-fetch; the button self-removes).
@@ -1053,7 +1053,7 @@
                     '</div>' +
                     '<div class="vibe-comment-meta">' +
                         pinnedBadge +
-                        // v3.15.0 Q&A — accepted badge leads the meta line on
+                        // v3.15.0 Q&A - accepted badge leads the meta line on
                         // the accepted answer (green check, before the author
                         // so the eye lands on the verdict first).
                         acceptedBadge +
@@ -1063,7 +1063,7 @@
                     '</div>' +
                 '</header>' +
                 '<div class="vibe-comment-content" data-raw="' + escapeHtml(comment.content) + '">' + pillifyMentions(linkify(renderMarkdown(comment.content))) + '</div>' +
-                // Picker lives here — outside the footer flex row — so it can never
+                // Picker lives here - outside the footer flex row - so it can never
                 // push Reply or Pin off screen on mobile when it opens.
                 rxBar.pickerHtml +
                 '<footer class="vibe-comment-footer">' +
@@ -1168,7 +1168,7 @@
 
             // ── Tap anywhere outside a picker or summary: close all ───────
             // Checking two targets (not just one .vibe-reactions container) because
-            // the picker now lives outside .vibe-reactions — they are siblings.
+            // the picker now lives outside .vibe-reactions - they are siblings.
             if (!e.target.closest('.vibe-reaction-picker') &&
                 !e.target.closest('.vibe-reaction-summary')) {
                 document.querySelectorAll('.vibe-reaction-picker:not([hidden])').forEach(function(p) {
@@ -1198,12 +1198,12 @@
     }
 
     /**
-     * v3.13.0 — 5-minute edit window.
+     * v3.13.0 - 5-minute edit window.
      *
      * Edit button → inline editor (textarea + Save/Cancel) swaps in for the
      * content div; Save POSTs vibe_edit_comment (nonce + vibe_guest_id for
      * guests, mirroring submit); the server alone decides authorization
-     * (ownership + window + length) — the client's can_edit only gates the
+     * (ownership + window + length) - the client's can_edit only gates the
      * affordance. On success the content re-renders through the SAME
      * markdown/pillify/linkify pipeline as createCommentElement, the
      * "(edited)" badge appears, and every other comment's expired Edit
@@ -1224,7 +1224,7 @@
             if (!article || !contentEl) return;
 
             // Raw source: the server stores the raw text; the DOM shows the
-            // rendered markdown. Send back what the server gave us — rebuild
+            // rendered markdown. Send back what the server gave us - rebuild
             // from the data attr stamped at render time (below).
             var raw = contentEl.getAttribute('data-raw') || contentEl.textContent || '';
             var maxLength = 2000;
@@ -1246,7 +1246,7 @@
             ta.focus();
             ta.setSelectionRange(ta.value.length, ta.value.length);
 
-            // Esc cancels; Enter (no shift) saves — matches comment-entry feel.
+            // Esc cancels; Enter (no shift) saves - matches comment-entry feel.
             ta.addEventListener('keydown', function(ev) {
                 if (ev.key === 'Escape') {
                     ev.preventDefault();
@@ -1300,7 +1300,7 @@
                         contentEl.style.display = '';
                         box.remove();
 
-                        // The "(edited)" badge — idempotent.
+                        // The "(edited)" badge - idempotent.
                         var meta = li.querySelector('.vibe-comment-meta');
                         if (meta && !meta.querySelector('.vibe-edited-badge')) {
                             var span = document.createElement('span');
@@ -1315,13 +1315,13 @@
                         showError(msg);
                         saveBtn.disabled = false;
                         saveBtn.textContent = 'Save';
-                        // Window may have just closed server-side — sweep.
+                        // Window may have just closed server-side - sweep.
                         sweepExpiredEditButtons();
                     }
                 })
                 .catch(function(err) {
                     console.error('Edit failed:', err);
-                    showError('Something went wrong. Please try again.');
+                    showError('Your comment didn\'t post. Check your connection and try again.');
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save';
                 });
@@ -1451,7 +1451,7 @@
 
         const DRAFT_KEY = 'vibe_draft_' + config.postId;
         // 2026-09-01 mega-audit: 7 days → 24 hours. Drafts are unfinished
-        // thoughts — on a shared computer the 7-day window meant the next
+        // thoughts - on a shared computer the 7-day window meant the next
         // user's page-load resurrected the previous user's half-written
         // comment into the textarea. 24h preserves the "recover what I was
         // writing today" value while bounding the shared-device exposure.
@@ -1592,7 +1592,7 @@
 
             // Reply push opt-in (v3.7.0): attach the browser subscription
             // when the user ticked the checkbox AND the subscribe succeeded.
-            // PHP's bracket notation (vibe_reply_push[endpoint]) is REQUIRED —
+            // PHP's bracket notation (vibe_reply_push[endpoint]) is REQUIRED -
             // URLSearchParams stringifies a nested object to "[object Object]";
             // bracket keys rebuild the array server-side. The server
             // re-validates everything; absence = plain comment.
@@ -1603,14 +1603,14 @@
                     data['vibe_reply_push[p256dh]']   = rpk.p256dh;
                     data['vibe_reply_push[auth]']    = rpk.auth;
                 } catch (e) {
-                    // Malformed subscription object — post the comment plain.
+                    // Malformed subscription object - post the comment plain.
                 }
             }
 
             // Reply EMAIL opt-in (v3.9.0): send the consent flag when the
             // user ticked "Email me about replies". The server stores it on
             // the comment; the notification address is the comment's own
-            // author email — nothing else is ever transmitted.
+            // author email - nothing else is ever transmitted.
             var emailBox = document.getElementById('vibe-reply-email-checkbox');
             if (emailBox && emailBox.checked) {
                 data['vibe_reply_email'] = '1';
@@ -1649,7 +1649,7 @@
                         incrementCommentHeading();
                         // A3 fix: move focus to the just-posted comment. Without
                         // this, a keyboard/screen-reader user has no confirmation
-                        // their comment actually landed, or where — focus was
+                        // their comment actually landed, or where - focus was
                         // simply left on the now-cleared, now-empty textarea.
                         // tabindex="-1" makes the <li> programmatically focusable
                         // without adding a permanent Tab stop; removed again on
@@ -1662,7 +1662,7 @@
                             }, { once: true });
                         }
                     }
-                    // Clear saved draft — comment is now posted.
+                    // Clear saved draft - comment is now posted.
                     try { if (draftKey) localStorage.removeItem(draftKey); } catch (e) {}
                     var draftBadge = form.querySelector('.vibe-draft-badge');
                     if (draftBadge) draftBadge.remove();
@@ -1671,7 +1671,7 @@
                     resetFormPosition();
                     saveGuestIdentity();
 
-                    // Warm, personalised feedback — improves perceived quality.
+                    // Warm, personalised feedback - improves perceived quality.
                     var name = data.author || (config.isLoggedIn ? '' : '');
                     if (result.data.awaiting_moderation) {
                         showSuccess(name
@@ -1689,7 +1689,7 @@
             })
             .catch(function(err) {
                 console.error('Comment submission failed:', err);
-                showError(err.message || 'Something went wrong. Please try again.');
+                showError(err.message || 'Couldn\'t reach the server for that. Try again in a moment.');
             })
             .finally(function() {
                 if (submitBtn) {
@@ -1708,14 +1708,14 @@
      * v3.4.0 changes, both required by the newest-first default order:
      *
      *   Top-level (parentId === 0): PREPENDED, not appended. The default
-     *   load order is now DESC (newest first) — appending to the bottom
+     *   load order is now DESC (newest first) - appending to the bottom
      *   would place a brand-new comment visually among the OLDEST comments
      *   on the page, which is backwards.
      *
      *   Reply (parentId > 0): if the parent thread's replies are still
      *   collapsed (no <ul class="children"> rendered yet, or it exists but
      *   is hidden), this reply would silently vanish into a location the
-     *   user can't see — including their own just-submitted reply, which is
+     *   user can't see - including their own just-submitted reply, which is
      *   the one thing they most want to see confirmed. Handles all three
      *   parent states: no button, collapsed, or already expanded.
      */
@@ -1728,21 +1728,21 @@
             const li = createCommentElement(comment);
             list.prepend(li);
             // A brand-new top-level comment always sits above any pinned
-            // comments visually if we don't re-hoist — pinned must stay on top.
+            // comments visually if we don't re-hoist - pinned must stay on top.
             hoistPinnedComments();
             if (scroll) li.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return li;
         }
 
         const parentLi = document.getElementById('comment-' + parentId);
-        if (!parentLi) return null; // parent not currently rendered (e.g. on another page) — nothing to attach to
+        if (!parentLi) return null; // parent not currently rendered (e.g. on another page) - nothing to attach to
 
         const li = createCommentElement(comment);
         let childUl = parentLi.querySelector(':scope > ul.children');
 
         if (!childUl) {
             // Thread was fully collapsed (no ul.children built yet). Create it
-            // and put the new reply there directly — this is the case that
+            // and put the new reply there directly - this is the case that
             // matters most: the user just clicked Reply and submitted, they
             // must see their own reply land, not have it disappear behind a
             // button that still says the stale pre-submission count.
@@ -1750,7 +1750,7 @@
             childUl.className = 'children';
             parentLi.appendChild(childUl);
         } else if (childUl.style.display === 'none') {
-            // Thread exists but is currently hidden — reveal it so the new
+            // Thread exists but is currently hidden - reveal it so the new
             // reply the user just posted is immediately visible.
             childUl.style.display = '';
         }
@@ -1769,7 +1769,7 @@
 
     function escapeHtml(text) {
         // Regex-based equivalent of the previous DOM-element approach (set
-        // textContent, read innerHTML back) — same four characters escaped,
+        // textContent, read innerHTML back) - same four characters escaped,
         // in the same order (& first is mandatory, or you'd double-escape
         // the & this function just inserted for < > "). Avoids creating a
         // new <div> on every single call; this runs once per rendered field
@@ -1815,7 +1815,7 @@
     }
 
     /**
-     * Comments load on demand — show trigger button, fetch on click.
+     * Comments load on demand - show trigger button, fetch on click.
      */
     function initCommentsTrigger() {
         var triggerWrap = document.getElementById('vibe-comments-trigger');
@@ -1824,7 +1824,7 @@
 
         if (!btn || !container) return;
 
-        // B4 fix: { once: true } auto-detaches the listener after first firing —
+        // B4 fix: { once: true } auto-detaches the listener after first firing -
         // cleaner than a manual `loaded` boolean flag that left a dead listener
         // checking a flag on every subsequent click forever.
         btn.addEventListener('click', function() {
@@ -1868,10 +1868,10 @@
             list.innerHTML = '';
 
             if (!result.success || !result.data) {
-                // BUG FIX: this branch handles a "soft" failure — the server
+                // BUG FIX: this branch handles a "soft" failure - the server
                 // responded fine (HTTP 200, valid JSON), it just reported
                 // success:false. That's a RESOLVED promise, not a rejected
-                // one, so .catch() below never runs for this case — meaning
+                // one, so .catch() below never runs for this case - meaning
                 // onComplete() must be called HERE too, or the trigger
                 // button (which set itself to "Loading…" before this fetch
                 // even started) never gets reset and the container holding
@@ -1879,7 +1879,7 @@
                 // was left staring at a permanently stuck "Loading…" button
                 // with a perfectly good error message sitting hidden right
                 // behind it, for ANY reason this could return success:false
-                // — not just the specific post-visibility cause that first
+                // - not just the specific post-visibility cause that first
                 // exposed this.
                 list.innerHTML = '<li class="vibe-error">Could not load comments. <button type="button" class="vibe-retry-btn">Try again</button></li>';
                 if (typeof onComplete === 'function') onComplete();
@@ -1895,13 +1895,13 @@
             // PHP already rendered the wp_options count, but this corrects any edge
             // case where the option was slightly behind (e.g. plugin just installed).
             // Uses the same shared commentCountText() as fetchCommentCount() and
-            // incrementCommentHeading() — previously this block hardcoded English
+            // incrementCommentHeading() - previously this block hardcoded English
             // text directly, silently overwriting whatever fetchCommentCount() had
             // already correctly localized the moment a user clicked Load Comments.
             if (titleEl) {
                 titleEl.textContent = commentCountText(total);
                 // Visibility is handled entirely by the .vibe-comments-title:empty
-                // CSS rule (no text content = hidden) — nothing in this codebase
+                // CSS rule (no text content = hidden) - nothing in this codebase
                 // sets display:none as an inline style on this element, so the
                 // display-restoration check that used to live here was dead code.
             }
@@ -1930,7 +1930,7 @@
                 if (toolbar) toolbar.style.display = 'flex';
                 initSortToggle();
                 initSearch();       // insert search beside sort select now toolbar is visible
-                hoistPinnedComments(); // pinned comments to top — survives page refresh
+                hoistPinnedComments(); // pinned comments to top - survives page refresh
             }
 
             hasMorePages = hasMore;
@@ -1940,7 +1940,7 @@
 
             // Sync user-specific reaction state (which reactions the current user made).
             // Guest users' reactions are already embedded in comment.user_reaction from
-            // the server response and don't need a separate sync call — their guest token
+            // the server response and don't need a separate sync call - their guest token
             // rotates daily so yesterday's reactions aren't tracked anyway.
             // Skipping this for guests saves one HTTP request for the majority of visitors.
             if (config.isLoggedIn) {
@@ -1959,7 +1959,7 @@
     }
 
     /**
-     * Build a comment <li> with nested children. No scroll — for initial render.
+     * Build a comment <li> with nested children. No scroll - for initial render.
      */
     function buildCommentTree(comment) {
         var li = createCommentElement(comment);
@@ -1978,17 +1978,17 @@
     }
 
     /**
-     * On-demand reply loading (v3.4.0) — "View N replies" / "Hide replies" toggle.
+     * On-demand reply loading (v3.4.0) - "View N replies" / "Hide replies" toggle.
      *
      * First click fetches the full nested subtree for that comment in one
      * request (see load_replies() in class-ajax-handler.php) and renders it
-     * via the same buildCommentTree() the file already uses elsewhere —
+     * via the same buildCommentTree() the file already uses elsewhere -
      * replies arrive in the identical nested-children JSON shape
      * format_comment_tree() always produces, so no new rendering logic is
      * needed for the reply markup itself.
      *
      * Subsequent clicks toggle visibility only (existence of the already-built
-     * <ul class="children"> is the state signal — no separate flag to drift
+     * <ul class="children"> is the state signal - no separate flag to drift
      * out of sync with reality). No re-fetch for the rest of the page view.
      */
     function initViewReplies() {
@@ -2047,11 +2047,11 @@
     /**
      * Silently fetch a fresh nonce to replace the one baked into the page cache.
      * WP nonces last 24h but a cached page can serve a nonce that is already 12h old.
-     * Fires in parallel with initComments — no blocking.
+     * Fires in parallel with initComments - no blocking.
      *
      * 2026-09-01 audit fix: fires for EVERYONE now, not guests only. The old
      * `if (!config.isLoggedIn) { refreshNonce(); }` gate assumed logged-in
-     * users always render fresh pages — false under nginx page cache, which
+     * users always render fresh pages - false under nginx page cache, which
      * serves the SAME cached HTML (with its stale baked nonce) to logged-in
      * visitors too. A logged-in user on a >24h-cached page got 403s on
      * pin/accept/edit with no recovery. The endpoint is cheap (2s rate cap)
@@ -2069,7 +2069,7 @@
                 config.nonce = result.data.nonce;
             }
         })
-        .catch(function() { /* cached nonce still valid for 24h — silently continue */ });
+        .catch(function() { /* cached nonce still valid for 24h - silently continue */ });
     }
 
 
@@ -2105,7 +2105,7 @@
             .then(function(result) {
                 if (result.success && result.data && result.data.auth_url) {
                     window.location.href = result.data.auth_url;
-                    // No need to re-enable btn — we're navigating away.
+                    // No need to re-enable btn - we're navigating away.
                 } else {
                     showError('Google authentication is not configured.');
                     btn.disabled    = false;
@@ -2126,9 +2126,9 @@
      * ─────────────────────────────────────────────
      * Three independent pieces of guest state are stored:
      *
-     *   vibe_guest_name   — display name, pre-filled in the comment form.
-     *   vibe_guest_email  — email, pre-filled in the comment form.
-     *   vibe_gid          — stable random UUID used as the reaction identity
+     *   vibe_guest_name   - display name, pre-filled in the comment form.
+     *   vibe_guest_email  - email, pre-filled in the comment form.
+     *   vibe_gid          - stable random UUID used as the reaction identity
      *                       (H1 fix). Sent to the server as vibe_guest_id and
      *                       hashed with AUTH_KEY to produce the guest_token
      *                       stored in the DB. Eliminates the NAT-collision
@@ -2142,7 +2142,7 @@
      * Prefers crypto.randomUUID() (Chrome 92+, Firefox 95+, Safari 15.4+).
      * Falls back to a manual crypto.getRandomValues() construction for older
      * browsers, and to Math.random() as a last resort (extremely old browsers
-     * only — entropy is lower but still functionally unique).
+     * only - entropy is lower but still functionally unique).
      *
      * Returns an empty string if localStorage is unavailable (private browsing,
      * storage-full errors). The server falls back to IP-based guest token in
@@ -2184,7 +2184,7 @@
             return uuid;
         } catch (e) {
             // localStorage unavailable (private browsing, quota exceeded, etc.).
-            // Return '' — server will fall back to IP-based guest token.
+            // Return '' - server will fall back to IP-based guest token.
             return '';
         }
     }
@@ -2264,7 +2264,7 @@
     }
 
     /**
-     * Character counter — warns at 90% and blocks at maxCommentLength.
+     * Character counter - warns at 90% and blocks at maxCommentLength.
      * maxlength attribute is also set so the browser enforces it natively.
      */
     function initCharCounter() {
@@ -2291,18 +2291,18 @@
     }
 
     /**
-     * Sort toggle — reverses top-level comment order in the DOM.
+     * Sort toggle - reverses top-level comment order in the DOM.
      * Zero server calls. Nested replies stay under their parent.
      */
     /**
      * Apply a sort mode to the current top-level comment list. Always reads
      * live DOM state (list.children / the datetime attribute each comment
-     * already carries) rather than a point-in-time snapshot — this is what
+     * already carries) rather than a point-in-time snapshot - this is what
      * makes it safe to call again after loadMoreComments() appends a new
      * page: there's no stale captured array that doesn't know about the
      * newly added elements, unlike the original implementation, which
      * snapshotted "load order" once and reversed that fixed array for
-     * "oldest" mode — a snapshot that couldn't account for comments
+     * "oldest" mode - a snapshot that couldn't account for comments
      * appended later via Load More.
      */
     function applySort(modeId) {
@@ -2314,12 +2314,12 @@
             // the unpin-snaps-back-into-place behavior below.
             restoreChronologicalOrder(list);
         } else if (modeId === 'top') {
-            // v3.11.0 "Top" — total reactions (all 4 types) descending,
-            // newest-first tiebreaker. Scoped to direct children ONLY —
+            // v3.11.0 "Top" - total reactions (all 4 types) descending,
+            // newest-first tiebreaker. Scoped to direct children ONLY -
             // list.children never reaches into nested reply threads (the
             // subtree-flattening trap the newest branch's note documents).
             // Zero-reaction comments are not penalized by age beyond the
-            // tiebreaker — they simply rank after reacted ones.
+            // tiebreaker - they simply rank after reacted ones.
             const rxOf = function(el) {
                 var wrap = el.querySelector('.vibe-reactions');
                 return wrap && wrap.dataset ? parseInt(wrap.dataset.totalReactions || '0', 10) || 0 : 0;
@@ -2341,9 +2341,9 @@
                 })
                 .forEach(function(el) { list.appendChild(el); });
         } else {
-            // newest — same datetime comparison as restoreChronologicalOrder(),
+            // newest - same datetime comparison as restoreChronologicalOrder(),
             // just descending instead of ascending. :scope > li.comment scopes
-            // this to direct (top-level) children only — see the fix note on
+            // this to direct (top-level) children only - see the fix note on
             // restoreChronologicalOrder() for why this matters: the original
             // version of this branch was written by mirroring that function's
             // (then-buggy) list.querySelectorAll('li.comment') pattern, which
@@ -2375,7 +2375,7 @@
 
         // v3.4.0: load_comments() default order flipped to DESC (newest first,
         // see class-ajax-handler.php). "Newest" is therefore mode index 0.
-        // v3.11.0: mode 3 is "Top" — total reactions (like+heart+fire+laugh,
+        // v3.11.0: mode 3 is "Top" - total reactions (like+heart+fire+laugh,
         // the same number the reaction engine keeps on data-total-reactions),
         // newest-first as the tiebreaker. Supersedes the v3.4 "liked ♥" mode:
         // likes are included in the total, so nothing ranked before is lost.
@@ -2384,7 +2384,7 @@
             { id: 'oldest', label: '\u2191', title: 'Oldest first' },
             { id: 'top',    label: '\u2b50', title: 'Top — most reacted' },
         ];
-        let idx = 0;  // current mode index — reassigned on each click
+        let idx = 0;  // current mode index - reassigned on each click
 
         btn.addEventListener('click', function() {
             idx = (idx + 1) % modes.length;
@@ -2396,7 +2396,7 @@
             applySort(mode.id);
             // Fix for Load More + Sort interaction: loadMoreComments() fetches
             // the next page in the SERVER's default order (always newest-first,
-            // no sort param sent) and appends it — without tracking which sort
+            // no sort param sent) and appends it - without tracking which sort
             // mode is currently active, a newly-appended page would land in
             // server order at the end of an already-resorted list, breaking
             // the visual sort the user just chose. See loadMoreComments().
@@ -2427,7 +2427,7 @@
         wrap.appendChild(status);
         toolbar.appendChild(wrap); // sits beside the sort select on the same row
 
-        // v3.15.0 — server-backed whole-thread search. The old client-side
+        // v3.15.0 - server-backed whole-thread search. The old client-side
         // filter could only match what was loaded (first 10 top-level
         // comments); this queries the ENTIRE thread server-side, including
         // replies inside collapsed threads. Falls back to the old local
@@ -2528,7 +2528,7 @@
             clearTimeout(searchTimer);
             const q = input.value.trim().toLowerCase();
             if (!q) {
-                // cleared — restore the real thread
+                // cleared - restore the real thread
                 searchSeq++;
                 restoreThread();
                 status.textContent = '';
@@ -2545,7 +2545,7 @@
     /**
      * Move pinned comments to the top of the list.
      * Called after initial load and after banner flush so position
-     * survives page refresh — the is_pinned field comes from the server.
+     * survives page refresh - the is_pinned field comes from the server.
      */
     function hoistPinnedComments() {
         var list = document.getElementById('vibe-comment-list');
@@ -2565,18 +2565,18 @@
      * rightful position without requiring a page refresh.
      */
     function restoreChronologicalOrder(list) {
-        // :scope > li.comment restricts this to DIRECT children only — the
+        // :scope > li.comment restricts this to DIRECT children only - the
         // top-level comments. Was previously list.querySelectorAll('li.comment'),
         // which searches the ENTIRE subtree and matches every nested reply
         // inside any expanded thread's <ul class="children"> too. Since
         // list.appendChild() on an element that already exists elsewhere in
         // the DOM MOVES it rather than cloning it, every single reply in every
         // expanded thread was being ripped out of its parent and flattened
-        // into the top-level list on every call — completely destroying the
+        // into the top-level list on every call - completely destroying the
         // nesting structure. This function is shared by "oldest" sort mode,
         // the "newest" sort branch in applySort() (which mirrored this exact
         // pattern, propagating the same bug there), and the pin/unpin
-        // snap-back-to-chronological-position behavior — all three were
+        // snap-back-to-chronological-position behavior - all three were
         // affected by this single root cause.
         var items = Array.from(list.querySelectorAll(':scope > li.comment'));
         items.sort(function(a, b) {
@@ -2658,7 +2658,7 @@
     }
 
     /**
-     * v3.15.0 Q&A mode — Accept / Unaccept answer.
+     * v3.15.0 Q&A mode - Accept / Unaccept answer.
      *
      * Author or moderator only (the button only renders for them). Click:
      * POST vibe_accept_answer → server toggles the post's _vibe_qa_accepted
@@ -2706,7 +2706,7 @@
                         b.dataset.accepted = isAcc ? '1' : '0';
                         b.textContent = isAcc ? 'Unaccept' : '✓ Accept';
                     });
-                    // The li-level data-accepted mirrors the button's — it
+                    // The li-level data-accepted mirrors the button's - it
                     // drives the green left-border rail via CSS.
                     list.querySelectorAll('li.comment[data-accepted]').forEach(function(row) {
                         var isAcc = parseInt(row.id.replace('comment-', ''), 10) === acceptedId;
@@ -2767,15 +2767,15 @@
         if (!titleEl) return;
 
         // Parse current count. If heading was empty (0 comments, CSS hidden),
-        // parseInt returns NaN — treat as 0 so first post yields "1 Comment".
+        // parseInt returns NaN - treat as 0 so first post yields "1 Comment".
         var current = parseInt(titleEl.textContent, 10);
         if (isNaN(current)) current = 0;
 
         var next = current + 1;
-        // Shared with fetchCommentCount() and initComments() — see
+        // Shared with fetchCommentCount() and initComments() - see
         // commentCountText()'s docblock for why this was consolidated.
         titleEl.textContent = commentCountText(next);
-        // Heading may have been empty/hidden via CSS :empty — text content
+        // Heading may have been empty/hidden via CSS :empty - text content
         // now makes it non-empty so the :empty rule no longer applies.
     }
 

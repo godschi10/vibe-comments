@@ -1,15 +1,15 @@
 <?php
 /**
- * Reply notifications via EMAIL — free, unlimited, any-server.
+ * Reply notifications via EMAIL - free, unlimited, any-server.
  *
  * The plugin never touches SMTP itself: it calls wp_mail(), the universal
- * WordPress mail channel. Wherever wp_mail works, this works — zero-config
+ * WordPress mail channel. Wherever wp_mail works, this works - zero-config
  * on hosts with server mail (cPanel/Exim/LiteSpeed), or via the GWILL_SMTP_*
  * constants the themes already support (phpmailer_init rail in inc/forms.php)
  * where outbound port 25 is blocked (like this VPS).
  *
  * Consent model: a flag in commentmeta (_vibe_reply_email) on the comment
- * itself — the notification address is ALWAYS the comment's own author email,
+ * itself - the notification address is ALWAYS the comment's own author email,
  * so the feature can never be used to email a stranger. Lifecycle is
  * automatic: comment deleted → consent gone. uninstall.php sweeps it.
  *
@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Vibe_Comments_Reply_Email {
 
 	/**
-	 * Consent flag — commentmeta key. Value is '1' (the address itself is the
+	 * Consent flag - commentmeta key. Value is '1' (the address itself is the
 	 * comment's comment_author_email; we store only the consent, never a
 	 * second copy of the address).
 	 */
@@ -40,7 +40,7 @@ class Vibe_Comments_Reply_Email {
 	const HOURLY_CAP = 3;
 
 	/**
-	 * Per-process dedup — the same reply can pass through more than one
+	 * Per-process dedup - the same reply can pass through more than one
 	 * approval hook (instant + transition + status-set); the overlap must
 	 * never double-send. Mirrors Vibe_Comments_Reply_Push::$notified.
 	 *
@@ -50,7 +50,7 @@ class Vibe_Comments_Reply_Email {
 
 	/**
 	 * Record consent on a comment (submit path). The flag is only stored for
-	 * a comment that exists — a failure here must never disturb the comment
+	 * a comment that exists - a failure here must never disturb the comment
 	 * itself.
 	 *
 	 * @param int $comment_id
@@ -84,7 +84,7 @@ class Vibe_Comments_Reply_Email {
 	}
 
 	/**
-	 * The notify event — a reply just became publicly visible. Called from
+	 * The notify event - a reply just became publicly visible. Called from
 	 * the same three approval paths as the push notifier; guards:
 	 *
 	 *   - wp_mail missing        → silent no-op
@@ -95,7 +95,7 @@ class Vibe_Comments_Reply_Email {
 	 *   - already sent (process)  → no-op (hook overlap dedup)
 	 *   - hourly cap exceeded    → no-op (anti-storm)
 	 *
-	 * A transport failure is swallowed and logged — the comment flow must
+	 * A transport failure is swallowed and logged - the comment flow must
 	 * never be disturbed by an email problem.
 	 *
 	 * @param WP_Comment|int $reply
@@ -129,7 +129,7 @@ class Vibe_Comments_Reply_Email {
 			return false;
 		}
 
-		// Self-reply guard — same email means the same person.
+		// Self-reply guard - same email means the same person.
 		$reply_email  = strtolower( trim( (string) $reply->comment_author_email ) );
 		$parent_email = strtolower( trim( (string) $parent->comment_author_email ) );
 		if ( $reply_email && $reply_email === $parent_email ) {
@@ -140,7 +140,7 @@ class Vibe_Comments_Reply_Email {
 			return false;
 		}
 
-		// Anti-storm cap — max HOURLY_CAP sends to this parent per hour.
+		// Anti-storm cap - max HOURLY_CAP sends to this parent per hour.
 		$rate_key = 'vibe_re_rate_' . $parent_id;
 		$sent_h   = (int) get_transient( $rate_key );
 		if ( $sent_h >= self::HOURLY_CAP ) {
@@ -152,7 +152,7 @@ class Vibe_Comments_Reply_Email {
 			set_transient( $rate_key, 1, HOUR_IN_SECONDS );
 		}
 
-		// Claim now — whatever happens below, this reply notifies once.
+		// Claim now - whatever happens below, this reply notifies once.
 		self::$sent[ $reply_id ] = true;
 
 		$post = get_post( $reply->comment_post_ID );
@@ -216,7 +216,7 @@ class Vibe_Comments_Reply_Email {
 		$excerpt  = wp_trim_words( wp_strip_all_tags( $reply->comment_content ), 30, '…' );
 		$parent_q = wp_trim_words( wp_strip_all_tags( $parent->comment_content ), 12, '…' );
 
-		// All dynamic values pass through esc_html()/esc_url() — email HTML
+		// All dynamic values pass through esc_html()/esc_url() - email HTML
 		// is still HTML.
 		return ''
 		. '<div style="max-width:560px;margin:0 auto;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;">'

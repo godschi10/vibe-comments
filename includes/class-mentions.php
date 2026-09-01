@@ -1,6 +1,6 @@
 <?php
 /**
- * Mentions — @name pills + push notifications, riding the reply-push rail.
+ * Mentions - @name pills + push notifications, riding the reply-push rail.
  *
  * RENDERING is client-side (vibe-comments.js renderMentions()): the stored
  * comment_content keeps plain "@Name" text, so any other renderer (feeds,
@@ -15,7 +15,7 @@
  * exists, approvals only, prune-on-410, per-request dedup.
  *
  * Portability law: everything degrades to plaintext when the theme rail is
- * absent — pills still render (client-side), notifications silently skip.
+ * absent - pills still render (client-side), notifications silently skip.
  *
  * @package Vibe_Comments
  */
@@ -104,7 +104,7 @@ class Vibe_Comments_Mentions {
 	 * mentionable list. Longest name first, terminator-guarded.
 	 *
 	 * Returns each mentioned author ONCE with the comment id of their
-	 * most recent comment on the post (0 for the post author — resolved
+	 * most recent comment on the post (0 for the post author - resolved
 	 * at notify time; the post author's subscription lives on their own
 	 * latest comment on the post, if any).
 	 *
@@ -175,7 +175,7 @@ class Vibe_Comments_Mentions {
 				return false;
 			}
 
-			// Terminator: char after the token must not be [a-zA-Z0-9_] —
+			// Terminator: char after the token must not be [a-zA-Z0-9_] -
 			// "@Ada," matches, "@Adae" does not. Guard multi-word names too.
 			$next = $at + $tlen;
 			if ( $next < $len && self::is_word_char( $raw[ $next ] ) ) {
@@ -184,7 +184,7 @@ class Vibe_Comments_Mentions {
 			}
 
 			// Pre-boundary: char before @ must not be a word char (alphanumeric
-			// or underscore) — "email@Ada" is an address, not a mention.
+			// or underscore) - "email@Ada" is an address, not a mention.
 			if ( $at > 0 && self::is_word_char( $raw[ $at - 1 ] ) ) {
 				$start = $at + 1;
 				continue;
@@ -210,7 +210,7 @@ class Vibe_Comments_Mentions {
 	}
 
 	/**
-	 * True for [A-Za-z0-9_] plus anything >= 0x80 (multibyte name tails —
+	 * True for [A-Za-z0-9_] plus anything >= 0x80 (multibyte name tails -
 	 * byte-safe: we only test the byte AFTER the match, which for UTF-8 is
 	 * either an ASCII terminator or a continuation byte (0x80-0xBF), treated
 	 * as part of the name).
@@ -272,7 +272,7 @@ class Vibe_Comments_Mentions {
 			}
 
 			// If this mention targets the direct parent's author, the
-			// reply-push already notified them — do not double-buzz.
+			// reply-push already notified them - do not double-buzz.
 			if ( $parent_id > 0 ) {
 				$parent = get_comment( $parent_id );
 				if ( $parent && strtolower( trim( (string) $parent->comment_author ) ) === strtolower( $name ) ) {
@@ -316,7 +316,7 @@ class Vibe_Comments_Mentions {
 			);
 
 			// Reuse the v3.7.0 send() contract via a public shim: the
-			// send() is private, so notify through the class's own door —
+			// send() is private, so notify through the class's own door -
 			// Vibe_Comments_Reply_Push::send_mention() (added v3.8.0).
 			$ok = Vibe_Comments_Reply_Push::send_mention( $subscription, $payload, $owner );
 			if ( $ok ) {
@@ -347,7 +347,7 @@ class Vibe_Comments_Mentions {
 			return 0;
 		}
 
-		// Every subscribed comment on this post — the exact candidate set.
+		// Every subscribed comment on this post - the exact candidate set.
 		$subscribed = get_comments( array(
 			'post_id'  => $post_id,
 			'status'  => 'approve',

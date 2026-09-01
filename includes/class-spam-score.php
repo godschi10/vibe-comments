@@ -3,7 +3,7 @@
  * Heuristic spam scorer (Feature #6, v3.14.0).
  *
  * Pure, stateless, zero-dependency: the score is computed from the comment's
- * own text/author fields alone — no DB reads, no network, no stored drift.
+ * own text/author fields alone - no DB reads, no network, no stored drift.
  * Score 0–100 with per-heuristic reasons; label bands:
  *   < 30  Clean        (green)
  *   30–59 Suspicious   (amber)
@@ -11,7 +11,7 @@
  *
  * DISPLAY-ONLY by design: this class NEVER changes a comment's status. The
  * site's own moderation settings (manual approval, Akismet, keyword lists)
- * remain the sole judge — the badge only gives the human moderator a
+ * remain the sole judge - the badge only gives the human moderator a
  * why-flagged score at a glance. Auto-action was deliberately rejected in
  * the design review: a false positive that hides a real reader's comment
  * costs more than a false negative the moderator was already reviewing.
@@ -26,7 +26,7 @@
  *  - Space-less long blob (gibberish / data-URI dumps)
  *  - Author-name signals (all-caps, keyword-stuffed)
  *
- * All heuristics are language-neutral on purpose — the site's audience may
+ * All heuristics are language-neutral on purpose - the site's audience may
  * comment in pidgin or mixed English, so only structural tells are used,
  * never grammar or vocabulary of legitimate languages.
  *
@@ -63,7 +63,7 @@ class Vibe_Comments_Spam_Score {
 		$points  = 0;
 		$reasons = array();
 
-		// ── 1. Link count — the classic blog-spam tell ──────────────────
+		// ── 1. Link count - the classic blog-spam tell ──────────────────
 		// URL regex tolerant of the forms wp_kses leaves behind in stored
 		// content (plain-text http/https/www links and bare domains).
 		preg_match_all( '/(?:https?:\/\/|www\.)[^\s<>"\']+/i', $content, $m );
@@ -78,14 +78,14 @@ class Vibe_Comments_Spam_Score {
 		// but an author URL on a link-stuffed body IS an extra spam signal.
 		if ( $url && $links >= 3 ) { $points += 5; $reasons[] = 'author URL'; }
 
-		// ── 2. Link-to-word ratio — filler text around stuffed links ────
+		// ── 2. Link-to-word ratio - filler text around stuffed links ────
 		$words = str_word_count( strip_tags( $content ) );
 		if ( $links > 0 && $words > 0 && ( $links / $words ) > 0.2 ) {
 			$points += 15;
 			$reasons[] = 'link-stuffed';
 		}
 
-		// ── 3. CAPS ratio — shouting ────────────────────────────────────
+		// ── 3. CAPS ratio - shouting ────────────────────────────────────
 		$letters = preg_replace( '/[^A-Za-z]/', '', $content );
 		if ( mb_strlen( $letters ) >= 20 ) {
 			$caps  = preg_replace( '/[^A-Z]/', '', $letters );
@@ -94,20 +94,20 @@ class Vibe_Comments_Spam_Score {
 			elseif ( $ratio > 0.3 )  { $points += 10; $reasons[] = 'heavy caps'; }
 		}
 
-		// ── 4. Longest same-character run — aaaaa!!!!! ─────────────────
+		// ── 4. Longest same-character run - aaaaa!!!!! ─────────────────
 		if ( preg_match( '/(.)\1{5,}/u', $content ) ) {
 			$points += 15;
 			$reasons[] = 'repeated characters';
 		}
 
-		// ── 5. Punctuation-run frequency — !!! ??? ──────────────────────
+		// ── 5. Punctuation-run frequency - !!! ??? ──────────────────────
 		preg_match_all( '/[!?]{3,}/', $content, $pm );
 		if ( count( $pm[0] ) >= 3 ) {
 			$points += 10;
 			$reasons[] = 'punctuation runs';
 		}
 
-		// ── 6. Known spam phrases — weighted keyword list ───────────────
+		// ── 6. Known spam phrases - weighted keyword list ───────────────
 		$phrases = array(
 			'viagra', 'cialis', 'casino', 'gambling', 'lottery winner',
 			'crypto giveaway', 'free bitcoins', 'bitcoin doubler',
@@ -128,7 +128,7 @@ class Vibe_Comments_Spam_Score {
 			$reasons[] = $hits . ' spam phrase' . ( $hits > 1 ? 's' : '' );
 		}
 
-		// ── 7. Space-less long blob — gibberish / data-URI dumps ───────
+		// ── 7. Space-less long blob - gibberish / data-URI dumps ───────
 		// 60+ non-space chars with no space at all is never human prose.
 		$flat = preg_replace( '/\s+/u', '', strip_tags( $content ) );
 		if ( mb_strlen( $flat ) >= 60 && strpos( $content, ' ' ) === false ) {

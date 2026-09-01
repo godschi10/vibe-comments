@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.17.2
+ * Version:           3.17.3
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.17.2');
+define('VIBE_COMMENTS_VERSION', '3.17.3');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -73,7 +73,7 @@ class Vibe_Comments {
 
     /**
      * Load translation files from /languages. Without this call, __()/_e()
-     * always fall back to the English source string even if .mo files exist —
+     * always fall back to the English source string even if .mo files exist -
      * the "Text Domain" plugin header alone does not wire up translations.
      */
     public function load_textdomain() {
@@ -92,13 +92,13 @@ class Vibe_Comments {
         $debug = defined('VIBE_COMMENTS_DEBUG_TOOLS') && VIBE_COMMENTS_DEBUG_TOOLS;
 
         // These two were the ONLY subsystem-touching calls in this method not
-        // wrapped in try/catch(Throwable) — every other instantiation below
+        // wrapped in try/catch(Throwable) - every other instantiation below
         // already was. If either of these throws at runtime for any reason
         // (a $wpdb issue, something host-specific), it previously took down
         // the entire site with an uncaught fatal instead of degrading
         // gracefully. Now matches the same pattern as everything else: log
         // via error_log() unconditionally (so it's visible even without
-        // WP_DEBUG_LOG enabled — see debug-logger.php's own reasoning for
+        // WP_DEBUG_LOG enabled - see debug-logger.php's own reasoning for
         // why error_log() specifically, not just vibe_log()), and let the
         // rest of the site keep functioning.
         try {
@@ -112,9 +112,9 @@ class Vibe_Comments {
         try {
             // JSON-LD structured data for comments (SEO).
             Vibe_Comments_Schema::init();
-            // v3.15.0 — Q&A mode (meta box + accept-answer AJAX).
+            // v3.15.0 - Q&A mode (meta box + accept-answer AJAX).
             Vibe_Comments_QA::init();
-            // v3.17.0 — daily digest (cron worker + settings + preview).
+            // v3.17.0 - daily digest (cron worker + settings + preview).
             Vibe_Comments_Digest::init();
             if ($debug) { vibe_log('Schema instantiated'); }
         } catch (Throwable $e) {
@@ -126,7 +126,7 @@ class Vibe_Comments {
             new Vibe_Comments_REST_API();
             if ($debug) { vibe_log('REST API instantiated'); }
         } catch (Throwable $e) {
-            // Always hit PHP's native log regardless of the debug flag — a fatal
+            // Always hit PHP's native log regardless of the debug flag - a fatal
             // subsystem failure must never go completely unrecorded.
             error_log('[Vibe Comments] REST API failed to load: ' . $e->getMessage());
             if ($debug) { vibe_log('REST API ERROR: ' . $e->getMessage()); }
@@ -200,11 +200,11 @@ class Vibe_Comments {
 
     public function enqueue_assets() {
         // Matches class-template-loader.php's load_template() condition exactly
-        // — that function was fixed in v3.5.0 to route to this plugin's
+        // - that function was fixed in v3.5.0 to route to this plugin's
         // template whenever a post has existing comments, even if new
         // commenting is closed, so JSON-LD schema output isn't describing a
         // discussion the plugin's own UI can't display. This condition was
-        // the other half of that same fix and was never updated to match —
+        // the other half of that same fix and was never updated to match -
         // the template rendered correctly, but its CSS/JS never loaded,
         // leaving visitors an unstyled heading and a "Load Comments" button
         // that did nothing when clicked.
@@ -236,7 +236,7 @@ class Vibe_Comments {
                 'isLoggedIn'       => is_user_logged_in(),
                 'isAdmin'          => current_user_can('moderate_comments'),
                 // v3.7.0: reply-push client config. Empty publicKey/blank
-                // flags = feature unarmed (no theme rail) — the JS never
+                // flags = feature unarmed (no theme rail) - the JS never
                 // shows the checkbox interactions beyond the markup that
                 // is_available() already gates.
                 'replyPush'        => Vibe_Comments_Reply_Push::is_available() ? array(
@@ -244,18 +244,18 @@ class Vibe_Comments {
                 ) : false,
                 // v3.8.0: mentionable authors for this post (autocomplete +
                 // pill rendering). Client merges this seed list with a live
-                // DOM scan of rendered comments — always current even mid-poll.
+                // DOM scan of rendered comments - always current even mid-poll.
                 'mentions'         => Vibe_Comments_Mentions::localize_data( get_the_ID() ),
-                // v3.15.0: Q&A mode per post — false/absent on classic posts
+                // v3.15.0: Q&A mode per post - false/absent on classic posts
                 // (JS renders the classic UI), a config object on Q&A posts.
                 // canAccept is requester-specific and computed fresh on every
-                // page load — it never enters the shared list cache.
+                // page load - it never enters the shared list cache.
                 'qa'               => Vibe_Comments_QA::localize_data( get_the_ID() ),
                 'googleEnabled'    => $google_on,
                 'maxCommentLength' => (int) apply_filters('vibe_comments_max_length', 2000),
                 // Mirrors templates/comments.php's exact 3-way branch (0/1/many) so the
                 // client-side heading refresh produces byte-identical grammar to the
-                // server-rendered version — same simplification (2 plural forms, not a
+                // server-rendered version - same simplification (2 plural forms, not a
                 // full _n_noop() set), kept consistent rather than "more correct" in JS
                 // only, which would make the two diverge for non-English locales.
                 'oneCommentText'      => esc_html__('1 Comment', 'vibe-comments'),
@@ -277,7 +277,7 @@ try {
         vibe_log('Main class instantiated successfully');
     }
 } catch (Throwable $e) {
-    // This is the single point of total plugin failure — always record it
+    // This is the single point of total plugin failure - always record it
     // regardless of the debug flag. Without this, the entire plugin can die
     // silently with zero trace anywhere on the server.
     error_log('[Vibe Comments] FATAL — plugin failed to initialize: ' . $e->getMessage());

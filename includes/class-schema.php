@@ -1,6 +1,6 @@
 <?php
 /**
- * Vibe Comments — JSON-LD structured data output.
+ * Vibe Comments - JSON-LD structured data output.
  *
  * Outputs a Schema.org @graph block in <head> on singular posts containing:
  *   - WebPage entity with commentCount (Google uses this as a quality signal)
@@ -8,14 +8,14 @@
  *   - parentItem links for threaded replies
  *
  * Why in wp_head rather than inline HTML:
- *   Comments load via AJAX — Googlebot may not execute the click that triggers
+ *   Comments load via AJAX - Googlebot may not execute the click that triggers
  *   the load, so comments are invisible to crawlers. JSON-LD in the page head
  *   is always present in the initial HTTP response and requires no JS execution.
  *
  * Compatibility:
  *   The WebPage @id uses the plain post URL (no fragment). Google merges same-URL
  *   entities across multiple JSON-LD blocks, so commentCount safely augments
- *   whatever Article/WebPage schema Yoast SEO, Rank Math, or the theme outputs —
+ *   whatever Article/WebPage schema Yoast SEO, Rank Math, or the theme outputs -
  *   no duplication, no conflict.
  */
 
@@ -39,13 +39,13 @@ class Vibe_Comments_Schema {
             return;
         }
 
-        // Stored count is updated on every comment approval/deletion —
+        // Stored count is updated on every comment approval/deletion -
         // no extra COUNT(*) query needed here.
         $count = (int) get_option( 'vibe_comment_count_' . $post_id, 0 );
 
         // Output schema if comments are open OR existing approved comments exist.
         // A post with commenting closed but 50 existing comments still has
-        // discussion data Google should index — skipping schema wastes the SEO signal.
+        // discussion data Google should index - skipping schema wastes the SEO signal.
         if ( ! comments_open( $post_id ) && $count === 0 ) {
             return;
         }
@@ -68,7 +68,7 @@ class Vibe_Comments_Schema {
 
         // ── v3.15.0 Q&A mode: QAPage replaces WebPage+Comment ──────────
         // When the post runs in Q&A mode, the comment section IS a question
-        // thread — serving Comment entities would tell Google "page with
+        // thread - serving Comment entities would tell Google "page with
         // comments" while the page itself now renders (and is intended, by
         // the author's explicit toggle) as a question with answers. QAPage
         // is the schema.org type for exactly this shape and is eligible for
@@ -118,13 +118,13 @@ class Vibe_Comments_Schema {
                     // wp_strip_all_tags() here matches the protection already
                     // applied to $text above. comment_content gets it; this field
                     // did not, and JSON_UNESCAPED_SLASHES is enabled a few lines
-                    // down — the exact combination that lets a literal
+                    // down - the exact combination that lets a literal
                     // </script> sequence in an author name break out of this
                     // <script type="application/ld+json"> block and inject
                     // arbitrary HTML into the page <head>. This plugin's own
                     // submission path (sanitize_text_field() in submit_comment())
                     // already strips such sequences, but that offers no
-                    // protection here — this reads whatever is in wp_comments
+                    // protection here - this reads whatever is in wp_comments
                     // right now, regardless of how it got there: admin editing
                     // (admins can typically post unfiltered HTML in WP), CSV/XML
                     // import, a different plugin, or legacy pre-this-plugin data.
@@ -153,17 +153,17 @@ class Vibe_Comments_Schema {
             '@graph'   => $graph,
         ];
 
-        // JSON_HEX_TAG escapes < and > as \u003C/\u003E within string values —
+        // JSON_HEX_TAG escapes < and > as \u003C/\u003E within string values -
         // this is what actually closes the </script>-breakout risk at the
         // encoding layer itself, for EVERY field, not just the ones this file
         // remembers to wp_strip_all_tags() individually. Still fully valid,
-        // spec-compliant JSON — a JSON-LD parser decodes \u003C back to the
+        // spec-compliant JSON - a JSON-LD parser decodes \u003C back to the
         // literal character exactly as if it had been unescaped, so this is
         // purely a raw-HTML-output-level protection with zero effect on how
         // Google (or anything else) actually interprets the structured data.
         // JSON_HEX_AMP is the standard companion flag for the same reason.
         // JSON_UNESCAPED_UNICODE keeps emoji/international text readable.
-        // JSON_UNESCAPED_SLASHES avoids \/  noise in URLs — safe to keep
+        // JSON_UNESCAPED_SLASHES avoids \/  noise in URLs - safe to keep
         // purely for readability now that JSON_HEX_TAG independently handles
         // the actual angle-bracket risk regardless of slash-escaping.
         echo "\n<script type=\"application/ld+json\">\n"
@@ -172,7 +172,7 @@ class Vibe_Comments_Schema {
     }
 
     /**
-     * v3.15.0 — QAPage schema for Q&A-mode posts.
+     * v3.15.0 - QAPage schema for Q&A-mode posts.
      *
      * Shape (schema.org QAPage):
      *   QAPage
@@ -186,7 +186,7 @@ class Vibe_Comments_Schema {
      *         └ suggestedAnswer[] = every other approved answer
      *
      * Why upvoteCount proxies from reactions: this minimal cut has no
-     * separate vote table — reactions ARE the vote UI (design decision,
+     * separate vote table - reactions ARE the vote UI (design decision,
      * agreed with the King). Sums are computed once per request from the
      * reactions map, not per-comment queries.
      */
@@ -196,7 +196,7 @@ class Vibe_Comments_Schema {
         $answers     = [];
 
         // Reaction totals in ONE batch query (not per-comment get_reaction_counts
-        // calls — that would be N queries for N answers on every page load).
+        // calls - that would be N queries for N answers on every page load).
         $db            = new Vibe_Comments_Database();
         $top_ids       = array_map( function( $c ) { return (int) $c->comment_ID; },
             array_filter( $comments, function( $c ) { return 0 === (int) $c->comment_parent; } ) );
@@ -204,7 +204,7 @@ class Vibe_Comments_Schema {
 
         foreach ( $comments as $comment ) {
             // Top-level comments only: in Q&A mode, replies attach to
-            // answers (and to the accepted answer's own thread) — they are
+            // answers (and to the accepted answer's own thread) - they are
             // discussion, not answers. Schema-wise each answer stands alone.
             if ( (int) $comment->comment_parent > 0 ) {
                 continue;
@@ -220,7 +220,7 @@ class Vibe_Comments_Schema {
                 continue;
             }
 
-            // upvoteCount proxies from total reactions — reactions ARE the vote
+            // upvoteCount proxies from total reactions - reactions ARE the vote
             // UI in this minimal cut (design decision, agreed with the King).
             $total = isset( $reaction_map[ $cid ] ) ? array_sum( array_map( 'intval', (array) $reaction_map[ $cid ] ) ) : 0;
 
@@ -247,7 +247,7 @@ class Vibe_Comments_Schema {
         $question_text = wp_strip_all_tags( get_post_field( 'post_excerpt', $post_id ) );
         $question_text = trim( preg_replace( '/\s+/', ' ', $question_text ) );
         if ( '' === $question_text ) {
-            // No excerpt: fall back to the post content's first 500 chars —
+            // No excerpt: fall back to the post content's first 500 chars -
             // a Question with no body text is semantically thin for rich
             // results, and the title alone may not carry the full question.
             $question_text = wp_strip_all_tags( get_post_field( 'post_content', $post_id ) );

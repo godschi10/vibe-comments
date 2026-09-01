@@ -1,34 +1,34 @@
 <?php
 /**
- * Vibe Comments — Q&A mode (Feature #3, v3.15.0).
+ * Vibe Comments - Q&A mode (Feature #3, v3.15.0).
  *
  * Per-post Q&A: when enabled, a post's comment section renders as a
- * Stack-Overflow-style Q&A thread — the post is the Question, top-level
+ * Stack-Overflow-style Q&A thread - the post is the Question, top-level
  * comments are Answers, reactions serve as upvotes, and the post author
  * can mark exactly one answer as Accepted (green check, hoisted to top).
  *
- * Storage law (why post meta, not comment meta):
- *   - `_vibe_qa_mode` (post meta)     — the per-post toggle. Post meta because
+ * Storage (why post meta, not comment meta):
+ *   - `_vibe_qa_mode` (post meta)     - the per-post toggle. Post meta because
  *     the mode is a property of the POST, not of any comment. One row, one
  *     read, cached by WP's meta cache.
- *   - `_vibe_qa_accepted` (post meta) — the accepted answer's comment_ID.
+ *   - `_vibe_qa_accepted` (post meta) - the accepted answer's comment_ID.
  *     Post meta, NOT comment meta, because "accepted" is a property of the
- *     question (this post) — one answer among many, and un-accepting must
+ *     question (this post) - one answer among many, and un-accepting must
  *     clear the mark in one write, not hunt down the previously-flagged
  *     comment. It also keeps the flag OUT of format_comment_tree()'s
- *     per-comment meta lookups — is_pinned already does one get_comment_meta
+ *     per-comment meta lookups - is_pinned already does one get_comment_meta
  *     per comment; a second per-comment meta flag would double that query
  *     load for every comment on every load. One get_post_meta per REQUEST
  *   instead is a single row read, shared by every comment's payload.
  *
- * Cache law: both flags are universal truths (same for every visitor, like
+ * Both flags are universal truths (same for every visitor, like
  * is_pinned/is_edited), so they bake safely into the shared 120s list cache.
- * No per-requester overlay is needed for rendering — only the Accept BUTTON's
+ * No per-requester overlay is needed for rendering - only the Accept BUTTON's
  * visibility is per-requester (gated by the localize config's canAccept, which
  * is computed fresh per page load and never cached).
  *
- * Permission law: accept/unaccept is the post author's call (classic model).
- * Users with moderate_comments (admins/editors) can also do it — a site owner
+ * Who may accept: the post author's call (classic model).
+ * Users with moderate_comments (admins/editors) can also do it - a site owner
  * must be able to curate a neglected question thread. Nobody else, ever.
  */
 
@@ -47,7 +47,7 @@ class Vibe_Comments_QA {
 		add_action( 'add_meta_boxes', array( __CLASS__, 'add_meta_box' ) );
 		add_action( 'save_post',     array( __CLASS__, 'save_meta_box' ), 10, 2 );
 
-		// Accept/unaccept answer — logged-in only (the author/moderator IS
+		// Accept/unaccept answer - logged-in only (the author/moderator IS
 		// logged in by definition; guests never see the button).
 		add_action( 'wp_ajax_vibe_accept_answer', array( __CLASS__, 'ajax_accept_answer' ) );
 	}
@@ -59,7 +59,7 @@ class Vibe_Comments_QA {
 	 *
 	 * get_post_meta with a single key is object-cached after the first call
 	 * anywhere in the request (schema output, localize config, AJAX handler
-	 * all ask) — one DB touch per request no matter how many call sites.
+	 * all ask) - one DB touch per request no matter how many call sites.
 	 */
 	public static function is_qa_post( $post_id ) {
 		if ( ! $post_id ) {
@@ -83,7 +83,7 @@ class Vibe_Comments_QA {
 
 	/**
 	 * Whether the CURRENT visitor may accept/unaccept answers on this post.
-	 * Author or moderator — checked fresh, never cached into any payload.
+	 * Author or moderator - checked fresh, never cached into any payload.
 	 */
 	public static function can_accept( $post_id ) {
 		if ( ! is_user_logged_in() ) {
@@ -115,7 +115,7 @@ class Vibe_Comments_QA {
 	/**
 	 * Nonce for the accept call. House pattern: every privileged AJAX in
 	 * this plugin (pin, edit, reply-push) rides the shared wp_rest nonce
-	 * (config.nonce) — one nonce, one refresh cycle (vibe_refresh_nonce
+	 * (config.nonce) - one nonce, one refresh cycle (vibe_refresh_nonce
 	 * keeps cached pages valid). A per-feature nonce would need its own
 	 * refresh endpoint or expire inside cached pages.
 	 */
@@ -126,7 +126,7 @@ class Vibe_Comments_QA {
 	// ── Editor sidebar toggle ────────────────────────────────────────────
 
 	public static function add_meta_box() {
-		// Only on post types that actually carry a comment section — a Q&A
+		// Only on post types that actually carry a comment section - a Q&A
 		// toggle on a post type with no comments would be a dead control.
 		$types = get_post_types_by_support( array( 'comments' ) );
 		add_meta_box(
@@ -155,7 +155,7 @@ class Vibe_Comments_QA {
 
 	public static function save_meta_box( $post_id, $post ) {
 		// The standard five rejections: autosave, revision, bad nonce,
-		// insufficient cap, wrong post type. Order matters — nonce check
+		// insufficient cap, wrong post type. Order matters - nonce check
 		// BEFORE cap so a forged save from an unprivileged user dies at the
 		// nonce, and cap check before the write itself.
 		if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
@@ -174,7 +174,7 @@ class Vibe_Comments_QA {
 		if ( ! empty( $_POST['vibe_qa_mode'] ) ) {
 			update_post_meta( $post_id, self::META_MODE, '1' );
 		} else {
-			// Turning Q&A OFF also clears the accepted-answer mark — leaving
+			// Turning Q&A OFF also clears the accepted-answer mark - leaving
 			// it would render a stray green badge in a classic thread if the
 			// mode is ever re-enabled with the stale meta still pointing at
 			// an answer the author may no longer endorse.
@@ -193,13 +193,13 @@ class Vibe_Comments_QA {
 		$comment_id = isset( $_POST['comment_id'] ) ? absint( $_POST['comment_id'] ) : 0;
 		$post_id    = isset( $_POST['post_id'] )    ? absint( $_POST['post_id'] )    : 0;
 
-		// House nonce (wp_rest, same as pin/edit) — see nonce() docblock.
+		// House nonce (wp_rest, same as pin/edit) - see nonce() docblock.
 		if ( ! check_ajax_referer( 'wp_rest', 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => __( 'Security check failed. Reload the page.', 'vibe-comments' ) ), 403 );
 		}
 
 		$comment = $comment_id ? get_comment( $comment_id ) : null;
-		// The comment must exist, be approved, and BELONG to this post —
+		// The comment must exist, be approved, and BELONG to this post -
 		// accepting a comment from another post would write a cross-post
 		// pointer into this post's meta.
 		if ( ! $comment || (int) $comment->comment_post_ID !== $post_id || '1' !== (string) $comment->comment_approved ) {

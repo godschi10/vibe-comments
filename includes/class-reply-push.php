@@ -1,6 +1,6 @@
 <?php
 /**
- * Reply Push Notifications — self-hosted, zero third parties.
+ * Reply Push Notifications - self-hosted, zero third parties.
  *
  * Lets a commenter opt in ("Notify me about replies" checkbox) to a web-push
  * alert when someone replies to THEIR comment. The browser subscription is
@@ -9,7 +9,7 @@
  * lifecycle: the comment is deleted → the subscription dies with it; the
  * plugin is uninstalled → uninstall.php sweeps the meta.
  *
- * DESIGN CONTRACT — this plugin does NOT ship its own push stack.
+ * DESIGN CONTRACT - this plugin does NOT ship its own push stack.
  * It integrates with a theme that already provides one (both GWill themes
  * ship the identical rail):
  *   - gwill_push_vapid()      → array{ publicKey, privateKey } (VAPID, autoload-off option)
@@ -22,7 +22,7 @@
  *
  * WHY NOT THE THEME'S SUBSCRIBER TABLE? The gwill_push_subscribers table is
  * the site-wide broadcast list ("new post" bell). Reply notifications are
- * per-comment and guest-inclusive — a guest has no user_id to join, and
+ * per-comment and guest-inclusive - a guest has no user_id to join, and
  * attaching the site-wide list to a single comment would be wrong. The
  * browser push subscription itself is the SAME subscription either way
  * (one per origin + service worker); only the server-side routing differs.
@@ -49,7 +49,7 @@ class Vibe_Comments_Reply_Push {
      * Per-process dedup: a comment approval can fire BOTH
      * transition_comment_status AND wp_set_comment_status (core calls the
      * transition from inside the setter), so a naive dual hook would push
-     * twice. One notification per comment ID per request — static, dies with
+     * twice. One notification per comment ID per request - static, dies with
      * the process, exactly like the theme's per-request memo caches.
      *
      * @var array<int, bool>
@@ -63,7 +63,7 @@ class Vibe_Comments_Reply_Push {
     /**
      * Is the push rail present and the feature enabled?
      *
-     * Checks the THEME contract (functions, not class names — the theme is
+     * Checks the THEME contract (functions, not class names - the theme is
      * procedural) plus the optional plugin filter so a site owner can turn
      * the feature off without touching code.
      *
@@ -146,7 +146,7 @@ class Vibe_Comments_Reply_Push {
             return false;
         }
 
-        // Round-trip validation — the same guard the theme's REST route uses.
+        // Round-trip validation - the same guard the theme's REST route uses.
         try {
             if ( ! class_exists( '\Minishlink\WebPush\Subscription' ) ) {
                 return false;
@@ -215,7 +215,7 @@ class Vibe_Comments_Reply_Push {
     /**
      * Notify the parent comment's author that their comment got a reply.
      *
-     * Fires on the reply's APPROVAL (instant or moderated — see the hooks
+     * Fires on the reply's APPROVAL (instant or moderated - see the hooks
      * in class-ajax-handler.php). Guards:
      *   - top-level comments (parent=0) have no author to notify;
      *   - self-replies never notify (same author email replying to themself);
@@ -244,7 +244,7 @@ class Vibe_Comments_Reply_Push {
 
         $parent_id = absint( $reply->comment_parent );
         if ( $parent_id < 1 ) {
-            return false; // not a reply — nothing to notify
+            return false; // not a reply - nothing to notify
         }
         if ( '1' !== (string) $reply->comment_approved ) {
             return false; // only approved replies are public events
@@ -282,7 +282,7 @@ class Vibe_Comments_Reply_Push {
             'body'  => wp_trim_words( wp_strip_all_tags( $reply->comment_content ), 18, '…' ),
             'icon'  => self::icon(),
             'badge' => self::icon(),
-            // Tap lands on the reply itself — the user has read their own
+            // Tap lands on the reply itself - the user has read their own
             // comment; the new content is the reply.
             'url'   => get_permalink( $post ) . '#comment-' . $reply_id,
         );
@@ -291,9 +291,9 @@ class Vibe_Comments_Reply_Push {
     }
 
     /**
-     * v3.8.0 — Public door for the mentions class to reuse the private
+     * v3.8.0 - Public door for the mentions class to reuse the private
      * send() + prune contract (same stream, same sw.js payload, same
-     * 410/404 self-cleaning). Nothing new is invented here — it is the
+     * 410/404 self-cleaning). Nothing new is invented here - it is the
      * reply-push rail with a mention-shaped payload.
      *
      * @param array $subscription { endpoint, p256dh, auth }
@@ -302,7 +302,7 @@ class Vibe_Comments_Reply_Push {
      * @return bool
      */
     public static function send_mention( $subscription, $payload, $comment_id ) {
-        // Mention payloads carry the same icon/badge as reply pushes —
+        // Mention payloads carry the same icon/badge as reply pushes -
         // normalize anything the caller left blank so sw.js renders a
         // complete notification every time.
         if ( empty( $payload['icon'] ) ) {
@@ -317,7 +317,7 @@ class Vibe_Comments_Reply_Push {
     /**
      * Queue + flush one notification through the theme's stream.
      *
-     * Prunes the stored meta on 410 Gone / 404 — a revoked subscription
+     * Prunes the stored meta on 410 Gone / 404 - a revoked subscription
      * (user unsubscribed the bell, browser expired it) must clean itself
      * up, mirroring the theme's send loop.
      *

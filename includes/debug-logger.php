@@ -1,11 +1,11 @@
 <?php
 /**
- * Debug logger — only writes when VIBE_COMMENTS_DEBUG_TOOLS is explicitly enabled.
+ * Debug logger - only writes when VIBE_COMMENTS_DEBUG_TOOLS is explicitly enabled.
  *
  * Gate: define('VIBE_COMMENTS_DEBUG_TOOLS', true) in wp-config.php.
  *
  * Deliberately does NOT gate on WP_DEBUG because WP_DEBUG is frequently enabled
- * on production sites for error capture — leaving a predictable log file at a
+ * on production sites for error capture - leaving a predictable log file at a
  * guessable URL on any server that doesn't enforce .htaccess (Nginx, LiteSpeed
  * in some configs). VIBE_COMMENTS_DEBUG_TOOLS is a deliberate opt-in by a
  * developer, not an ambient configuration flag.
@@ -25,7 +25,7 @@ function vibe_log($message) {
         return;
     }
     // Wrap all filesystem work in try/catch. The logger must never crash the
-    // plugin — a read-only filesystem or bad permissions should fail silently.
+    // plugin - a read-only filesystem or bad permissions should fail silently.
     try {
         $log_dir  = WP_CONTENT_DIR . '/logs';
         $log_file = $log_dir . '/vibe-comments-debug.log';
@@ -39,7 +39,7 @@ function vibe_log($message) {
         $line = gmdate('Y-m-d H:i:s') . ' UTC - ' . $message . PHP_EOL;
         @file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX);
     } catch ( Throwable $e ) {
-        // Silently swallow — logging must never be the reason the plugin fails.
+        // Silently swallow - logging must never be the reason the plugin fails.
     }
 }
 } // end function_exists vibe_log

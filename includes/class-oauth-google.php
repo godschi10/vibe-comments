@@ -13,7 +13,7 @@ class Vibe_Comments_OAuth_Google {
 
     public function __construct() {
         // The REST route is the only callback Google ever hits.
-        // The init hook (which also processed OAuth callbacks) has been removed —
+        // The init hook (which also processed OAuth callbacks) has been removed -
         // it exposed the same processing logic on any front-end URL via
         // ?vibe-google-callback=1, creating unnecessary attack surface.
         add_action('rest_api_init', array($this, 'register_callback_route'));
@@ -30,7 +30,7 @@ class Vibe_Comments_OAuth_Google {
     }
 
     /**
-     * REST callback — the only entry point for Google's OAuth redirect.
+     * REST callback - the only entry point for Google's OAuth redirect.
      * Validates state against both the transient AND the browser cookie
      * to prevent login-CSRF on anonymous-user nonces (C2 fix).
      */
@@ -38,7 +38,7 @@ class Vibe_Comments_OAuth_Google {
         $code  = sanitize_text_field( $request->get_param('code')  ?? '' );
         $state = sanitize_text_field( $request->get_param('state') ?? '' );
         $this->process_oauth_callback( $code, $state );
-        // process_oauth_callback always wp_safe_redirect()+exit or wp_die() — never reaches here.
+        // process_oauth_callback always wp_safe_redirect()+exit or wp_die() - never reaches here.
         return new WP_REST_Response( array( 'error' => 'OAuth callback failed.' ), 400 );
     }
 
@@ -68,12 +68,12 @@ class Vibe_Comments_OAuth_Google {
         // ── C2 fix: crypto-random state, browser-bound via cookie ────────
         // wp_create_nonce() for anonymous users always produces the same value
         // within a ~12-hour tick (uid=0, session_token=''), making all anon
-        // visitors share the same state — login-CSRF attack is trivial.
+        // visitors share the same state - login-CSRF attack is trivial.
         // Fix: generate a 32-char cryptographically random token, store the
         // return_url in a transient keyed by its hash, and simultaneously
         // set an HttpOnly SameSite=Lax cookie with the same token. The callback
         // validates BOTH the transient AND the cookie, so the token is bound
-        // to the initiating browser — not just a server-side time window.
+        // to the initiating browser - not just a server-side time window.
         $state      = wp_generate_password( 32, false, false );
         $state_hash = md5( $state );
 
@@ -92,7 +92,7 @@ class Vibe_Comments_OAuth_Google {
         // which is exactly the login-CSRF vector: attacker crafts a malicious link
         // to the callback URL with a known state, victim clicks it, browser sends
         // the Lax cookie, attacker's state validates, victim's Google account links
-        // to attacker's WP account. Strict blocks this — cookie only sent on
+        // to attacker's WP account. Strict blocks this - cookie only sent on
         // same-site requests (user typing URL, bookmarks, or same-origin links).
         $cookie_options = array(
             'expires'  => time() + 600,
@@ -154,7 +154,7 @@ class Vibe_Comments_OAuth_Google {
 
         $return_url = $stored_url;
 
-        // Cookie must match the state in the URL — proves this browser initiated the flow.
+        // Cookie must match the state in the URL - proves this browser initiated the flow.
         if ( empty( $cookie_state ) || ! hash_equals( $state, $cookie_state ) ) {
             $this->oauth_error( $return_url, __('Invalid OAuth state. Please try signing in again.', 'vibe-comments') );
         }
@@ -198,7 +198,7 @@ class Vibe_Comments_OAuth_Google {
             $this->oauth_error( $return_url, __('Token verification failed. Please try again.', 'vibe-comments') );
         }
 
-        // Reject unverified emails — Google can return these from federated providers.
+        // Reject unverified emails - Google can return these from federated providers.
         if ( empty( $payload['email_verified'] ) || $payload['email_verified'] !== true ) {
             $this->oauth_error( $return_url, __('Your Google email address is not verified. Please verify your Google account and try again.', 'vibe-comments') );
         }
@@ -215,7 +215,7 @@ class Vibe_Comments_OAuth_Google {
         if ( ! $user ) {
             $email_parts = explode( '@', $email );
             $base        = sanitize_user( $email_parts[0] );
-            // wp_generate_password(8, false) — cryptographically random alphanumeric.
+            // wp_generate_password(8, false) - cryptographically random alphanumeric.
             $suffix      = wp_generate_password( 8, false );
             $username    = sanitize_user( $base . '_' . $suffix );
 
@@ -223,7 +223,7 @@ class Vibe_Comments_OAuth_Google {
             // 2026-09-01 mega-audit hard-cap: default_role can only LOWER the
             // privilege, never raise it. If a future admin misconfigures
             // default_role to contributor/author/editor, Google sign-up must
-            // never silently mint those accounts — the comment form needs
+            // never silently mint those accounts - the comment form needs
             // exactly Subscriber and nothing more. Clamp to subscriber unless
             // the setting names something with FEWER capabilities (a custom
             // read-only role), in which case the setting wins.
@@ -231,7 +231,7 @@ class Vibe_Comments_OAuth_Google {
             $role_caps    = get_role( $default_role );
             $sub_caps     = get_role( 'subscriber' );
             if ( ! $role_caps || ! $sub_caps ) {
-                $default_role = 'subscriber'; // unknown role name — safe default
+                $default_role = 'subscriber'; // unknown role name - safe default
             } else {
                 // Any capability the configured role has that Subscriber lacks = elevated.
                 $elevated = array_diff_key( $role_caps->capabilities, array_filter( $sub_caps->capabilities ) );
@@ -280,7 +280,7 @@ class Vibe_Comments_OAuth_Google {
      * Verify a Google ID token's RS256 signature against Google's JWKS.
      *
      * Returns the decoded payload array on success, null on any failure.
-     * Any failure (network, bad signature, expired, wrong audience) returns null —
+     * Any failure (network, bad signature, expired, wrong audience) returns null -
      * the caller must treat null as an authentication failure.
      *
      * @param  string $jwt       The raw id_token string from Google's token endpoint.
@@ -297,7 +297,7 @@ class Vibe_Comments_OAuth_Google {
         );
         if (empty($header['kid']) || ($header['alg'] ?? '') !== 'RS256') return null;
 
-        // Decode payload — not trusted until signature is verified.
+        // Decode payload - not trusted until signature is verified.
         $payload = json_decode(
             base64_decode(strtr($parts[1], '-_', '+/')), true
         );
@@ -313,14 +313,14 @@ class Vibe_Comments_OAuth_Google {
         $valid_issuers = array('https://accounts.google.com', 'accounts.google.com');
         if (empty($payload['iss']) || !in_array($payload['iss'], $valid_issuers, true)) return null;
 
-        // Fetch Google's JWKS — cached for 1 hour. Find the key matching the
+        // Fetch Google's JWKS - cached for 1 hour. Find the key matching the
         // token's kid, retrying ONCE with a forced-fresh fetch if not found.
         //
         // Google rotates its signing keys periodically. If a token was signed
         // with a key that rotated in AFTER our transient was cached, the kid
         // won't be in our stale cached set. Previously this comment claimed
         // "try once more" but the code only busted the cache for NEXT time and
-        // failed the CURRENT request — a user hitting a rotation window got a
+        // failed the CURRENT request - a user hitting a rotation window got a
         // hard login failure and had to manually retry. This now actually
         // retries within the same request: attempt 1 uses whatever's cached
         // (or fetches if nothing is), and only if the kid genuinely isn't
@@ -348,7 +348,7 @@ class Vibe_Comments_OAuth_Google {
             }
 
             if ( null === $matching_key && $attempt === 0 ) {
-                // Cached set didn't have it — force a genuine network refetch
+                // Cached set didn't have it - force a genuine network refetch
                 // on the next loop iteration rather than trusting the cache again.
                 delete_transient( 'vibe_google_jwks' );
             }
@@ -387,7 +387,7 @@ class Vibe_Comments_OAuth_Google {
 
         if (!$modulus || !$exponent) return null;
 
-        // Encode as ASN.1 DER — the binary format openssl expects.
+        // Encode as ASN.1 DER - the binary format openssl expects.
         // RSAPublicKey ::= SEQUENCE { modulus INTEGER, publicExponent INTEGER }
         $mod_len = strlen($modulus);
         $exp_len = strlen($exponent);
@@ -402,7 +402,7 @@ class Vibe_Comments_OAuth_Google {
         $rsa_key_der  = "\x30" . $this->der_length(strlen($modulus_der) + strlen($exponent_der))
                       . $modulus_der . $exponent_der;
 
-        // RSA OID: 1.2.840.113549.1.1.1 — identifies this as an RSA public key.
+        // RSA OID: 1.2.840.113549.1.1.1 - identifies this as an RSA public key.
         $rsa_oid = "\x30\x0d\x06\x09\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01\x05\x00";
 
         // Build the BIT STRING object first so its total length is known exactly.

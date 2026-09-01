@@ -1,6 +1,6 @@
 <?php
 /**
- * WP-CLI Commands — Vibe Comments
+ * WP-CLI Commands - Vibe Comments
  *
  * Provides CLI commands for cache management, count syncing, and debugging.
  *

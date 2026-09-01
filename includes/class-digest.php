@@ -1,26 +1,26 @@
 <?php
 /**
- * Vibe Comments — Daily Digest Email (Feature #9, v3.17.0).
+ * Vibe Comments - Daily Digest Email (Feature #9, v3.17.0).
  *
  * ONE email per day to the site admin: yesterday's comment activity in a
- * single branded summary — counts, top-reacted, awaiting moderation, spam
+ * single branded summary - counts, top-reacted, awaiting moderation, spam
  * scores, top authors, per-post breakdown. Every entry links straight to
  * its admin row so a busy owner can act in one click.
  *
  * Why admin-only (design decision, agreed with the King): subscriber
- * digests are a different product — consent rules, per-reader state,
+ * digests are a different product - consent rules, per-reader state,
  * unsubscribe machinery, storm risk. The King asked for a morning paper,
  * not a mailing list. One recipient, zero consent surface, zero storm.
  *
- * Delivery law (unchanged from v3.9.0): the plugin never touches SMTP.
- * It calls wp_mail() — wherever mail works, this works. On THIS host the
+ * Delivery follows v3.9.0: the plugin never touches SMTP.
+ * It calls wp_mail() - wherever mail works, this works. On THIS host the
  * three walls stand (no sendmail binary, port 25 blocked, empty Brevo key),
  * so the rail is: cron fires daily → digest BUILT → wp_mail() attempts →
  * honest error-log if the transport is down. The moment the Brevo key
  * lands in wp-config.php, the same cron lights up with zero further work.
  * Until then, the preview button renders the exact HTML that would be sent.
  *
- * Scheduling law: a single-event self-chaining cron — each run reschedules
+ * Scheduling: a single-event self-chaining cron - each run reschedules
  * the next 07:00 UTC (08:00 WAT). Single-event chains are idempotent under
  * re-activation (arm() refuses to double-schedule) where recurring
  * schedules double-fire.
@@ -56,12 +56,12 @@ class Vibe_Comments_Digest {
 	/** Schedule the next 07:00 UTC run if none is pending. Idempotent. */
 	public static function arm() {
 		if ( wp_next_scheduled( self::CRON_HOOK ) ) {
-			return; // already armed — never double-schedule
+			return; // already armed - never double-schedule
 		}
 		wp_schedule_single_event( self::next_run_ts(), self::CRON_HOOK );
 	}
 
-	/** Next 07:00 UTC (08:00 WAT — the King's morning) from now. */
+	/** Next 07:00 UTC (08:00 WAT - the King's morning) from now. */
 	public static function next_run_ts() {
 		$now  = current_time( 'timestamp', true );
 		$next = gmmktime( 7, 0, 0, (int) gmdate( 'n', $now ), (int) gmdate( 'j', $now ), (int) gmdate( 'Y', $now ) );
@@ -76,7 +76,7 @@ class Vibe_Comments_Digest {
 	public static function run() {
 		$settings = get_option( 'vibe_digest_settings', array() );
 		if ( empty( $settings['enabled'] ) ) {
-			return; // disarmed without clearing — die quietly
+			return; // disarmed without clearing - die quietly
 		}
 
 		self::send_digest( self::build_digest( self::window_start(), self::window_end() ) );
@@ -90,7 +90,7 @@ class Vibe_Comments_Digest {
 
 	/**
 	 * Window: yesterday 00:00–24:00 UTC. A digest at 07:00 about the FULL
-	 * previous calendar day — the numbers describe a day, which is what
+	 * previous calendar day - the numbers describe a day, which is what
 	 * "daily digest" means to a human.
 	 */
 	public static function window_start() {
@@ -104,7 +104,7 @@ class Vibe_Comments_Digest {
 
 	/**
 	 * Assemble the digest data + HTML. Build is separate from send so the
-	 * preview and the cron share ONE path — no drift between what You
+	 * preview and the cron share ONE path - no drift between what You
 	 * preview and what the inbox receives.
 	 */
 	public static function build_digest( $start_gmt, $end_gmt ) {
@@ -198,7 +198,7 @@ class Vibe_Comments_Digest {
 		$day_label = gmdate( 'l j F', strtotime( $start_gmt ) );
 		$rows      = '';
 
-		// Pending section first — the actionable morning list.
+		// Pending section first - the actionable morning list.
 		if ( $counts['pending'] > 0 ) {
 			$rows .= '<tr><td style="padding:18px 0 0 0;">'
 				. '<h2 style="margin:0 0 10px 0;font-size:16px;color:#1f2937;">⚠️ Awaiting moderation — ' . (int) $counts['pending'] . '</h2>';

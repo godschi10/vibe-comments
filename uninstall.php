@@ -1,6 +1,6 @@
 <?php
 /**
- * Vibe Comments — Uninstall handler.
+ * Vibe Comments - Uninstall handler.
  * Runs when the plugin is deleted (not just deactivated) via the WP admin.
  *
  * Removes:
@@ -12,7 +12,7 @@
  *
  * GUARD: if the canonical vibe-comments plugin is still active (possible when
  * an off-slug copy such as vibe-comments-v3_2_5 is being deleted), bail
- * immediately — the shared table and options must not be destroyed while the
+ * immediately - the shared table and options must not be destroyed while the
  * main plugin is still using them. This was the exact scenario that caused
  * production reaction data loss in June 2026.
  */
@@ -32,7 +32,7 @@ $network_active  = is_multisite()
     : [];
 
 if ( in_array( $canonical, $active, true ) || in_array( $canonical, $network_active, true ) ) {
-    // The main plugin is still active — preserve all shared data.
+    // The main plugin is still active - preserve all shared data.
     exit;
 }
 
@@ -41,7 +41,7 @@ $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'vibe_comment_likes' );
 
 // ── 2. Delete all per-post comment count options ──────────────────────────
 // These are stored as vibe_comment_count_{post_id} with autoload=false.
-// Can't use delete_option() without knowing every post ID — use a LIKE query.
+// Can't use delete_option() without knowing every post ID - use a LIKE query.
 $wpdb->query(
     "DELETE FROM {$wpdb->options}
      WHERE option_name LIKE 'vibe\_comment\_count\_%'"
@@ -81,7 +81,7 @@ $wpdb->delete(
 );
 
 // ── 3d. Remove _vibe_qa_mode + _vibe_qa_accepted POSTMETA (v3.15.0 Q&A) ────
-// Found by the 2026-09-01 conflict audit: uninstall touched commentmeta only —
+// Found by the 2026-09-01 conflict audit: uninstall touched commentmeta only -
 // these two postmeta keys (the Q&A toggle + accepted-answer pointer, stored
 // on the POST, not the comment) survived uninstall as orphans on every post
 // that ever ran Q&A mode.

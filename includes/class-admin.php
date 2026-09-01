@@ -8,14 +8,14 @@ class Vibe_Comments_Admin {
     public function __construct() {
         add_action( 'admin_menu', array( $this, 'add_menu_page' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
-        // v3.14.0 — Spam-score column in the WP admin comments list
+        // v3.14.0 - Spam-score column in the WP admin comments list
         // (Feature #6: heuristic scorer, display-only).
         add_filter( 'manage_edit-comments_columns',        array( $this, 'spam_column_header' ) );
         add_filter( 'manage_edit-comments_sortable_columns', array( $this, 'spam_column_sortable' ) );
         add_action( 'manage_comments_custom_column',      array( $this, 'spam_column_render' ), 10, 2 );
         add_action( 'admin_print_styles-edit-comments.php', array( $this, 'spam_column_css' ) );
         // Bulk-level convenience on pending: sort queue by score via
-        // pre_get_comments is NOT added — WP has no score field to sort on;
+        // pre_get_comments is NOT added - WP has no score field to sort on;
         // the column itself carries the info (sortable = false, honest).
     }
 
@@ -78,17 +78,17 @@ class Vibe_Comments_Admin {
 
     /**
      * Sanitize each field before it is saved to wp_options.
-     * Without this, any string — including HTML and JS — can be stored.
+     * Without this, any string - including HTML and JS - can be stored.
      */
     public function sanitize_settings( $input ) {
         $clean = array();
 
-        // Unlike text fields, an HTML checkbox submits NOTHING when unchecked —
+        // Unlike text fields, an HTML checkbox submits NOTHING when unchecked -
         // it never appears in $_POST at all. Guarding this with isset() (as the
         // other fields correctly do) meant unchecking "Enable Google Login" and
         // saving silently dropped the key from the stored option entirely, rather
         // than storing false. The consumption logic in vibe-comments.php then
-        // fell through to "enabled if client_id is set" — re-enabling Google
+        // fell through to "enabled if client_id is set" - re-enabling Google
         // login the admin had just explicitly turned off. Confirmed this form has
         // exactly one <form> covering all three fields together (render_page()
         // above), so absence here unambiguously means "checkbox was unchecked,"
@@ -136,7 +136,7 @@ class Vibe_Comments_Admin {
         }
 
         if ( $type === 'password' ) {
-            // Never pre-fill the secret — password inputs should not be populated
+            // Never pre-fill the secret - password inputs should not be populated
             // from storage. If the admin wants to change it, they type a new value;
             // if they leave it blank, sanitize_settings() preserves the existing one.
             printf(
@@ -167,7 +167,7 @@ class Vibe_Comments_Admin {
                 settings_fields( 'vibe_comments' );
                 do_settings_sections( 'vibe-comments' );
 
-                // v3.17.0 — digest preview: renders the exact email HTML.
+                // v3.17.0 - digest preview: renders the exact email HTML.
                 // The SMTP-free window: works regardless of mail transport.
                 ?>
                 <hr />
@@ -230,7 +230,7 @@ class Vibe_Comments_Admin {
     }
 
     /* ══════════════════════════════════════════════════════════════════════
-     * v3.14.0 — Spam-score column (Feature #6)
+     * v3.14.0 - Spam-score column (Feature #6)
      * Display-only heuristic badge on every comment row in wp-admin.
      * ══════════════════════════════════════════════════════════════════════ */
 
@@ -254,7 +254,7 @@ class Vibe_Comments_Admin {
     }
 
     /**
-     * Not sortable — WP has no persisted score field to ORDER BY; a fake
+     * Not sortable - WP has no persisted score field to ORDER BY; a fake
      * sort would lie. The badge alone carries the information.
      */
     public function spam_column_sortable( $columns ) {

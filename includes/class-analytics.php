@@ -1,9 +1,9 @@
 <?php
 /**
- * Comment Analytics Dashboard — every comment stat, one screen.
+ * Comment Analytics Dashboard - every comment stat, one screen.
  *
  * A top-level "Vibe Comments" admin page (capability: moderate_comments, so
- * editors see it too — it's comment data, not plugin settings). All queries
+ * editors see it too - it's comment data, not plugin settings). All queries
  * are driver-portable (MySQL AND the SQLite dropin): the time-series are
  * computed in PHP from ONE bulk fetch (no DATE_FORMAT/strftime dialect
  * risk), and SQL is used only for GROUP BY leaderboards.
@@ -75,13 +75,13 @@ class Vibe_Comments_Analytics {
 	}
 
 	/**
-	 * v3.11.0 — Settings submenu delegate. The old registration passed
-	 * array( 'Vibe_Comments_Admin', 'render_page' ) — a NON-static method as
+	 * v3.11.0 - Settings submenu delegate. The old registration passed
+	 * array( 'Vibe_Comments_Admin', 'render_page' ) - a NON-static method as
 	 * a class-string callable, which PHP 8.3 rejects in isolation. WP only
 	 * tolerated it because the duplicate 'vibe-comments' slug resolved to
 	 * the legacy Settings registration's valid instance callable. This
 	 * delegate is a real instance method on $this, and it renders through
-	 * an actual Vibe_Comments_Admin instance — valid regardless of which
+	 * an actual Vibe_Comments_Admin instance - valid regardless of which
 	 * registration wins the slug.
 	 */
 	public function render_settings_page() {
@@ -89,7 +89,7 @@ class Vibe_Comments_Analytics {
 	}
 
 	/* ══════════════════════════════════════════════════════════════════════
-	 * DATA — every stat, computed fresh or from the 5-minute cache
+	 * DATA - every stat, computed fresh or from the 5-minute cache
 	 * ════════════════════════════════════════════════════════════════════ */
 
 	/**
@@ -143,7 +143,7 @@ class Vibe_Comments_Analytics {
 
 		/* ── 2. ONE portable bulk fetch: every approved comment's core
 		 * fields. All time-series, threading and velocity stats derive
-		 * from this in PHP — no SQL date functions (driver-portable). ── */
+		 * from this in PHP - no SQL date functions (driver-portable). ── */
 		$bulk = $wpdb->get_results(
 			"SELECT comment_ID AS id, comment_parent AS parent,
 			        comment_date_gmt AS d, comment_author_email AS email,

@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.14.0  
+**Version:** 3.14.1  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later

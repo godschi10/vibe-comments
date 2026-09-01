@@ -15,6 +15,16 @@ Types of changes:
 
 ---
 
+## [3.14.1] — 2026-08-31
+
+### Fixed — @mention dropdown invisible (King-reported: "I never saw the feature")
+
+**Root cause**: the mention dropdown is `position:fixed` (viewport-anchored), but the code positioned it with `rect.bottom + window.scrollY` — page coordinates. `getBoundingClientRect()` already returns viewport space; adding `scrollY` pushed the dropdown that many pixels BELOW the caret. On any page scrolled down to the comment form (i.e., every real usage), the dropdown rendered thousands of pixels off-screen — the feature worked, but was invisible. This explains the King never seeing it despite the v3.8.0 ship and its E2E (which ran unscrolled, where scrollY=0 made the math accidentally correct).
+
+**Fix**: viewport-rect anchoring with flip-above when the dropdown would clip the bottom edge, and side-clamping to the viewport. Dropdown now appears within 4px of the caret everywhere: scrolled pages, phones, short viewports.
+
+**Proof**: live E2E before fix — dropdown rect at y:5979 with a 437px viewport (off-screen by miles); after fix — dropdown at the caret, `nearCaret:true`, Enter inserts `@Groot` and closes. Verified on the live site post-deploy.
+
 ## [3.14.0] — 2026-08-31
 
 ### Added — Heuristic spam scorer for the moderation queue (Feature #6)

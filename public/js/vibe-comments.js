@@ -149,6 +149,7 @@
         initReactions();
         initReplies();
         initEditWindow();
+        initNotifyToggle();
         initViewReplies();
         initPinComment();
         initQAAccept();
@@ -1044,6 +1045,13 @@
         const editBtnHtml  = comment.can_edit
             ? '<button type="button" class="vibe-edit-btn" data-comment-id="' + cid + '" data-deadline="' + editDeadline + '">Edit</button>'
             : '';
+        // v3.18.0 consent law - the Notify toggle: the comment's author can
+        // flip reply-email consent anytime, no window. Strangers never see it.
+        const notifyBtnHtml = comment.owns
+            ? '<button type="button" class="vibe-notify-btn" data-comment-id="' + cid + '" data-on="' + (comment.notify_on ? '1' : '0') + '" title="Turn reply emails for this thread on or off">'
+                + (comment.notify_on ? '🔔 On' : '🔕 Off')
+              + '</button>'
+            : '';
 
         li.innerHTML =
             '<article class="vibe-comment-body" id="div-comment-' + cid + '">' +
@@ -1073,6 +1081,7 @@
                     pinHtml +
                     acceptHtml +
                     editBtnHtml +
+                    notifyBtnHtml +
                 '</footer>' +
             '</article>';
 
@@ -2652,6 +2661,47 @@
             })
             .catch(function(err) {
                 console.error('Pin toggle failed:', err);
+                btn.disabled = false;
+            });
+        });
+    }
+
+    /**
+     * v3.18.0 consent law - the Notify toggle on one's own comment.
+     * Click flips reply-email consent for that thread server-side (nonce +
+     * the same ownership rail edit_comment trusts) and updates the pill.
+     */
+    function initNotifyToggle() {
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.vibe-notify-btn');
+            if (!btn) return;
+
+            e.preventDefault();
+            if (btn.disabled) return;
+            btn.disabled = true;
+
+            var next = btn.dataset.on === '1' ? '0' : '1';
+            fetch(config.ajaxUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    action:        'vibe_toggle_notify',
+                    comment_id:    btn.dataset.commentId,
+                    notify:        next,
+                    vibe_guest_id: getGuestId(),
+                    nonce:         config.nonce
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                btn.disabled = false;
+                if (!res || !res.success) return;
+                btn.dataset.on = res.data.notify ? '1' : '0';
+                btn.textContent = res.data.notify ? '\uD83D\uDD14 On' : '\uD83D\uDD15 Off';
+            })
+            .catch(function(err) {
+                console.error('Notify toggle failed:', err);
                 btn.disabled = false;
             });
         });

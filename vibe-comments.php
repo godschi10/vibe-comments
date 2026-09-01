@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.17.4
+ * Version:           3.18.0
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.17.4');
+define('VIBE_COMMENTS_VERSION', '3.18.0');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -56,6 +56,7 @@ require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-analytics.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-spam-score.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-qa.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-digest.php';
+require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-unsubscribe.php';
 
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-admin.php';
 require_once VIBE_COMMENTS_PLUGIN_DIR . 'includes/class-schema.php';
@@ -69,6 +70,19 @@ class Vibe_Comments {
         add_action('init', array($this, 'load_textdomain'));
         add_action('init', array($this, 'init'));
         add_action('rest_api_init', array($this, 'add_cache_headers'));
+
+        // v3.18.0 - unsubscribe (public token rail + checkbox toggle).
+        // BOOT-ORDER LAW (live-E2E catch, 2026-09-01): this MUST live in the
+        // CONSTRUCTOR (plugins_loaded context), never inside init() - the
+        // main class's init() method runs ON the 'init' hook, and WP never
+        // dispatches a hook listener registered while that same hook is
+        // mid-execution. The first attempt placed this call in init(): the
+        // unsubscribe link silently rendered the homepage instead.
+        try {
+            Vibe_Comments_Unsubscribe::init();
+        } catch (Throwable $e) {
+            error_log('[Vibe Comments] FATAL in Unsubscribe::init(): ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        }
     }
 
     /**

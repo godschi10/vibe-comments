@@ -959,15 +959,19 @@ class Vibe_Comments_Ajax_Handler {
         unset($c);
     }
 
-    /** Walk a comment + its children, collecting in-window ids => ages. */
+    /**
+     * Walk a comment + its children, collecting EVERY id => age.
+     * v3.18.0: the map now holds all comments, not just in-window ones -
+     * ownership (the Notify toggle) has no time limit, so the overlay
+     * needs the full set. The in-window check moved to patch_edit_flag,
+     * which is where can_edit (window-gated) and owns (ageless) diverge.
+     */
     private function collect_edit_candidates($c, $now, array &$candidates) {
         if (!is_array($c) || empty($c['id']) || empty($c['date_gmt'])) {
             return;
         }
         $age = $now - strtotime($c['date_gmt']);
-        if ($age >= 0 && $age <= self::EDIT_WINDOW) {
-            $candidates[(int) $c['id']] = $age;
-        }
+        $candidates[(int) $c['id']] = $age;
         if (!empty($c['children'])) {
             foreach ($c['children'] as $child) {
                 $this->collect_edit_candidates($child, $now, $candidates);
@@ -975,24 +979,43 @@ class Vibe_Comments_Ajax_Handler {
         }
     }
 
-    /** Patch can_edit (and recurse) for one comment subtree. */
+    /**
+     * Patch can_edit + owns + notify_on (and recurse) for one comment subtree.
+     * can_edit: ownership AND within the 5-minute window.
+     * owns:     ownership with NO window (v3.18.0 Notify toggle - consent
+     *           law: every opt-in rail needs a reachable opt-out).
+     * notify_on: the comment's current reply-email consent state.
+     */
     private function patch_edit_flag(&$c, $user_id, $guest_token, array $candidates) {
         if (!is_array($c) || empty($c['id'])) {
             return;
         }
         $cid = (int) $c['id'];
         $c['can_edit'] = false;
-        if (isset($candidates[$cid])) {
-            if ($user_id > 0) {
-                $comment = get_comment($cid);
-                $c['can_edit'] = $comment && intval($comment->user_id) === $user_id;
-            } else {
-                $owner = get_comment_meta($cid, '_vibe_owner', true);
-                $c['can_edit'] = !empty($owner)
-                    && is_string($guest_token)
-                    && hash_equals((string) $owner, (string) $guest_token);
-            }
+        $c['owns']     = false;
+
+        $is_owner = false;
+        if ($user_id > 0) {
+            $comment  = get_comment($cid);
+            $is_owner = $comment && intval($comment->user_id) === $user_id;
+        } else {
+            $owner    = get_comment_meta($cid, '_vibe_owner', true);
+            $is_owner = !empty($owner)
+                && is_string($guest_token)
+                && hash_equals((string) $owner, (string) $guest_token);
         }
+
+        $c['owns'] = $is_owner;
+        if ($is_owner && isset($candidates[$cid]) && $candidates[$cid] >= 0 && $candidates[$cid] <= self::EDIT_WINDOW) {
+            $c['can_edit'] = true;
+        }
+
+        // Notify state rides along for the owner only - a stranger's
+        // consent state is nobody's business.
+        $c['notify_on'] = $is_owner
+            ? (bool) get_comment_meta($cid, Vibe_Comments_Reply_Email::META_KEY, true)
+            : false;
+
         if (!empty($c['children'])) {
             foreach ($c['children'] as &$child) {
                 $this->patch_edit_flag($child, $user_id, $guest_token, $candidates);

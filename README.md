@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.17.4  
+**Version:** 3.18.0  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later
@@ -102,6 +102,7 @@ A reaction toggle purges the same `vc_load_*` cache via the same function (`purg
 - Author badge on post-author comments
 - Collapse long comments (>300 chars) with Read more / Show less
 - Basic Markdown: `**bold**`, `*italic*`, `` `code` ``, `> blockquote`
+- One-click unsubscribe for all notification rails (token links in every email, Notify toggle on own comments)
 - Daily digest email (v3.17.0: admin morning paper - stat cards, spam-scored moderation queue, most-reacted, per-post breakdown; SMTP-free preview in Settings)
 - Auto-link bare URLs (XSS-safe)
 - Empty state CTA when no comments exist

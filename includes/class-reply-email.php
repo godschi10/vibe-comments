@@ -239,7 +239,8 @@ class Vibe_Comments_Reply_Email {
 		. '</p>'
 		. '<p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.6;">'
 		. esc_html__( 'You opted in via the "Email me about replies" checkbox on your comment. This is the only way this address receives these emails.', 'vibe-comments' )
-		. '<br><a href="' . esc_url( $home ) . '" style="color:#9ca3af;">' . esc_html( $site_name ) . '</a>'
+		. '<br><a href="' . esc_url( Vibe_Comments_Unsubscribe::url( 'email', $parent->comment_ID ) ) . '" style="color:#9ca3af;">' . esc_html__( 'Stop these emails for this thread', 'vibe-comments' ) . '</a>'
+		. ' &middot; <a href="' . esc_url( $home ) . '" style="color:#9ca3af;">' . esc_html( $site_name ) . '</a>'
 		. '</p>'
 		. '</div>'
 		. '</div>';

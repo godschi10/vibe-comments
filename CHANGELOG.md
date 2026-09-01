@@ -15,6 +15,22 @@ Types of changes:
 
 ---
 
+## [3.18.0] — 2026-09-01
+
+### Added - Unsubscribe for all notification rails (King-reported gap: "people can't unsubscribe from comments alerts")
+
+The consent laws, now enforced: every notification rail with an opt-in has a matching opt-out; every outbound notification email carries a working unsubscribe link; the token is a keyed signature (AUTH_KEY + rail + comment ID), not a stored secret - deleting the consent meta IS the expiry, so there is no second source of truth to drift or leak.
+
+- **New class** `includes/class-unsubscribe.php` - HMAC-SHA256 token rail (32 hex chars, timing-safe verify, rail-bound), public `?vibe_unsub=TOKEN-CID-RAIL` handler on `init` (works logged-out - consent given as a guest is revocable as a guest), branded confirmation page (honest second-click state, no-info-leak generic page on forged tokens), and the `vibe_toggle_notify` AJAX endpoint gated by nonce + the same ownership rail edit_comment trusts.
+- **Email footer** - every reply-notification now carries "Stop these emails for this thread" linking the token URL (enforced at build time in the body builder).
+- **Push payloads** - every reply push carries `unsub_url` for the service worker's secondary action.
+- **The Notify toggle** - the comment footer now shows a bell pill (🔕 Off / 🔔 On) on one's OWN comments (new `owns` + `notify_on` payload fields, requester-specific, never cached; ownership has no time window unlike can_edit). One click flips reply-email consent for that thread server-side.
+- **Overlay restructure** - collect_edit_candidates now maps ALL comments (not just in-window ones) so ownership is computed agelessly; the window check moved into patch_edit_flag where can_edit and owns diverge. Cost: the same two batched cache-priming queries the overlay already made.
+
+**Boot-order law (live-E2E catch)**: the first implementation registered maybe_handle on 'init' from inside the main class's init() method - which itself runs ON the 'init' hook - so the listener never fired and the unsubscribe link silently rendered the homepage. Fixed by booting the unsubscribe rail in the CONSTRUCTOR (plugins_loaded context). The law: **a hook listener must be registered before its hook starts firing; never register a hook from inside a callback of that same hook.**
+
+**Proofs**: battery 15/15 (token determinism/binding, timing-safe verify, per-rail clears, unknown-rail false, URL shape, nonce/ownership/ON/OFF toggle paths, footer + payload laws). Live E2E on the real site: unsubscribe URL clicked as a logged-out visitor → consent meta cleared + "Unsubscribed" page rendered; second click → honest already-removed state; forged token → rejected, consent survives; REAL email body (via reflection on the private builder) carries the link and footer text; AJAX toggle ON → consent set, OFF → cleared, stranger (different UUID) → 403; a fixture-vs-code guest-token collision was diagnosed as test-data error (non-UUID IDs share the IP fallback by design) and re-proven with real UUIDs. Probe comments cleaned.
+
 ## [3.17.4] — 2026-09-01
 
 ### Changed - the four "leave as-is" audit verdicts overturned and fixed (royal law: fix ALL findings, never carry forward)

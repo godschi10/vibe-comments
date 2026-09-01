@@ -1309,3 +1309,30 @@
         scroll-behavior: auto !important;
     }
 }
+
+/* ── v3.18.0 consent law - Notify toggle on one's own comment ────────── */
+.vibe-notify-btn {
+    background: none;
+    border: 1px solid var(--vibe-border, #e5e7eb);
+    border-radius: 999px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.78rem;
+    color: var(--vibe-text-muted, #888);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.vibe-notify-btn[data-on="1"] {
+    border-color: #86efac;
+    color: #15803d;
+    background: #f0fdf4;
+}
+.vibe-notify-btn:hover:not(:disabled) {
+    border-color: #15803d;
+    color: #15803d;
+}
+.vibe-notify-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}

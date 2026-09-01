@@ -285,6 +285,9 @@ class Vibe_Comments_Reply_Push {
             // Tap lands on the reply itself - the user has read their own
             // comment; the new content is the reply.
             'url'   => get_permalink( $post ) . '#comment-' . $reply_id,
+            // v3.18.0 consent law: every push carries its own off-switch.
+            // sw.js surfaces this as the notification's secondary action.
+            'unsub_url' => Vibe_Comments_Unsubscribe::url( 'push', $parent_id ),
         );
 
         return self::send( $subscription, $payload, $parent_id );

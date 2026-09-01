@@ -259,6 +259,12 @@ class Vibe_Comments_Mentions {
 		$parent_id = absint( $comment->comment_parent );
 		$sent      = 0;
 
+		// Hoisted out of the loop (cleanup-audit N3, 2026-09-01): the parent
+		// comment and the post are the SAME object on every iteration -
+		// fetching them once turns two per-mention queries into zero.
+		$parent = $parent_id > 0 ? get_comment( $parent_id ) : null;
+		$post    = get_post( $comment->comment_post_ID );
+
 		foreach ( $mentions as $mention ) {
 			if ( $sent >= self::NOTIFY_CAP ) {
 				break;
@@ -274,7 +280,6 @@ class Vibe_Comments_Mentions {
 			// If this mention targets the direct parent's author, the
 			// reply-push already notified them - do not double-buzz.
 			if ( $parent_id > 0 ) {
-				$parent = get_comment( $parent_id );
 				if ( $parent && strtolower( trim( (string) $parent->comment_author ) ) === strtolower( $name ) ) {
 					continue;
 				}
@@ -293,7 +298,6 @@ class Vibe_Comments_Mentions {
 				continue;
 			}
 
-			$post = get_post( $comment->comment_post_ID );
 			if ( ! $post ) {
 				continue;
 			}

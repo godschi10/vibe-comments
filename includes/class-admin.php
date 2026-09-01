@@ -8,15 +8,44 @@ class Vibe_Comments_Admin {
     public function __construct() {
         add_action( 'admin_menu', array( $this, 'add_menu_page' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
+        add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
         // v3.14.0 - Spam-score column in the WP admin comments list
         // (Feature #6: heuristic scorer, display-only).
         add_filter( 'manage_edit-comments_columns',        array( $this, 'spam_column_header' ) );
         add_filter( 'manage_edit-comments_sortable_columns', array( $this, 'spam_column_sortable' ) );
         add_action( 'manage_comments_custom_column',      array( $this, 'spam_column_render' ), 10, 2 );
-        add_action( 'admin_print_styles-edit-comments.php', array( $this, 'spam_column_css' ) );
+        // (spam-column CSS now loads via enqueue_admin_assets - v3.17.4)
         // Bulk-level convenience on pending: sort queue by score via
         // pre_get_comments is NOT added - WP has no score field to sort on;
         // the column itself carries the info (sortable = false, honest).
+    }
+
+    /**
+     * Admin assets, hook-suffix-gated so each screen loads only what it
+     * uses. One consolidated stylesheet and one script file serve all
+     * three admin surfaces (replaces the old inline <style>/<script>
+     * blocks - cleanup-audit finding N1, resolved 2026-09-01).
+     */
+    public function enqueue_admin_assets( $hook ) {
+        $base = VIBE_COMMENTS_PLUGIN_URL . 'public/';
+
+        // Spam-score column: comments list + moderation queue.
+        if ( 'edit-comments.php' === $hook ) {
+            wp_enqueue_style( 'vibe-admin', $base . 'css/vibe-admin.css', array(), VIBE_COMMENTS_VERSION );
+            return;
+        }
+
+        // Analytics dashboard + the settings screens (both the options page
+        // registered here and the analytics-registered Settings submenu
+        // share the 'vibe-comments' slug; toplevel covers the dashboard).
+        if ( false !== strpos( $hook, 'vibe-analytics' ) || false !== strpos( $hook, 'vibe-comments' ) ) {
+            wp_enqueue_style( 'vibe-admin', $base . 'css/vibe-admin.css', array(), VIBE_COMMENTS_VERSION );
+            wp_enqueue_script( 'vibe-admin', $base . 'js/vibe-admin.js', array(), VIBE_COMMENTS_VERSION, true );
+            wp_localize_script( 'vibe-admin', 'vibeAdmin', array(
+                'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+                'nonce'   => wp_create_nonce( 'wp_rest' ),
+            ) );
+        }
     }
 
     public function add_menu_page() {
@@ -139,11 +168,14 @@ class Vibe_Comments_Admin {
             // Never pre-fill the secret - password inputs should not be populated
             // from storage. If the admin wants to change it, they type a new value;
             // if they leave it blank, sanitize_settings() preserves the existing one.
+            // Neutral placeholder regardless of stored state - a "(saved)"
+            // hint would tell any options-reader the exact storage shape
+            // (cleanup-audit N2, tightened 2026-09-01: the sanitize path's
+            // keep-on-empty behavior already preserves the stored secret).
             printf(
-                '<input type="password" name="%s[%s]" value="" class="regular-text" autocomplete="new-password" placeholder="%s">',
+                '<input type="password" name="%s[%s]" value="" class="regular-text" autocomplete="new-password" placeholder="Client secret - leave blank to keep the saved one">',
                 esc_attr( $this->option_name ),
-                esc_attr( $field ),
-                esc_attr( isset( $settings[ $field ] ) && $settings[ $field ] ? '(saved — leave blank to keep)' : 'Paste secret here' )
+                esc_attr( $field )
             );
             return;
         }
@@ -183,44 +215,8 @@ class Vibe_Comments_Admin {
                 </p>
                 <div id="vibe-digest-preview-wrap" style="display:none;margin-top:12px;">
                     <div style="margin-bottom:6px;"><strong id="vibe-digest-preview-subject"></strong></div>
-                    <iframe id="vibe-digest-preview-frame" style="width:100%;min-height:520px;border:1px solid #dcdcde;border-radius:4px;background:#fff;"></iframe>
+                    <iframe id="vibe-digest-preview-frame"></iframe>
                 </div>
-                <script>
-                document.getElementById('vibe-digest-preview-btn').addEventListener('click', function() {
-                    var btn    = this;
-                    var status = document.getElementById('vibe-digest-preview-status');
-                    btn.disabled = true;
-                    status.textContent = 'Building\u2026';
-                    var body = new URLSearchParams({
-                        action: 'vibe_digest_preview',
-                        nonce:  btn.dataset.nonce
-                    });
-                    fetch(btn.dataset.ajaxUrl, {
-                        method: 'POST',
-                        credentials: 'same-origin',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: body
-                    })
-                    .then(function(r) { return r.json(); })
-                    .then(function(res) {
-                        btn.disabled = false;
-                        if (!res || !res.success) {
-                            status.textContent = (res && res.data && res.data.message) ? res.data.message : 'Preview failed.';
-                            return;
-                        }
-                        status.textContent = '';
-                        document.getElementById('vibe-digest-preview-subject').textContent = res.data.subject;
-                        var wrap = document.getElementById('vibe-digest-preview-wrap');
-                        wrap.style.display = 'block';
-                        var frame = document.getElementById('vibe-digest-preview-frame');
-                        frame.srcdoc = res.data.html;
-                    })
-                    .catch(function(err) {
-                        btn.disabled = false;
-                        status.textContent = 'Preview failed: ' + err;
-                    });
-                });
-                </script>
                 <?php
                 submit_button();
                 ?>
@@ -281,23 +277,4 @@ class Vibe_Comments_Admin {
      * Column styles: fixed narrow width + the three band colors, matching
      * WP admin badge aesthetics (subtle tints, not loud blocks).
      */
-    public function spam_column_css() {
-        ?>
-        <style>
-        .column-vibe_spam { width: 90px; }
-        .vibe-spam-badge {
-            display: inline-block;
-            font-size: 11px;
-            line-height: 1;
-            padding: 4px 7px;
-            border-radius: 10px;
-            white-space: nowrap;
-            cursor: help;
-        }
-        .vibe-spam-clean        { background: #edf7ed; color: #1a7a1a; }
-        .vibe-spam-suspicious   { background: #fcf0e1; color: #9a6700; }
-        .vibe-spam-likely-spam  { background: #fbeaea; color: #c62828; }
-        </style>
-        <?php
-    }
 }

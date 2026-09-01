@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.17.3  
+**Version:** 3.17.4  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later
@@ -12,7 +12,7 @@ A performance-focused custom comment plugin for WordPress, built for [gwillchiji
 
 ## How It Scales to 10M+ Monthly Visits
 
-The key insight: **the page never hits the DB for comments on a normal visit.** Here is the exact flow:
+The key insight: **the page never hits the DB for comments on a normal visit.** The flow:
 
 ### Page Load (every visitor)
 ```
@@ -22,7 +22,7 @@ The comment count in the heading is read from `wp_options` (WP's in-memory optio
 No live DB query. No PHP. No AJAX. Pure cache hit.
 
 ### "Load Comments" click (only visitors who want to read comments)
-Assume 30% of visitors click. At 10M monthly = ~3M click events = ~100K/day.
+At a 30% click-through, 10M monthly visits mean roughly 100K comment-loads a day.
 
 ```
 Click → admin-ajax.php?action=vibe_load_comments

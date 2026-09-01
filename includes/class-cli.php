@@ -63,12 +63,26 @@ WP_CLI::add_command( 'vibe-comments sync-counts', function( $args, $assoc_args )
         global $wpdb;
         $posts = $wpdb->get_col( "SELECT ID FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish'" );
         $synced = 0;
+
+        // One grouped query for ALL posts (cleanup-audit N3, 2026-09-01) -
+        // previously a get_comments() per post inside the loop. GROUP BY
+        // returns only posts that HAVE comments; posts absent from the map
+        // correctly sync to 0.
+        $counts_map = array();
+        $rows = $wpdb->get_results(
+            "SELECT comment_post_ID, COUNT(*) AS n
+             FROM {$wpdb->comments}
+             WHERE comment_approved = '1' AND comment_post_ID IN (
+                 SELECT ID FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish'
+             )
+             GROUP BY comment_post_ID"
+        );
+        foreach ( $rows as $r ) {
+            $counts_map[ (int) $r->comment_post_ID ] = (int) $r->n;
+        }
+
         foreach ( $posts as $pid ) {
-            $count = (int) get_comments( [
-                'post_id' => $pid,
-                'status'  => 'approve',
-                'count'   => true,
-            ] );
+            $count = isset( $counts_map[ (int) $pid ] ) ? $counts_map[ (int) $pid ] : 0;
             update_option( 'vibe_comment_count_' . $pid, $count, false );
             delete_transient( 'vibe_count_' . $pid );
             $synced++;

@@ -440,35 +440,7 @@ class Vibe_Comments_Analytics {
 			<?php $this->render_charts( $stats ); ?>
 			<?php $this->render_boards( $stats ); ?>
 		</div>
-		<style>
-		.vibe-an-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin:14px 0 26px; }
-		.vibe-an-card { background:#fff; border:1px solid #c3c4c7; border-radius:6px; padding:14px 16px; }
-		.vibe-an-num { font-size:26px; font-weight:600; line-height:1.2; color:#1d2327; }
-		.vibe-an-lbl { font-size:12px; color:#646970; text-transform:uppercase; letter-spacing:.04em; margin-top:4px; }
-		.vibe-an-sec { margin:26px 0 8px; font-size:15px; font-weight:600; color:#1d2327; border-bottom:1px solid #dcdcde; padding-bottom:8px; }
-		.vibe-an-two { display:grid; grid-template-columns:1fr 1fr; gap:26px; }
-		.vibe-an-chart { background:#fff; border:1px solid #c3c4c7; border-radius:6px; padding:16px; margin-bottom:14px; }
-		.vibe-an-chart h3 { margin:0 0 10px; font-size:13px; color:#3c434a; font-weight:600; }
-		.vibe-an-chart svg { width:100%; height:auto; display:block; }
-		.vibe-an-table { width:100%; border-collapse:collapse; background:#fff; border:1px solid #c3c4c7; border-radius:6px; }
-		.vibe-an-table th, .vibe-an-table td { text-align:left; padding:8px 12px; border-bottom:1px solid #f0f0f1; font-size:13px; }
-		.vibe-an-table th { background:#f6f7f7; font-weight:600; color:#3c434a; }
-		.vibe-an-table td.num { font-variant-numeric:tabular-nums; font-weight:600; }
-		.vibe-an-count-pill { display:inline-block; min-width:34px; text-align:center; background:#2271b1; color:#fff; border-radius:10px; padding:1px 8px; font-size:12px; }
-		.vibe-an-excerpt { color:#646970; max-width:420px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:bottom; }
-		@media (max-width: 960px) { .vibe-an-two { grid-template-columns:1fr; } }
-		/* v3.12.0 mobile fix — the "Most-reacted comments" table blew out to
-		   ~962px on a 375px phone: two .vibe-an-excerpt columns each capped at
-		   420px + white-space:nowrap forced them side-by-side past the viewport,
-		   stretching the whole dashboard ~3x and making EVERY section overflow.
-		   On phones we drop the nowrap cap and let text wrap so the table never
-		   exceeds its container. (Measured at 375px: scrollWidth 972px → fit.) */
-		@media (max-width: 782px) {
-			.vibe-an-table { width:100%; max-width:100%; table-layout:auto; }
-			.vibe-an-table th, .vibe-an-table td { padding:7px 9px; overflow-wrap:anywhere; word-break:break-word; }
-			.vibe-an-excerpt { max-width:100%; white-space:normal; display:block; overflow-wrap:anywhere; word-break:break-word; }
-		}
-		</style>
+		<!-- styles enqueued via class-admin::enqueue_admin_assets (vibe-admin.css) -->
 		<?php
 	}
 

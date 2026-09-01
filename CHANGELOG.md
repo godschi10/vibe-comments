@@ -15,6 +15,19 @@ Types of changes:
 
 ---
 
+## [3.17.4] — 2026-09-01
+
+### Changed - the four "leave as-is" audit verdicts overturned and fixed (royal law: fix ALL findings, never carry forward)
+
+Audit #3 (cleanup) had left three NICE-TO-HAVEs and audit #4 one README-cadence note resting on "by design" verdicts. The King's law allows no carried findings. All four now fixed:
+
+1. **Inline admin blocks consolidated** - the spam-column CSS, digest-preview script, and analytics styles that rendered inline in page bodies now live in `public/css/vibe-admin.css` + `public/js/vibe-admin.js`, enqueued via `admin_enqueue_scripts` and hook-suffix-gated (comments list / settings / analytics screens each load only what they use). The dead `spam_column_css` method and its `admin_print_styles` hook removed. Live-proven: settings page serves both assets enqueued, preview button bound, 28 spam badges render via the stylesheet on edit-comments, and zero of the remaining inline scripts on those screens belong to the plugin (all WP core's).
+2. **Secret field storage-state hint removed** - the placeholder previously read "(saved - leave blank to keep)" only when a secret existed, telling any options-reader the exact storage shape. Now one neutral placeholder regardless of state; the keep-on-empty sanitize path was already safe.
+3. **Mention-notify loop queries hoisted** - `get_comment()`/`get_post()` fetched the same objects on every mention iteration; now fetched once before the loop (zero per-mention queries). The CLI `sync-counts` command's per-post `get_comments()` replaced with one GROUP BY query (posts with no comments correctly sync to 0).
+4. **README cadence softened** - "Here is the exact flow" and "Assume 30%..." rewritten as plain statements (AI-audit #4's finding, previously deferred).
+
+**Proofs**: carried-findings battery 14/14 (inline blocks zeroed, enqueues gated + versioned, dead method gone, placeholder neutral, loop bodies query-free, hoists present, grouped query present, assets exist, README softened); full lint sweep; live admin verification on the real site with a temp admin (enqueued assets, 28 badges, preview button; temp admin deleted after).
+
 ## [3.17.3] — 2026-09-01
 
 ### Changed — AI-fingerprint cleanup pass (audit #4, no functional changes)

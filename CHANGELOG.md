@@ -15,6 +15,19 @@ Types of changes:
 
 ---
 
+## [3.19.1] — 2026-09-02
+
+### i18n completion — independent-review catch (20 more strings converted)
+
+The v3.19.0 i18n sweep missed strings in non-`textContent = 'String'` patterns. The independent reviewer caught 6; the hardened sweep (which catches ternaries, `showError()` args, `createTextNode`, and `throw new Error`) found 14 more — **20 total additional user-facing strings** now flow through `str()`:
+
+- `Show less` toggle (the reviewer's critical catch), push-blocked notice, react/edit/post failure fallbacks, draft-restored label, all 3 form validations, 2 server-fatal thrown errors, Google not-configured + login-failed, search `aria-label`, guest-form toggle ternary.
+- **Guest-recall `<strong>` regression fixed** — `commentingAs` split so the bold name styling lives in JS (translators never handle HTML), not in the translatable string.
+
+**Process law born from this catch:** the i18n sweep must be a hardened regex over `? | || = ( , 'String'` patterns, NOT just `textContent = 'String'` — the naive first sweep missed every ternary and function-arg string.
+
+**Proofs:** hardened sweep now returns only false positives (key-args inside str(), intentional fallbacks); `node --check` clean; `php -l` clean; .pot regenerated 189→206 msgids.
+
 ## [3.19.0] — 2026-09-02
 
 ### Portability Audit (Audit #5) — all 7 findings fixed

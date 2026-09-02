@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: vibe-comments 3.19.0\n"
-"Report-Msgid-Bugs-To: https://github.com/godschi10/vibe-comments/issues\n"
-"POT-Creation-Date: 2026-09-02 09:59+0000\n"
+"Project-Id-Version: vibe-comments 3.19.1\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-02 11:11+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,13 +18,13 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: vibe-comments.php:276 templates/comments.php:39
+#: vibe-comments.php:276 templates/comments.php:45
 msgid "1 Comment"
 msgstr ""
 
 #. translators: %s = formatted number, e.g. "12 Comments"
 #. translators: %s = formatted number
-#: vibe-comments.php:278 templates/comments.php:43
+#: vibe-comments.php:278 templates/comments.php:49
 #, php-format
 msgid "%s Comments"
 msgstr ""
@@ -37,7 +37,7 @@ msgstr ""
 msgid "Loading..."
 msgstr ""
 
-#: vibe-comments.php:287 templates/comments.php:120
+#: vibe-comments.php:287 templates/comments.php:126
 msgid "Load More Comments"
 msgstr ""
 
@@ -46,184 +46,255 @@ msgid "Read more"
 msgstr ""
 
 #: vibe-comments.php:289
-msgid "Saving..."
+msgid "Show less"
 msgstr ""
 
 #: vibe-comments.php:290
-msgid "Save"
+msgid "Saving..."
 msgstr ""
 
 #: vibe-comments.php:291
-msgid "(edited)"
+msgid "Save"
 msgstr ""
 
 #: vibe-comments.php:292
-msgid "discard"
+msgid "(edited)"
 msgstr ""
 
 #: vibe-comments.php:293
+msgid "discard"
+msgstr ""
+
+#: vibe-comments.php:294
 msgid "Hide Guest Form"
 msgstr ""
 
-#: vibe-comments.php:294 templates/comments.php:159
+#: vibe-comments.php:295 templates/comments.php:165
 msgid "Comment as Guest"
 msgstr ""
 
-#: vibe-comments.php:295
+#: vibe-comments.php:296
 msgid "Hide replies"
 msgstr ""
 
-#: vibe-comments.php:296
+#: vibe-comments.php:297
 msgid "View replies"
 msgstr ""
 
-#: vibe-comments.php:297
+#: vibe-comments.php:298
 msgid "Connecting…"
 msgstr ""
 
-#: vibe-comments.php:298
+#: vibe-comments.php:299
 msgid "Search comments…"
 msgstr ""
 
-#: vibe-comments.php:299
+#: vibe-comments.php:300
 msgid "Type at least 2 characters…"
 msgstr ""
 
-#: vibe-comments.php:300 vibe-comments.php:320
+#: vibe-comments.php:301 vibe-comments.php:338
 msgid "📌 Pinned"
 msgstr ""
 
-#: vibe-comments.php:301
+#: vibe-comments.php:302
 msgid "✓ Accepted"
 msgstr ""
 
-#: vibe-comments.php:302
+#: vibe-comments.php:303
 msgid "Could not load comments."
 msgstr ""
 
-#: vibe-comments.php:303
+#: vibe-comments.php:304
 msgid "Try again"
 msgstr ""
 
-#: vibe-comments.php:304
+#: vibe-comments.php:305
 msgid "No comments yet"
 msgstr ""
 
-#: vibe-comments.php:305
+#: vibe-comments.php:306
 msgid "Be the first to share your thoughts ✨"
 msgstr ""
 
-#: vibe-comments.php:306
+#: vibe-comments.php:307
 msgid "No comments found"
 msgstr ""
 
-#: vibe-comments.php:307
+#: vibe-comments.php:308
 msgid "Try a different search term 🔎"
 msgstr ""
 
-#: vibe-comments.php:308
+#: vibe-comments.php:309
 #, php-format
 msgid "%s found"
 msgstr ""
 
-#: vibe-comments.php:309
+#: vibe-comments.php:310
 msgid " (showing first 50)"
 msgstr ""
 
-#: vibe-comments.php:310
-#, php-format
-msgid "Commenting as %s."
-msgstr ""
-
 #: vibe-comments.php:311
-msgid "Not you?"
+msgid "Commenting as"
 msgstr ""
 
 #: vibe-comments.php:312
-msgid "Reply"
+msgid "Not you?"
 msgstr ""
 
 #: vibe-comments.php:313
+msgid "Your comment didn't post. Check your connection and try again."
+msgstr ""
+
+#: vibe-comments.php:314
+msgid "Thanks! Your comment is pending review."
+msgstr ""
+
+#: vibe-comments.php:315
+msgid "Your comment is live!"
+msgstr ""
+
+#: vibe-comments.php:316
+msgid "Couldn't reach the server for that. Try again in a moment."
+msgstr ""
+
+#: vibe-comments.php:317
+msgid "Search comments"
+msgstr ""
+
+#: vibe-comments.php:318
+msgid "Notifications are blocked for this site in your browser settings."
+msgstr ""
+
+#: vibe-comments.php:319
+msgid "Failed to react."
+msgstr ""
+
+#: vibe-comments.php:320
+msgid "Edit failed."
+msgstr ""
+
+#: vibe-comments.php:321
+msgid "Draft restored — "
+msgstr ""
+
+#: vibe-comments.php:322
+msgid "Please write a comment."
+msgstr ""
+
+#: vibe-comments.php:323
+msgid "Please enter your name and email to comment."
+msgstr ""
+
+#: vibe-comments.php:324 includes/class-ajax-handler.php:1373
+msgid "Please enter a valid email address."
+msgstr ""
+
+#: vibe-comments.php:325
+msgid "A server fatal error occurred. Check error logs or contact support."
+msgstr ""
+
+#: vibe-comments.php:326
+msgid "Server returned an invalid response. Check browser console for details."
+msgstr ""
+
+#: vibe-comments.php:327
+msgid "Failed to post comment."
+msgstr ""
+
+#: vibe-comments.php:328
+msgid "Google authentication is not configured."
+msgstr ""
+
+#: vibe-comments.php:329
+msgid "Failed to initiate Google login."
+msgstr ""
+
+#: vibe-comments.php:330
+msgid "Reply"
+msgstr ""
+
+#: vibe-comments.php:331
 #, php-format
 msgid "View %s reply"
 msgstr ""
 
-#: vibe-comments.php:314
+#: vibe-comments.php:332
 #, php-format
 msgid "View %s replies"
 msgstr ""
 
-#: vibe-comments.php:315
+#: vibe-comments.php:333
 msgid "Pin"
 msgstr ""
 
-#: vibe-comments.php:316
+#: vibe-comments.php:334
 msgid "Unpin"
 msgstr ""
 
-#: vibe-comments.php:317
+#: vibe-comments.php:335
 msgid "Unaccept"
 msgstr ""
 
-#: vibe-comments.php:318
+#: vibe-comments.php:336
 msgid "✓ Accept"
 msgstr ""
 
-#: vibe-comments.php:319
+#: vibe-comments.php:337
 msgid "Author"
 msgstr ""
 
-#: vibe-comments.php:321
+#: vibe-comments.php:339
 msgid ""
 "Reply alerts for this thread (emails and browser notifications) - click to "
 "switch"
 msgstr ""
 
-#: vibe-comments.php:322
+#: vibe-comments.php:340
 msgid "🔔 On"
 msgstr ""
 
-#: vibe-comments.php:323
+#: vibe-comments.php:341
 msgid "🔕 Off"
 msgstr ""
 
-#: vibe-comments.php:324
+#: vibe-comments.php:342
 msgid "This browser does not support notifications."
 msgstr ""
 
-#: vibe-comments.php:325 templates/comments.php:212
+#: vibe-comments.php:343 templates/comments.php:218
 msgid ""
 "You will get a push notification on this device when someone replies to your "
 "comment."
 msgstr ""
 
-#: vibe-comments.php:326
+#: vibe-comments.php:344
 msgid "Could not enable notifications on this device."
 msgstr ""
 
-#: vibe-comments.php:327
+#: vibe-comments.php:345
 #, php-format
 msgid "Thanks %s! Your comment is pending review."
 msgstr ""
 
-#: vibe-comments.php:328
+#: vibe-comments.php:346
 #, php-format
 msgid "Thanks %s! Your comment is now live."
 msgstr ""
 
-#: vibe-comments.php:329
+#: vibe-comments.php:347
 msgid "Like"
 msgstr ""
 
-#: vibe-comments.php:330
+#: vibe-comments.php:348
 msgid "Love"
 msgstr ""
 
-#: vibe-comments.php:331
+#: vibe-comments.php:349
 msgid "Fire"
 msgstr ""
 
-#: vibe-comments.php:332
+#: vibe-comments.php:350
 msgid "Haha"
 msgstr ""
 
@@ -314,10 +385,6 @@ msgstr ""
 
 #: includes/class-ajax-handler.php:1369
 msgid "Name and email are required for guest comments."
-msgstr ""
-
-#: includes/class-ajax-handler.php:1373
-msgid "Please enter a valid email address."
 msgstr ""
 
 #: includes/class-ajax-handler.php:1421
@@ -733,11 +800,11 @@ msgstr ""
 msgid "Back to the site"
 msgstr ""
 
-#: templates/comments.php:61
+#: templates/comments.php:67
 msgid "Load Comments"
 msgstr ""
 
-#: templates/comments.php:80
+#: templates/comments.php:86
 #, php-format
 msgid ""
 "This page has %s comment. Enable JavaScript to view and join the discussion."
@@ -746,77 +813,77 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/comments.php:88
+#: templates/comments.php:94
 msgid "Enable JavaScript to view and join the discussion."
 msgstr ""
 
-#: templates/comments.php:104
+#: templates/comments.php:110
 msgid "Newest first"
 msgstr ""
 
-#: templates/comments.php:133
+#: templates/comments.php:139
 msgid "Log out"
 msgstr ""
 
-#: templates/comments.php:148
+#: templates/comments.php:154
 #, php-format
 msgid "Login to %s"
 msgstr ""
 
-#: templates/comments.php:154
+#: templates/comments.php:160
 msgid "Continue with Google"
 msgstr ""
 
-#: templates/comments.php:157
+#: templates/comments.php:163
 msgid "or"
 msgstr ""
 
-#: templates/comments.php:172
+#: templates/comments.php:178
 msgid "Name"
 msgstr ""
 
-#: templates/comments.php:176
+#: templates/comments.php:182
 msgid "Your name"
 msgstr ""
 
-#: templates/comments.php:180
+#: templates/comments.php:186
 msgid "Email"
 msgstr ""
 
-#: templates/comments.php:184
+#: templates/comments.php:190
 msgid "your@email.com"
 msgstr ""
 
-#: templates/comments.php:191
+#: templates/comments.php:197
 msgid "Your comment"
 msgstr ""
 
-#: templates/comments.php:195
+#: templates/comments.php:201
 msgid "What do you think?"
 msgstr ""
 
-#: templates/comments.php:209
+#: templates/comments.php:215
 msgid "Notify me about replies"
 msgstr ""
 
-#: templates/comments.php:223
+#: templates/comments.php:229
 msgid "Email me about replies"
 msgstr ""
 
-#: templates/comments.php:226
+#: templates/comments.php:232
 msgid ""
 "You will get an email at the address above when someone replies to your "
 "comment."
 msgstr ""
 
-#: templates/comments.php:232
+#: templates/comments.php:238
 msgid "Post Comment"
 msgstr ""
 
-#: templates/comments.php:236
+#: templates/comments.php:242
 msgid "Cancel Reply"
 msgstr ""
 
-#: templates/comments.php:243
+#: templates/comments.php:249
 msgid "Comments are closed."
 msgstr ""

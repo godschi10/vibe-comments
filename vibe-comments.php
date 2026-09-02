@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.19.0
+ * Version:           3.19.1
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.19.0');
+define('VIBE_COMMENTS_VERSION', '3.19.1');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -286,6 +286,7 @@ class Vibe_Comments {
                     'loadingDots'        => __('Loading...', 'vibe-comments'),
                     'loadMore'           => __('Load More Comments', 'vibe-comments'),
                     'readMore'           => __('Read more', 'vibe-comments'),
+                    'showLess'           => __('Show less', 'vibe-comments'),
                     'saving'             => __('Saving...', 'vibe-comments'),
                     'save'               => __('Save', 'vibe-comments'),
                     'edited'             => __('(edited)', 'vibe-comments'),
@@ -307,8 +308,25 @@ class Vibe_Comments {
                     'tryDifferent'       => __('Try a different search term 🔎', 'vibe-comments'),
                     'found'              => __('%s found', 'vibe-comments'),
                     'showingFirst50'     => __(' (showing first 50)', 'vibe-comments'),
-                    'commentingAs'       => __('Commenting as %s.', 'vibe-comments'),
+                    'commentingAs'       => __('Commenting as', 'vibe-comments'),
                     'notYou'             => __('Not you?', 'vibe-comments'),
+                    'editFailed'         => __('Your comment didn\'t post. Check your connection and try again.', 'vibe-comments'),
+                    'thanksNoName'      => __('Thanks! Your comment is pending review.', 'vibe-comments'),
+                    'liveNoName'        => __('Your comment is live!', 'vibe-comments'),
+                    'serverError'       => __('Couldn\'t reach the server for that. Try again in a moment.', 'vibe-comments'),
+                    'searchAria'        => __('Search comments', 'vibe-comments'),
+                    'pushBlocked'       => __('Notifications are blocked for this site in your browser settings.', 'vibe-comments'),
+                    'reactFailed'       => __('Failed to react.', 'vibe-comments'),
+                    'editFailedShort'   => __('Edit failed.', 'vibe-comments'),
+                    'draftRestored'     => __('Draft restored — ', 'vibe-comments'),
+                    'errWriteComment'   => __('Please write a comment.', 'vibe-comments'),
+                    'errNameEmail'      => __('Please enter your name and email to comment.', 'vibe-comments'),
+                    'errValidEmail'     => __('Please enter a valid email address.', 'vibe-comments'),
+                    'serverFatal'       => __('A server fatal error occurred. Check error logs or contact support.', 'vibe-comments'),
+                    'invalidResponse'   => __('Server returned an invalid response. Check browser console for details.', 'vibe-comments'),
+                    'postFailed'        => __('Failed to post comment.', 'vibe-comments'),
+                    'googleNotConfig'   => __('Google authentication is not configured.', 'vibe-comments'),
+                    'googleLoginFailed' => __('Failed to initiate Google login.', 'vibe-comments'),
                     'reply'              => __('Reply', 'vibe-comments'),
                     'viewReplyCount'     => __('View %s reply', 'vibe-comments'),
                     'viewReplyCounts'    => __('View %s replies', 'vibe-comments'),

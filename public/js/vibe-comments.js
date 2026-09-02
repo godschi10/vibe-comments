@@ -243,7 +243,7 @@
                     box.checked = false;
                     if (note) {
                         note.textContent = permission === 'denied'
-                            ? 'Notifications are blocked for this site in your browser settings.'
+                            ? str('pushBlocked', 'Notifications are blocked for this site in your browser settings.')
                             : 'Permission not granted — the checkbox stays off.';
                         note.hidden = false;
                     }
@@ -1102,7 +1102,7 @@
                 toggle.textContent = str('readMore', 'Read more');
                 toggle.addEventListener('click', function() {
                     const collapsed = contentEl.classList.toggle('vibe-content-collapsed');
-                    toggle.textContent = collapsed ? 'Read more' : 'Show less';
+                    toggle.textContent = collapsed ? str('readMore', 'Read more') : str('showLess', 'Show less');
                 });
                 contentEl.insertAdjacentElement('afterend', toggle);
             }
@@ -1164,7 +1164,7 @@
                     if (result.success && result.data) {
                         updateReactionDisplay(commentId, result.data.reactions, result.data.user_reaction);
                     } else {
-                        var msg = (result.data && result.data.message) || 'Failed to react.';
+                        var msg = (result.data && result.data.message) || str('reactFailed', 'Failed to react.');
                         showError(msg);
                         var a = option.closest('article.vibe-comment-body');
                         var p = a && a.querySelector('.vibe-reaction-picker');
@@ -1326,7 +1326,7 @@
 
                         sweepExpiredEditButtons();
                     } else {
-                        var msg = (result.data && result.data.message) || 'Edit failed.';
+                        var msg = (result.data && result.data.message) || str('editFailedShort', 'Edit failed.');
                         showError(msg);
                         saveBtn.disabled = false;
                         saveBtn.textContent = str('save', 'Save');
@@ -1336,7 +1336,7 @@
                 })
                 .catch(function(err) {
                     console.error('Edit failed:', err);
-                    showError('Your comment didn\'t post. Check your connection and try again.');
+                    showError(str('editFailed', 'Your comment didn\'t post. Check your connection and try again.'));
                     saveBtn.disabled = false;
                     saveBtn.textContent = str('save', 'Save');
                 });
@@ -1518,7 +1518,7 @@
         var badge = document.createElement('div');
         badge.className = 'vibe-draft-badge';
 
-        var label = document.createTextNode('Draft restored\u2009\u2014\u2009');
+        var label = document.createTextNode(str('draftRestored', 'Draft restored\u2009\u2014\u2009'));
         var btn   = document.createElement('button');
         btn.type        = 'button';
         btn.className   = 'vibe-draft-clear';
@@ -1578,7 +1578,7 @@
             };
 
             if (!data.content) {
-                showError('Please write a comment.');
+                showError(str('errWriteComment', 'Please write a comment.'));
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.classList.remove('vibe-loading');
@@ -1588,7 +1588,7 @@
 
             if (!config.isLoggedIn) {
                 if (!data.author || !data.email) {
-                    showError('Please enter your name and email to comment.');
+                    showError(str('errNameEmail', 'Please enter your name and email to comment.'));
                     if (submitBtn) {
                         submitBtn.disabled = false;
                         submitBtn.classList.remove('vibe-loading');
@@ -1596,7 +1596,7 @@
                     return;
                 }
                 if (!isValidEmail(data.email)) {
-                    showError('Please enter a valid email address.');
+                    showError(str('errValidEmail', 'Please enter a valid email address.'));
                     if (submitBtn) {
                         submitBtn.disabled = false;
                         submitBtn.classList.remove('vibe-loading');
@@ -1648,9 +1648,9 @@
                         console.error('Server returned non-JSON:', text.substring(0, 500));
                         // Detect WordPress fatal error HTML
                         if (text.indexOf('critical error') !== -1 || text.indexOf('wp-die-message') !== -1) {
-                            throw new Error('A server fatal error occurred. Check error logs or contact support.');
+                            throw new Error(str('serverFatal', 'A server fatal error occurred. Check error logs or contact support.'));
                         }
-                        throw new Error('Server returned an invalid response. Check browser console for details.');
+                        throw new Error(str('invalidResponse', 'Server returned an invalid response. Check browser console for details.'));
                     });
                 }
                 return res.json();
@@ -1691,20 +1691,20 @@
                     if (result.data.awaiting_moderation) {
                         showSuccess(name
                             ? str('thanksPending', 'Thanks %s! Your comment is pending review.').replace('%s', escapeHtml(name))
-                            : 'Thanks! Your comment is pending review.');
+                            : str('thanksNoName', 'Thanks! Your comment is pending review.'));
                     } else {
                         showSuccess(name
                             ? str('thanksLive', 'Thanks %s! Your comment is now live.').replace('%s', escapeHtml(name))
-                            : 'Your comment is live!');
+                            : str('liveNoName', 'Your comment is live!'));
                     }
                 } else {
-                    var msg = (result.data && result.data.message) || result.message || 'Failed to post comment.';
+                    var msg = (result.data && result.data.message) || result.message || str('postFailed', 'Failed to post comment.');
                     showError(msg);
                 }
             })
             .catch(function(err) {
                 console.error('Comment submission failed:', err);
-                showError(err.message || 'Couldn\'t reach the server for that. Try again in a moment.');
+                showError(err.message || str('serverError', 'Couldn\'t reach the server for that. Try again in a moment.'));
             })
             .finally(function() {
                 if (submitBtn) {
@@ -2122,14 +2122,14 @@
                     window.location.href = result.data.auth_url;
                     // No need to re-enable btn - we're navigating away.
                 } else {
-                    showError('Google authentication is not configured.');
+                    showError(str('googleNotConfig', 'Google authentication is not configured.'));
                     btn.disabled    = false;
                     btn.textContent = originalText;
                 }
             })
             .catch(function(err) {
                 console.error('Google auth failed:', err);
-                showError('Failed to initiate Google login.');
+                showError(str('googleLoginFailed', 'Failed to initiate Google login.'));
                 btn.disabled    = false;
                 btn.textContent = originalText;
             });
@@ -2239,7 +2239,7 @@
         var notice = document.createElement('p');
         notice.id        = 'vibe-guest-recall';
         notice.className = 'vibe-guest-recall';
-        notice.innerHTML = str('commentingAs', 'Commenting as <strong>%s</strong>.').replace('%s', escapeHtml(name)) + ' <button type="button" class="vibe-recall-clear">' + str('notYou', 'Not you?') + '</button>';
+        notice.innerHTML = str('commentingAs', 'Commenting as') + ' <strong>' + escapeHtml(name) + '</strong>. <button type="button" class="vibe-recall-clear">' + str('notYou', 'Not you?') + '</button>';
 
         notice.querySelector('.vibe-recall-clear').addEventListener('click', function() {
             try {
@@ -2273,7 +2273,7 @@
         toggle.addEventListener('click', function() {
             const isHidden = fields.style.display === 'none' || !fields.style.display;
             fields.style.display = isHidden ? 'grid' : 'none';
-            this.textContent = isHidden ? 'Hide Guest Form' : 'Comment as Guest';
+            this.textContent = isHidden ? str('hideGuestForm', 'Hide Guest Form') : str('commentAsGuest', 'Comment as Guest');
         });
     }
 
@@ -2431,7 +2431,7 @@
         input.type = 'search';
         input.className   = 'vibe-search-input';
         input.placeholder = str('searchComments', 'Search comments\u2026');
-        input.setAttribute('aria-label', 'Search comments');
+        input.setAttribute('aria-label', str('searchAria', 'Search comments'));
 
         const status = document.createElement('span');
         status.className = 'vibe-search-status';

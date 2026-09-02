@@ -165,7 +165,8 @@ class Vibe_Comments_OAuth_Google {
 
         $settings      = get_option( $this->option_name, array() );
         $client_id     = $settings['client_id']     ?? '';
-        $client_secret = $settings['client_secret'] ?? '';
+        // v3.18.2: unseal on read (accepts sealed + legacy plaintext).
+        $client_secret = Vibe_Comments_Secret::unseal( $settings['client_secret'] ?? '' );
 
         if ( empty( $client_id ) || empty( $client_secret ) ) {
             $this->oauth_error( $return_url, __('Google Sign-In is not configured. Please contact the site administrator.', 'vibe-comments') );

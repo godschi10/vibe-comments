@@ -134,7 +134,11 @@ class Vibe_Comments_Admin {
             if ( '' === trim( $input['client_secret'] ) ) {
                 $clean['client_secret'] = $existing['client_secret'] ?? '';
             } else {
-                $clean['client_secret'] = sanitize_text_field( $input['client_secret'] );
+                // v3.18.2: sealed at rest (sodium secretbox, AUTH_KEY-derived
+                // key). The value in wp_options never carries the plaintext.
+                $clean['client_secret'] = Vibe_Comments_Secret::seal(
+                    sanitize_text_field( $input['client_secret'] )
+                );
             }
         }
 

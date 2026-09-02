@@ -15,6 +15,20 @@ Types of changes:
 
 ---
 
+## [3.18.2] — 2026-09-01
+
+### Fixed - the last carried audit verdict overturned: Google client_secret now sealed at rest
+
+Audit #3's N2 finding ("client_secret stored as plain wp_option") had been left with "none recommended at plugin level" - a deferral the royal fix-all law forbids. Resolved properly:
+
+- **New class** `includes/class-secret.php` - sodium secretbox (XSalsa20-Poly1305 authenticated encryption) with the key derived from AUTH_KEY + a fixed label via sodium generichash (never stored; rotating AUTH_KEY rotates the key - a sealed secret then honestly fails to unseal and the admin re-enters it). Ciphertext format `enc1:base64(nonce||ct||tag)`; the prefix makes migration trivial: legacy plaintext values pass through unseal() unchanged and get resealed on next save. Sodium-less hosts degrade to plaintext passthrough - the plugin never breaks over a crypto shim.
+- **Wire-up**: seal-on-save in the settings sanitize path, unseal-on-read in the OAuth token exchange.
+- **Live catch during the build**: `hash('blake2b', ...)` is not in PHP's hash() registry on this build (throws "must be a valid hashing algorithm") - key derivation switched to `sodium_crypto_generichash` (ships with the same extension secretbox needs).
+
+The second carried item (the honeypot's `!important` block) is reclassified as **fixed-by-architecture**: the `.vibe-hp-field` utility is bot protection whose entire function is being un-overridable by theme CSS - accidental un-hiding would expose the honeypot to bots. The `!important`s are load-bearing, documented in the CSS header ("Do not remove: this is bot protection").
+
+**Proofs**: secret-at-rest battery 5/5 (sealed output is enc1:-prefixed ciphertext without plaintext, round-trip exact, tampered ciphertext fails authentication to empty string, legacy plaintext passes through, empty stays empty). Live: a secret saved through the REAL sanitize path stored as `enc1:` ciphertext (plaintext leak: false, verified in the raw option), read back exactly through unseal(); test settings removed after.
+
 ## [3.18.1] — 2026-09-01
 
 ### Fixed - push subscribers had no off-switch (King-reported: "can't find the cancel bell for push notifications")

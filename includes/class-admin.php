@@ -42,6 +42,10 @@ class Vibe_Comments_Admin {
             wp_enqueue_style( 'vibe-admin', $base . 'css/vibe-admin.css', array(), VIBE_COMMENTS_VERSION );
             wp_enqueue_script( 'vibe-admin', $base . 'js/vibe-admin.js', array(), VIBE_COMMENTS_VERSION, true );
             wp_localize_script( 'vibe-admin', 'vibeAdmin', array(
+                'i18n' => array(
+                    'building'      => __( 'Building…', 'vibe-comments' ),
+                    'previewFailed' => __( 'Preview failed.', 'vibe-comments' ),
+                ),
                 'ajaxUrl' => admin_url( 'admin-ajax.php' ),
                 'nonce'   => wp_create_nonce( 'wp_rest' ),
             ) );

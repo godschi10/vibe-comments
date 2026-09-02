@@ -2,13 +2,19 @@
    The digest-preview handler, moved out of the inline <script> block that
    previously rendered inside the settings page body. */
 document.addEventListener('DOMContentLoaded', function () {
+function adminStr(key, fallback) {
+    var i18n = (window.vibeAdmin && vibeAdmin.i18n) ? vibeAdmin.i18n : {};
+    return (typeof i18n[key] === 'string' && i18n[key] !== '') ? i18n[key] : (fallback || '');
+}
+
+
     var btn = document.getElementById('vibe-digest-preview-btn');
     if (!btn) return;
 
     btn.addEventListener('click', function () {
         var status = document.getElementById('vibe-digest-preview-status');
         btn.disabled = true;
-        status.textContent = 'Building\u2026';
+        status.textContent = adminStr('building', 'Building\u2026');
 
         // Localized config wins; data-attributes remain as the fallback for
         // cached admin markup.
@@ -28,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(function (res) {
             btn.disabled = false;
             if (!res || !res.success) {
-                status.textContent = (res && res.data && res.data.message) ? res.data.message : 'Preview failed.';
+                status.textContent = (res && res.data && res.data.message) ? res.data.message : adminStr('previewFailed', 'Preview failed.');
                 return;
             }
             status.textContent = '';
@@ -38,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(function (err) {
             btn.disabled = false;
-            status.textContent = 'Preview failed: ' + err;
+            status.textContent = adminStr('previewFailed', 'Preview failed: ') + err;
         });
     });
 });

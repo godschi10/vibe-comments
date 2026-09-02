@@ -41,6 +41,15 @@ class Vibe_Comments_Template_Loader {
         if ( ! self::should_render() ) {
             return $template;
         }
+        // v3.19.0 (Portability N6): a theme may ship its own
+        // templates/comments.php to override the plugin's UI wholesale -
+        // check the active theme's directory first, then fall back to the
+        // plugin's own template. (Child themes get this for free since
+        // get_stylesheet_directory() returns the child's dir.)
+        $theme_template = get_stylesheet_directory() . '/templates/comments.php';
+        if ( file_exists( $theme_template ) ) {
+            return $theme_template;
+        }
         $plugin_template = VIBE_COMMENTS_PLUGIN_DIR . 'templates/comments.php';
         return file_exists( $plugin_template ) ? $plugin_template : $template;
     }

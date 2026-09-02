@@ -26,6 +26,12 @@ if (!comments_open() && !have_comments()) {
 //
 // On first render (option not yet seeded), fall back to get_comments_number()
 // and seed the option so future renders are free.
+//
+// Portability note (v3.19.0, audit N4): this is a SINGLE bounded write — one
+// tiny per-post option, autoload=false, seeded once per post then read-only.
+// Not the "option updates inside loops / unbounded transients" anti-pattern;
+// bounded by post count, cleaned by uninstall.php's LIKE sweep, travels fine
+// through a DB migration (no domain data in the value).
 $vibe_count = get_option('vibe_comment_count_' . get_the_ID());
 if (false === $vibe_count) {
     $vibe_count = (int) get_comments_number();

@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.18.2
+ * Version:           3.19.0
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.18.2');
+define('VIBE_COMMENTS_VERSION', '3.19.0');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -276,11 +276,61 @@ class Vibe_Comments {
                 'oneCommentText'      => esc_html__('1 Comment', 'vibe-comments'),
                 /* translators: %s = formatted number, e.g. "12 Comments" */
                 'manyCommentsTemplate' => esc_html__('%s Comments', 'vibe-comments'),
-                // Lets JS-side silent .catch() blocks (e.g. fetchCommentCount())
-                // optionally console.warn for a developer who deliberately
-                // turned on VIBE_COMMENTS_DEBUG_TOOLS, without ever logging
-                // anything to a real visitor's browser console by default.
                 'debug'                 => defined('VIBE_COMMENTS_DEBUG_TOOLS') && VIBE_COMMENTS_DEBUG_TOOLS,
+                // v3.19.0: ALL client-facing strings flow through here so a
+                // translated install gets a translated UI. Source-language
+                // English is the default inside __() itself - no translation
+                // file needed to render, only to localize. str('key') in JS.
+                'i18n'                  => array(
+                    'loading'            => __('Loading…', 'vibe-comments'),
+                    'loadingDots'        => __('Loading...', 'vibe-comments'),
+                    'loadMore'           => __('Load More Comments', 'vibe-comments'),
+                    'readMore'           => __('Read more', 'vibe-comments'),
+                    'saving'             => __('Saving...', 'vibe-comments'),
+                    'save'               => __('Save', 'vibe-comments'),
+                    'edited'             => __('(edited)', 'vibe-comments'),
+                    'discard'            => __('discard', 'vibe-comments'),
+                    'hideGuestForm'      => __('Hide Guest Form', 'vibe-comments'),
+                    'commentAsGuest'     => __('Comment as Guest', 'vibe-comments'),
+                    'hideReplies'        => __('Hide replies', 'vibe-comments'),
+                    'viewReplies'        => __('View replies', 'vibe-comments'),
+                    'connecting'         => __('Connecting…', 'vibe-comments'),
+                    'searchComments'     => __('Search comments…', 'vibe-comments'),
+                    'typeAtLeast2'       => __('Type at least 2 characters…', 'vibe-comments'),
+                    'pinned'             => __('📌 Pinned', 'vibe-comments'),
+                    'accepted'           => __('✓ Accepted', 'vibe-comments'),
+                    'couldNotLoad'       => __('Could not load comments.', 'vibe-comments'),
+                    'tryAgain'           => __('Try again', 'vibe-comments'),
+                    'noCommentsYet'      => __('No comments yet', 'vibe-comments'),
+                    'beFirst'            => __('Be the first to share your thoughts ✨', 'vibe-comments'),
+                    'noCommentsFound'    => __('No comments found', 'vibe-comments'),
+                    'tryDifferent'       => __('Try a different search term 🔎', 'vibe-comments'),
+                    'found'              => __('%s found', 'vibe-comments'),
+                    'showingFirst50'     => __(' (showing first 50)', 'vibe-comments'),
+                    'commentingAs'       => __('Commenting as %s.', 'vibe-comments'),
+                    'notYou'             => __('Not you?', 'vibe-comments'),
+                    'reply'              => __('Reply', 'vibe-comments'),
+                    'viewReplyCount'     => __('View %s reply', 'vibe-comments'),
+                    'viewReplyCounts'    => __('View %s replies', 'vibe-comments'),
+                    'pin'                => __('Pin', 'vibe-comments'),
+                    'unpin'              => __('Unpin', 'vibe-comments'),
+                    'unaccept'           => __('Unaccept', 'vibe-comments'),
+                    'accept'             => __('✓ Accept', 'vibe-comments'),
+                    'author'             => __('Author', 'vibe-comments'),
+                    'pinnedBadge'        => __('📌 Pinned', 'vibe-comments'),
+                    'notifyTitle'        => __('Reply alerts for this thread (emails and browser notifications) - click to switch', 'vibe-comments'),
+                    'bellOn'             => __('🔔 On', 'vibe-comments'),
+                    'bellOff'            => __('🔕 Off', 'vibe-comments'),
+                    'noPushSupport'      => __('This browser does not support notifications.', 'vibe-comments'),
+                    'pushWillNotify'     => __('You will get a push notification on this device when someone replies to your comment.', 'vibe-comments'),
+                    'pushEnableFail'     => __('Could not enable notifications on this device.', 'vibe-comments'),
+                    'thanksPending'      => __('Thanks %s! Your comment is pending review.', 'vibe-comments'),
+                    'thanksLive'         => __('Thanks %s! Your comment is now live.', 'vibe-comments'),
+                    'reactLike'          => __('Like', 'vibe-comments'),
+                    'reactLove'          => __('Love', 'vibe-comments'),
+                    'reactFire'          => __('Fire', 'vibe-comments'),
+                    'reactHaha'          => __('Haha', 'vibe-comments'),
+                ),
             ));
         }
     }

@@ -7,16 +7,22 @@
     'use strict';
 
     const config = window.vibeComments || {};
+    function str(key, fallback) {
+        var i18n = config && config.i18n ? config.i18n : {};
+        return (typeof i18n[key] === 'string' && i18n[key] !== '') ? i18n[key] : (fallback || '');
+    }
+
+
 
     /**
      * The four supported reactions, in display order.
      * These must match the PHP whitelist (Vibe_Comments_Database::REACTION_TYPES).
      */
     const REACTION_DEFS = [
-        { type: 'like',  emoji: '👍', label: 'Like'  },
-        { type: 'heart', emoji: '❤️', label: 'Love'  },
-        { type: 'fire',  emoji: '🔥', label: 'Fire'  },
-        { type: 'laugh', emoji: '😂', label: 'Haha'  },
+        { type: 'like',  emoji: '👍', label: str('reactLike', 'Like')  },
+        { type: 'heart', emoji: '❤️', label: str('reactLove', 'Love')  },
+        { type: 'fire',  emoji: '🔥', label: str('reactFire', 'Fire')  },
+        { type: 'laugh', emoji: '😂', label: str('reactHaha', 'Haha')  },
     ];
 
     /**
@@ -227,7 +233,7 @@
             if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
                 box.checked = false;
                 if (note) {
-                    note.textContent = 'This browser does not support notifications.';
+                    note.textContent = str('noPushSupport', 'This browser does not support notifications.');
                     note.hidden = false;
                 }
                 return;
@@ -257,14 +263,14 @@
                 }).then(function(sub) {
                     replyPushSub = sub;
                     if (note) {
-                        note.textContent = 'You will get a push notification on this device when someone replies to your comment.';
+                        note.textContent = str('pushWillNotify', 'You will get a push notification on this device when someone replies to your comment.');
                         note.hidden = false;
                     }
                 }).catch(function() {
                     box.checked = false;
                     replyPushSub = null;
                     if (note) {
-                        note.textContent = 'Could not enable notifications on this device.';
+                        note.textContent = str('pushEnableFail', 'Could not enable notifications on this device.');
                         note.hidden = false;
                     }
                 });
@@ -905,7 +911,7 @@
     function loadMoreComments() {
         isLoadingMore = true;
         var btn = document.getElementById('vibe-load-more');
-        if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
+        if (btn) { btn.disabled = true; btn.textContent = str('loadingDots', 'Loading...'); }
 
         var nextPage = currentPage + 1;
 
@@ -956,7 +962,7 @@
         })
         .finally(function() {
             isLoadingMore = false;
-            if (btn) { btn.disabled = false; btn.textContent = 'Load More Comments'; }
+            if (btn) { btn.disabled = false; btn.textContent = str('loadMore', 'Load More Comments'); }
         });
     }
 
@@ -994,7 +1000,7 @@
         if (comment.is_qa) li.setAttribute('data-accepted', comment.is_accepted ? '1' : '0');
 
         const rxBar     = buildReactionBar(cid, comment.reactions, comment.user_reaction || null);
-        const replyHtml = '<button type="button" class="comment-reply-link vibe-reply-trigger" data-comment-id="' + cid + '">Reply</button>';
+        const replyHtml = '<button type="button" class="comment-reply-link vibe-reply-trigger" data-comment-id="' + cid + '">'+str('reply', 'Reply')+'</button>';
 
         // v3.4.0: top-level comments arrive with children always empty and a
         // reply_count instead - replies are fetched on demand when this is
@@ -1006,12 +1012,12 @@
         const alreadyExpanded = comment.children && comment.children.length > 0;
         const viewRepliesHtml = (hasReplyCount && !alreadyExpanded)
             ? '<button type="button" class="vibe-view-replies-btn" data-comment-id="' + cid + '" data-post-id="' + (config.postId || '') + '" data-state="collapsed">'
-                + 'View ' + comment.reply_count + (comment.reply_count === 1 ? ' reply' : ' replies')
+                + str(comment.reply_count === 1 ? 'viewReplyCount' : 'viewReplyCounts', 'View %s').replace('%s', comment.reply_count)
               + '</button>'
             : '';
 
         const pinHtml = config.isAdmin
-            ? '<button type="button" class="vibe-pin-btn" data-comment-id="' + cid + '" data-pinned="' + (comment.is_pinned ? '1' : '0') + '">' + (comment.is_pinned ? 'Unpin' : 'Pin') + '</button>'
+            ? '<button type="button" class="vibe-pin-btn" data-comment-id="' + cid + '" data-pinned="' + (comment.is_pinned ? '1' : '0') + '">' + (comment.is_pinned ? str('unpin', 'Unpin') : str('pin', 'Pin')) + '</button>'
             : '';
 
         // v3.15.0 Q&A - Accept button, rendered only for the post author /
@@ -1022,11 +1028,11 @@
         const qaOn      = !!(config.qa && config.qa.mode);
         const canAccept = qaOn && !!(config.qa && config.qa.canAccept);
         const acceptHtml = (canAccept && comment.parent === 0)
-            ? '<button type="button" class="vibe-accept-btn" data-comment-id="' + cid + '" data-accepted="' + (comment.is_accepted ? '1' : '0') + '">' + (comment.is_accepted ? 'Unaccept' : '✓ Accept') + '</button>'
+            ? '<button type="button" class="vibe-accept-btn" data-comment-id="' + cid + '" data-accepted="' + (comment.is_accepted ? '1' : '0') + '">' + (comment.is_accepted ? str('unaccept', 'Unaccept') : str('accept', '✓ Accept')) + '</button>'
             : '';
 
-        const authorBadge = comment.is_author ? ' <span class="vibe-author-badge">Author</span>'            : '';
-        const pinnedBadge = comment.is_pinned ? '<span class="vibe-pinned-badge">&#128204; Pinned</span>' : '';
+        const authorBadge = comment.is_author ? ' <span class="vibe-author-badge">' + str('author', 'Author') + '</span>'            : '';
+        const pinnedBadge = comment.is_pinned ? '<span class="vibe-pinned-badge">' + str('pinnedBadge', '\uD83D\uDCCC Pinned') + '</span>' : '';
         // v3.15.0 Q&A - the green accepted-answer checkmark. Renders on the
         // comment that IS the accepted answer (is_accepted is a universal
         // truth from the payload; hoisting already puts it first).
@@ -1048,8 +1054,8 @@
         // v3.18.0 consent law - the Notify toggle: the comment's author can
         // flip reply-email consent anytime, no window. Strangers never see it.
         const notifyBtnHtml = comment.owns
-            ? '<button type="button" class="vibe-notify-btn" data-comment-id="' + cid + '" data-on="' + (comment.notify_on ? '1' : '0') + '" title="Reply alerts for this thread (emails and browser notifications) - click to switch">'
-                + (comment.notify_on ? '🔔 On' : '🔕 Off')
+            ? '<button type="button" class="vibe-notify-btn" data-comment-id="' + cid + '" data-on="' + (comment.notify_on ? '1' : '0') + '" title="' + str('notifyTitle', 'Reply alerts for this thread (emails and browser notifications) - click to switch') + '">'
+                + (comment.notify_on ? str('bellOn', '\uD83D\uDD14 On') : str('bellOff', '\uD83D\uDD15 Off'))
               + '</button>'
             : '';
 
@@ -1093,7 +1099,7 @@
                 const toggle = document.createElement('button');
                 toggle.type = 'button';
                 toggle.className = 'vibe-read-more';
-                toggle.textContent = 'Read more';
+                toggle.textContent = str('readMore', 'Read more');
                 toggle.addEventListener('click', function() {
                     const collapsed = contentEl.classList.toggle('vibe-content-collapsed');
                     toggle.textContent = collapsed ? 'Read more' : 'Show less';
@@ -1281,7 +1287,7 @@
 
                 var saveBtn = box.querySelector('.vibe-edit-save');
                 saveBtn.disabled = true;
-                saveBtn.textContent = 'Saving...';
+                saveBtn.textContent = str('saving', 'Saving...');
 
                 var params = new URLSearchParams({
                     action: 'vibe_edit_comment',
@@ -1314,7 +1320,7 @@
                         if (meta && !meta.querySelector('.vibe-edited-badge')) {
                             var span = document.createElement('span');
                             span.className = 'vibe-edited-badge';
-                            span.textContent = '(edited)';
+                            span.textContent = str('edited', '(edited)');
                             meta.appendChild(span);
                         }
 
@@ -1323,7 +1329,7 @@
                         var msg = (result.data && result.data.message) || 'Edit failed.';
                         showError(msg);
                         saveBtn.disabled = false;
-                        saveBtn.textContent = 'Save';
+                        saveBtn.textContent = str('save', 'Save');
                         // Window may have just closed server-side - sweep.
                         sweepExpiredEditButtons();
                     }
@@ -1332,7 +1338,7 @@
                     console.error('Edit failed:', err);
                     showError('Your comment didn\'t post. Check your connection and try again.');
                     saveBtn.disabled = false;
-                    saveBtn.textContent = 'Save';
+                    saveBtn.textContent = str('save', 'Save');
                 });
             }
         });
@@ -1393,7 +1399,7 @@
 
         if (!config.isLoggedIn && guestFields) {
             guestFields.style.display = 'grid';
-            if (guestToggle) guestToggle.textContent = 'Hide Guest Form';
+            if (guestToggle) guestToggle.textContent = str('hideGuestForm', 'Hide Guest Form');
         }
 
         let replyContainer = targetComment.querySelector('.vibe-reply-container');
@@ -1430,7 +1436,7 @@
 
         if (guestFields && !config.isLoggedIn) {
             guestFields.style.display = 'none';
-            if (guestToggle) guestToggle.textContent = 'Comment as Guest';
+            if (guestToggle) guestToggle.textContent = str('commentAsGuest', 'Comment as Guest');
         }
 
         if (originalFormParent) {
@@ -1516,7 +1522,7 @@
         var btn   = document.createElement('button');
         btn.type        = 'button';
         btn.className   = 'vibe-draft-clear';
-        btn.textContent = 'discard';
+        btn.textContent = str('discard', 'discard');
 
         btn.addEventListener('click', function () {
             try { localStorage.removeItem(draftKey); } catch (e) {}
@@ -1684,11 +1690,11 @@
                     var name = data.author || (config.isLoggedIn ? '' : '');
                     if (result.data.awaiting_moderation) {
                         showSuccess(name
-                            ? 'Thanks ' + escapeHtml(name) + '! Your comment is pending review.'
+                            ? str('thanksPending', 'Thanks %s! Your comment is pending review.').replace('%s', escapeHtml(name))
                             : 'Thanks! Your comment is pending review.');
                     } else {
                         showSuccess(name
-                            ? 'Thanks ' + escapeHtml(name) + '! Your comment is now live.'
+                            ? str('thanksLive', 'Thanks %s! Your comment is now live.').replace('%s', escapeHtml(name))
                             : 'Your comment is live!');
                     }
                 } else {
@@ -1769,7 +1775,7 @@
         // Update or remove the View/Hide Replies button to match new reality.
         const viewBtn = parentLi.querySelector(':scope > article .vibe-view-replies-btn');
         if (viewBtn) {
-            viewBtn.textContent = 'Hide replies';
+            viewBtn.textContent = str('hideReplies', 'Hide replies');
         }
 
         if (scroll) li.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1838,7 +1844,7 @@
         // checking a flag on every subsequent click forever.
         btn.addEventListener('click', function() {
             btn.disabled    = true;
-            btn.textContent = 'Loading\u2026';
+            btn.textContent = str('loading', 'Loading\u2026');
 
             initComments(function onLoaded() {
                 if (triggerWrap) triggerWrap.style.display = 'none';
@@ -1890,7 +1896,7 @@
                 // behind it, for ANY reason this could return success:false
                 // - not just the specific post-visibility cause that first
                 // exposed this.
-                list.innerHTML = '<li class="vibe-error">Could not load comments. <button type="button" class="vibe-retry-btn">Try again</button></li>';
+                list.innerHTML = '<li class="vibe-error">' + str('couldNotLoad', 'Could not load comments.') + ' <button type="button" class="vibe-retry-btn">' + str('tryAgain', 'Try again') + '</button></li>';
                 if (typeof onComplete === 'function') onComplete();
                 return;
             }
@@ -1918,8 +1924,8 @@
             if (comments.length === 0) {
                 list.innerHTML =
                     '<li class="vibe-empty-state">' +
-                        '<p class="vibe-empty-title">No comments yet</p>' +
-                        '<p class="vibe-empty-sub">Be the first to share your thoughts \u2728</p>' +
+                        '<p class="vibe-empty-title">' + str('noCommentsYet', 'No comments yet') + '</p>' +
+                        '<p class="vibe-empty-sub">' + str('beFirst', 'Be the first to share your thoughts \u2728') + '</p>' +
                     '</li>';
             } else {
                 var fragment = document.createDocumentFragment();
@@ -1961,7 +1967,7 @@
         .catch(function(err) {
             console.error('Failed to load comments:', err);
             if (list) {
-                list.innerHTML = '<li class="vibe-error">Could not load comments. <button type="button" class="vibe-retry-btn">Try again</button></li>';
+                list.innerHTML = '<li class="vibe-error">' + str('couldNotLoad', 'Could not load comments.') + ' <button type="button" class="vibe-retry-btn">' + str('tryAgain', 'Try again') + '</button></li>';
             }
             if (typeof onComplete === 'function') onComplete();
         });
@@ -2013,7 +2019,7 @@
             if (existingUl) {
                 var willShow = existingUl.style.display === 'none';
                 existingUl.style.display = willShow ? '' : 'none';
-                btn.textContent = willShow ? 'Hide replies' : (btn.dataset.collapsedLabel || 'View replies');
+                btn.textContent = willShow ? str('hideReplies', 'Hide replies') : (btn.dataset.collapsedLabel || str('viewReplies', 'View replies'));
                 return;
             }
 
@@ -2021,7 +2027,7 @@
             var postId    = btn.dataset.postId || config.postId;
             btn.dataset.collapsedLabel = btn.textContent; // remember "View N replies" for later
             btn.disabled    = true;
-            btn.textContent = 'Loading\u2026';
+            btn.textContent = str('loading', 'Loading\u2026');
 
             var url = config.ajaxUrl + '?action=vibe_load_replies&post_id=' + postId + '&comment_id=' + commentId;
             if (!config.isLoggedIn) { url += '&vibe_guest_id=' + encodeURIComponent(getGuestId()); }
@@ -2031,7 +2037,7 @@
             .then(function(result) {
                 btn.disabled = false;
                 if (!result.success || !result.data || !Array.isArray(result.data.replies) || result.data.replies.length === 0) {
-                    btn.textContent = btn.dataset.collapsedLabel || 'View replies';
+                    btn.textContent = btn.dataset.collapsedLabel || str('viewReplies', 'View replies');
                     return;
                 }
 
@@ -2043,12 +2049,12 @@
                 });
                 li.appendChild(childUl);
 
-                btn.textContent = 'Hide replies';
+                btn.textContent = str('hideReplies', 'Hide replies');
             })
             .catch(function(err) {
                 console.error('Failed to load replies:', err);
                 btn.disabled    = false;
-                btn.textContent = btn.dataset.collapsedLabel || 'View replies';
+                btn.textContent = btn.dataset.collapsedLabel || str('viewReplies', 'View replies');
             });
         });
     }
@@ -2097,7 +2103,7 @@
         btn.addEventListener('click', function() {
             btn.disabled    = true;
             var originalText = btn.textContent;
-            btn.textContent = 'Connecting\u2026';
+            btn.textContent = str('connecting', 'Connecting\u2026');
 
             fetchWithTimeout(config.ajaxUrl, {
                 method: 'POST',
@@ -2233,8 +2239,7 @@
         var notice = document.createElement('p');
         notice.id        = 'vibe-guest-recall';
         notice.className = 'vibe-guest-recall';
-        notice.innerHTML = 'Commenting as <strong>' + escapeHtml(name) + '</strong>. ' +
-                           '<button type="button" class="vibe-recall-clear">Not you?</button>';
+        notice.innerHTML = str('commentingAs', 'Commenting as <strong>%s</strong>.').replace('%s', escapeHtml(name)) + ' <button type="button" class="vibe-recall-clear">' + str('notYou', 'Not you?') + '</button>';
 
         notice.querySelector('.vibe-recall-clear').addEventListener('click', function() {
             try {
@@ -2425,7 +2430,7 @@
         const input  = document.createElement('input');
         input.type = 'search';
         input.className   = 'vibe-search-input';
-        input.placeholder = 'Search comments\u2026';
+        input.placeholder = str('searchComments', 'Search comments\u2026');
         input.setAttribute('aria-label', 'Search comments');
 
         const status = document.createElement('span');
@@ -2490,13 +2495,13 @@
             if (results.length === 0) {
                 list.innerHTML =
                     '<li class="vibe-empty-state">' +
-                        '<p class="vibe-empty-title">No comments found</p>' +
-                        '<p class="vibe-empty-sub">Try a different search term \uD83D\uDD0E</p>' +
+                        '<p class="vibe-empty-title">' + str('noCommentsFound', 'No comments found') + '</p>' +
+                        '<p class="vibe-empty-sub">' + str('tryDifferent', 'Try a different search term \uD83D\uDD0E') + '</p>' +
                     '</li>';
             } else {
                 list.appendChild(fragment);
             }
-            status.textContent = total + ' found' + (truncated ? ' (showing first 50)' : '');
+            status.textContent = str('found', '%s found').replace('%s', total) + (truncated ? str('showingFirst50', ' (showing first 50)') : '');
         }
 
         function runServerSearch(q) {
@@ -2544,7 +2549,7 @@
                 return;
             }
             if (q.length < 2) {
-                status.textContent = 'Type at least 2 characters\u2026';
+                status.textContent = str('typeAtLeast2', 'Type at least 2 characters\u2026');
                 return;
             }
             searchTimer = setTimeout(function() { runServerSearch(q); }, 300);
@@ -2628,7 +2633,7 @@
                 if (!res.success) return;
                 var nowPinned = res.data.pinned;
                 btn.dataset.pinned = nowPinned ? '1' : '0';
-                btn.textContent    = nowPinned ? 'Unpin' : 'Pin';
+                btn.textContent    = nowPinned ? str('unpin', 'Unpin') : str('pin', 'Pin');
 
                 var li = btn.closest('li.comment');
                 if (!li) return;
@@ -2639,7 +2644,7 @@
                 if (nowPinned && !badge && meta) {
                     var b = document.createElement('span');
                     b.className   = 'vibe-pinned-badge';
-                    b.textContent = '\uD83D\uDCCC Pinned';
+                    b.textContent = str('pinned', '\uD83D\uDCCC Pinned');
                     meta.prepend(b);
                 } else if (!nowPinned && badge) {
                     badge.remove();
@@ -2754,7 +2759,7 @@
                     list.querySelectorAll('.vibe-accept-btn').forEach(function(b) {
                         var isAcc = parseInt(b.dataset.commentId, 10) === acceptedId;
                         b.dataset.accepted = isAcc ? '1' : '0';
-                        b.textContent = isAcc ? 'Unaccept' : '✓ Accept';
+                        b.textContent = isAcc ? str('unaccept', 'Unaccept') : str('accept', '✓ Accept');
                     });
                     // The li-level data-accepted mirrors the button's - it
                     // drives the green left-border rail via CSS.
@@ -2769,7 +2774,7 @@
                         if (win) {
                             var badge = document.createElement('span');
                             badge.className   = 'vibe-accepted-badge';
-                            badge.textContent = '✓ Accepted';
+                            badge.textContent = str('accepted', '\u2713 Accepted');
                             win.prepend(badge);
                         }
                         // Hoist the accepted answer to position 1.

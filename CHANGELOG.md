@@ -15,6 +15,24 @@ Types of changes:
 
 ---
 
+## [3.19.0] — 2026-09-02
+
+### Portability Audit (Audit #5) — all 7 findings fixed
+
+The plugin's codebase is now fully translatable, migration-documented, and extensibility-checked.
+
+**SHOULD-FIX: JS layer is now fully translatable via `str()`/`adminStr()` + PHP-localized `i18n` dict**
+- Public JS: 30+ user-facing strings converted from hardcoded English literals to `str('key', 'English fallback')` calls, reading from `vibeComments.i18n` (populated by `wp_localize_script` with `__()` wrappers, so `.mo` translations override the English source).
+- Admin JS: `adminStr()` helper + `vibeAdmin.i18n` dict, same pattern.
+- `.pot` template generated (189 strings) at `languages/vibe-comments.pot`.
+
+**NICE-TO-HAVE: Migration safety**
+- New README **Migrating to a New Server or Domain** section — covers push subscription staleness, Cloudflare token re-entry, and Google OAuth re-entry (with the AUTH_KEY rotation gotcha).
+- Theme-dir template override: `load_template()` now checks `get_stylesheet_directory() . '/templates/comments.php'` first, so a theme can ship its own template without hacking the plugin.
+- Count-option seed write: documented as bounded-by-design (one per post, autoload=false, cleaned by uninstall).
+
+**Proofs:** JS `node --check` (both files), `php -l` (all 4 changed files), .pot with 189 translatable strings, README migration section, theme-dir check in template-loader.
+
 ## [3.18.2] — 2026-09-01
 
 ### Fixed - the last carried audit verdict overturned: Google client_secret now sealed at rest

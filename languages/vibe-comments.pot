@@ -1,0 +1,822 @@
+# Vibe Comments - Translation Template
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# G-Will <godschi10@gmail.com>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: vibe-comments 3.19.0\n"
+"Report-Msgid-Bugs-To: https://github.com/godschi10/vibe-comments/issues\n"
+"POT-Creation-Date: 2026-09-02 09:59+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: vibe-comments.php:276 templates/comments.php:39
+msgid "1 Comment"
+msgstr ""
+
+#. translators: %s = formatted number, e.g. "12 Comments"
+#. translators: %s = formatted number
+#: vibe-comments.php:278 templates/comments.php:43
+#, php-format
+msgid "%s Comments"
+msgstr ""
+
+#: vibe-comments.php:285
+msgid "Loading…"
+msgstr ""
+
+#: vibe-comments.php:286
+msgid "Loading..."
+msgstr ""
+
+#: vibe-comments.php:287 templates/comments.php:120
+msgid "Load More Comments"
+msgstr ""
+
+#: vibe-comments.php:288
+msgid "Read more"
+msgstr ""
+
+#: vibe-comments.php:289
+msgid "Saving..."
+msgstr ""
+
+#: vibe-comments.php:290
+msgid "Save"
+msgstr ""
+
+#: vibe-comments.php:291
+msgid "(edited)"
+msgstr ""
+
+#: vibe-comments.php:292
+msgid "discard"
+msgstr ""
+
+#: vibe-comments.php:293
+msgid "Hide Guest Form"
+msgstr ""
+
+#: vibe-comments.php:294 templates/comments.php:159
+msgid "Comment as Guest"
+msgstr ""
+
+#: vibe-comments.php:295
+msgid "Hide replies"
+msgstr ""
+
+#: vibe-comments.php:296
+msgid "View replies"
+msgstr ""
+
+#: vibe-comments.php:297
+msgid "Connecting…"
+msgstr ""
+
+#: vibe-comments.php:298
+msgid "Search comments…"
+msgstr ""
+
+#: vibe-comments.php:299
+msgid "Type at least 2 characters…"
+msgstr ""
+
+#: vibe-comments.php:300 vibe-comments.php:320
+msgid "📌 Pinned"
+msgstr ""
+
+#: vibe-comments.php:301
+msgid "✓ Accepted"
+msgstr ""
+
+#: vibe-comments.php:302
+msgid "Could not load comments."
+msgstr ""
+
+#: vibe-comments.php:303
+msgid "Try again"
+msgstr ""
+
+#: vibe-comments.php:304
+msgid "No comments yet"
+msgstr ""
+
+#: vibe-comments.php:305
+msgid "Be the first to share your thoughts ✨"
+msgstr ""
+
+#: vibe-comments.php:306
+msgid "No comments found"
+msgstr ""
+
+#: vibe-comments.php:307
+msgid "Try a different search term 🔎"
+msgstr ""
+
+#: vibe-comments.php:308
+#, php-format
+msgid "%s found"
+msgstr ""
+
+#: vibe-comments.php:309
+msgid " (showing first 50)"
+msgstr ""
+
+#: vibe-comments.php:310
+#, php-format
+msgid "Commenting as %s."
+msgstr ""
+
+#: vibe-comments.php:311
+msgid "Not you?"
+msgstr ""
+
+#: vibe-comments.php:312
+msgid "Reply"
+msgstr ""
+
+#: vibe-comments.php:313
+#, php-format
+msgid "View %s reply"
+msgstr ""
+
+#: vibe-comments.php:314
+#, php-format
+msgid "View %s replies"
+msgstr ""
+
+#: vibe-comments.php:315
+msgid "Pin"
+msgstr ""
+
+#: vibe-comments.php:316
+msgid "Unpin"
+msgstr ""
+
+#: vibe-comments.php:317
+msgid "Unaccept"
+msgstr ""
+
+#: vibe-comments.php:318
+msgid "✓ Accept"
+msgstr ""
+
+#: vibe-comments.php:319
+msgid "Author"
+msgstr ""
+
+#: vibe-comments.php:321
+msgid ""
+"Reply alerts for this thread (emails and browser notifications) - click to "
+"switch"
+msgstr ""
+
+#: vibe-comments.php:322
+msgid "🔔 On"
+msgstr ""
+
+#: vibe-comments.php:323
+msgid "🔕 Off"
+msgstr ""
+
+#: vibe-comments.php:324
+msgid "This browser does not support notifications."
+msgstr ""
+
+#: vibe-comments.php:325 templates/comments.php:212
+msgid ""
+"You will get a push notification on this device when someone replies to your "
+"comment."
+msgstr ""
+
+#: vibe-comments.php:326
+msgid "Could not enable notifications on this device."
+msgstr ""
+
+#: vibe-comments.php:327
+#, php-format
+msgid "Thanks %s! Your comment is pending review."
+msgstr ""
+
+#: vibe-comments.php:328
+#, php-format
+msgid "Thanks %s! Your comment is now live."
+msgstr ""
+
+#: vibe-comments.php:329
+msgid "Like"
+msgstr ""
+
+#: vibe-comments.php:330
+msgid "Love"
+msgstr ""
+
+#: vibe-comments.php:331
+msgid "Fire"
+msgstr ""
+
+#: vibe-comments.php:332
+msgid "Haha"
+msgstr ""
+
+#: includes/class-admin.php:46
+msgid "Building…"
+msgstr ""
+
+#: includes/class-admin.php:47
+msgid "Preview failed."
+msgstr ""
+
+#: includes/class-admin.php:249 includes/class-admin.php:255
+#: includes/class-analytics.php:453
+msgid "Spam"
+msgstr ""
+
+#: includes/class-ajax-handler.php:170 includes/class-ajax-handler.php:741
+msgid "Too many requests. Please wait a moment."
+msgstr ""
+
+#: includes/class-ajax-handler.php:277 includes/class-ajax-handler.php:329
+#: includes/class-ajax-handler.php:368 includes/class-ajax-handler.php:720
+#: includes/class-ajax-handler.php:1333 includes/class-ajax-handler.php:1344
+msgid "Invalid post."
+msgstr ""
+
+#: includes/class-ajax-handler.php:582 includes/class-ajax-handler.php:593
+msgid "Invalid request."
+msgstr ""
+
+#: includes/class-ajax-handler.php:599 includes/class-ajax-handler.php:1106
+#: includes/class-ajax-handler.php:1595 includes/class-unsubscribe.php:126
+msgid "Comment not found."
+msgstr ""
+
+#: includes/class-ajax-handler.php:620 includes/class-ajax-handler.php:1159
+msgid "Too many requests."
+msgstr ""
+
+#: includes/class-ajax-handler.php:710
+msgid "Type at least 2 characters to search."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1079 includes/class-ajax-handler.php:1149
+#: includes/class-ajax-handler.php:1287 includes/class-ajax-handler.php:1576
+#: includes/class-oauth-google.php:47
+msgid "Security check failed."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1093 includes/class-ajax-handler.php:1585
+#: includes/class-ajax-handler.php:1701
+msgid "Invalid comment."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1099
+msgid "Invalid reaction type."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1116
+msgid "Please wait before reacting again."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1300
+msgid "Please wait a moment before posting again."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1317 includes/class-ajax-handler.php:1631
+msgid "Comment cannot be empty."
+msgstr ""
+
+#. translators: %d: maximum allowed comment length in characters.
+#: includes/class-ajax-handler.php:1322 includes/class-ajax-handler.php:1636
+#, php-format
+msgid "Comment exceeds the %d character limit."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1328
+msgid "Name is too long (max 255 characters)."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1338 includes/class-ajax-handler.php:1601
+msgid "Comments are closed for this post."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1351
+msgid "Invalid parent comment."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1369
+msgid "Name and email are required for guest comments."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1373
+msgid "Please enter a valid email address."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1421
+msgid "Failed to post comment. Please try again."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1443
+msgid "Comment created but could not be retrieved."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1541
+msgid "That didn't go through. Reload the page and try once more."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1609 includes/class-ajax-handler.php:1615
+msgid "You can only edit your own comments."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1624 includes/class-ajax-handler.php:1659
+msgid "The 5-minute edit window has closed."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1669
+msgid "Failed to save the edit. Please try again."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1695
+msgid "Permission denied."
+msgstr ""
+
+#: includes/class-analytics.php:51 includes/class-analytics.php:52
+msgid "Vibe Comments"
+msgstr ""
+
+#: includes/class-analytics.php:61 includes/class-analytics.php:423
+msgid "Comment Analytics"
+msgstr ""
+
+#: includes/class-analytics.php:62
+msgid "Analytics"
+msgstr ""
+
+#: includes/class-analytics.php:69
+msgid "Vibe Comments Settings"
+msgstr ""
+
+#: includes/class-analytics.php:70
+msgid "Settings"
+msgstr ""
+
+#: includes/class-analytics.php:426
+msgid "Refresh data"
+msgstr ""
+
+#. translators: %s = number of minutes.
+#: includes/class-analytics.php:433
+#, php-format
+msgid ""
+"Live from the comments tables — cached %d min. Reactions, push/email opt-"
+"ins, threading and velocity in one place."
+msgstr ""
+
+#: includes/class-analytics.php:450
+msgid "All comments (every status)"
+msgstr ""
+
+#: includes/class-analytics.php:451
+msgid "Approved"
+msgstr ""
+
+#: includes/class-analytics.php:452
+msgid "Awaiting moderation"
+msgstr ""
+
+#: includes/class-analytics.php:454
+msgid "Unique commenters"
+msgstr ""
+
+#: includes/class-analytics.php:455
+msgid "Reactions given"
+msgstr ""
+
+#: includes/class-analytics.php:456
+msgid "Replies (threaded)"
+msgstr ""
+
+#: includes/class-analytics.php:457
+msgid "Top-level comments"
+msgstr ""
+
+#: includes/class-analytics.php:458
+msgid "Push subscriptions"
+msgstr ""
+
+#: includes/class-analytics.php:459
+msgid "Email opt-ins"
+msgstr ""
+
+#: includes/class-analytics.php:460
+msgid "Pinned comments"
+msgstr ""
+
+#: includes/class-analytics.php:461
+msgid "Guest comments"
+msgstr ""
+
+#: includes/class-analytics.php:462
+msgid "Member comments"
+msgstr ""
+
+#: includes/class-analytics.php:463
+msgid "Deepest thread"
+msgstr ""
+
+#: includes/class-analytics.php:464
+msgid "Avg comment length (chars)"
+msgstr ""
+
+#: includes/class-analytics.php:469
+msgid "Avg time to first reply"
+msgstr ""
+
+#: includes/class-analytics.php:487
+msgid "Comments per month (12 months)"
+msgstr ""
+
+#: includes/class-analytics.php:491
+msgid "Reactions split"
+msgstr ""
+
+#: includes/class-analytics.php:495
+msgid "Comments by hour of day (UTC)"
+msgstr ""
+
+#: includes/class-analytics.php:499
+msgid "Comments by weekday"
+msgstr ""
+
+#: includes/class-analytics.php:527
+msgid "No data yet."
+msgstr ""
+
+#: includes/class-analytics.php:589 includes/class-analytics.php:680
+msgid "No reactions yet."
+msgstr ""
+
+#: includes/class-analytics.php:635
+msgid "Leaderboards"
+msgstr ""
+
+#: includes/class-analytics.php:639
+msgid "Post"
+msgstr ""
+
+#: includes/class-analytics.php:639 includes/class-analytics.php:659
+msgid "Comments"
+msgstr ""
+
+#: includes/class-analytics.php:642
+msgid "No comments yet."
+msgstr ""
+
+#: includes/class-analytics.php:648
+msgid "(no title)"
+msgstr ""
+
+#: includes/class-analytics.php:659
+msgid "Commenter"
+msgstr ""
+
+#: includes/class-analytics.php:662
+msgid "No commenters yet."
+msgstr ""
+
+#: includes/class-analytics.php:675
+msgid "Most-reacted comments"
+msgstr ""
+
+#: includes/class-analytics.php:677
+msgid "Reactions"
+msgstr ""
+
+#: includes/class-analytics.php:677
+msgid "Comment"
+msgstr ""
+
+#: includes/class-analytics.php:677
+msgid "On post"
+msgstr ""
+
+#: includes/class-analytics.php:691
+msgid "Engagement quality"
+msgstr ""
+
+#: includes/class-analytics.php:696
+msgid "Top-level comments answered by a reply"
+msgstr ""
+
+#: includes/class-analytics.php:697
+msgid "Avg time from comment to first reply"
+msgstr ""
+
+#: includes/class-analytics.php:698
+msgid "Deepest thread (replies deep)"
+msgstr ""
+
+#: includes/class-analytics.php:705
+msgid "Guest vs member comments"
+msgstr ""
+
+#: includes/class-analytics.php:706
+msgid "Comments per post (avg, top 10 posts)"
+msgstr ""
+
+#: includes/class-analytics.php:711
+msgid "Push + email subscribers (total rails)"
+msgstr ""
+
+#: includes/class-digest.php:333
+msgid "Daily Digest"
+msgstr ""
+
+#: includes/class-digest.php:335
+msgid "Enable daily digest"
+msgstr ""
+
+#: includes/class-digest.php:337
+msgid "Send to"
+msgstr ""
+
+#: includes/class-digest.php:352
+msgid ""
+"One email each morning (08:00 WAT): yesterday's comment activity — counts, "
+"pending queue with spam scores, most-reacted, top posts and voices. Preview "
+"renders the exact email."
+msgstr ""
+
+#: includes/class-digest.php:358
+msgid "Send the daily digest"
+msgstr ""
+
+#: includes/class-digest.php:369
+msgid "Moderators only."
+msgstr ""
+
+#: includes/class-mentions.php:307 includes/class-reply-email.php:166
+#: includes/class-reply-push.php:277
+msgid "Someone"
+msgstr ""
+
+#: includes/class-mentions.php:311
+#, php-format
+msgid "%1$s mentioned you in a comment"
+msgstr ""
+
+#: includes/class-oauth-google.php:143
+msgid "OAuth state has expired. Please try signing in again."
+msgstr ""
+
+#: includes/class-oauth-google.php:159
+msgid "Invalid OAuth state. Please try signing in again."
+msgstr ""
+
+#: includes/class-oauth-google.php:163
+msgid "Missing OAuth authorization code."
+msgstr ""
+
+#: includes/class-oauth-google.php:172
+msgid ""
+"Google Sign-In is not configured. Please contact the site administrator."
+msgstr ""
+
+#: includes/class-oauth-google.php:187
+msgid "Could not connect to Google. Please try again."
+msgstr ""
+
+#: includes/class-oauth-google.php:193
+msgid "Google sign-in failed. Please try again."
+msgstr ""
+
+#: includes/class-oauth-google.php:199
+msgid "Token verification failed. Please try again."
+msgstr ""
+
+#: includes/class-oauth-google.php:204
+msgid ""
+"Your Google email address is not verified. Please verify your Google account "
+"and try again."
+msgstr ""
+
+#: includes/class-oauth-google.php:208
+msgid "Google did not return an email address. Please try again."
+msgstr ""
+
+#: includes/class-oauth-google.php:253
+msgid "Could not create your account. Please try again."
+msgstr ""
+
+#: includes/class-qa.php:134
+msgid "Vibe Q&A Mode"
+msgstr ""
+
+#: includes/class-qa.php:148
+msgid "Enable Q&A mode"
+msgstr ""
+
+#: includes/class-qa.php:151
+msgid ""
+"Renders the comment section as a Q&A thread: the post is the question, "
+"comments become answers, and you can mark one answer as accepted."
+msgstr ""
+
+#: includes/class-qa.php:198 includes/class-unsubscribe.php:117
+msgid "Security check failed. Reload the page."
+msgstr ""
+
+#: includes/class-qa.php:206
+msgid "Answer not found."
+msgstr ""
+
+#: includes/class-qa.php:210
+msgid "This post is not in Q&A mode."
+msgstr ""
+
+#: includes/class-qa.php:214
+msgid "Only the post author or a moderator can accept answers."
+msgstr ""
+
+#. translators: 1: replier name, 2: site name.
+#: includes/class-reply-email.php:170
+#, php-format
+msgid "%1$s replied to your comment on %2$s"
+msgstr ""
+
+#: includes/class-reply-email.php:225
+msgid "New reply"
+msgstr ""
+
+#: includes/class-reply-email.php:230
+msgid "replied to your comment"
+msgstr ""
+
+#: includes/class-reply-email.php:238
+msgid "Read the reply"
+msgstr ""
+
+#: includes/class-reply-email.php:241
+msgid ""
+"You opted in via the \"Email me about replies\" checkbox on your comment. "
+"This is the only way this address receives these emails."
+msgstr ""
+
+#: includes/class-reply-email.php:242
+msgid "Stop these emails for this thread"
+msgstr ""
+
+#. translators: %s = replier's display name.
+#: includes/class-reply-push.php:281
+#, php-format
+msgid "%s replied to your comment"
+msgstr ""
+
+#: includes/class-spam-score.php:193
+msgid "Likely spam"
+msgstr ""
+
+#: includes/class-spam-score.php:194
+msgid "Suspicious"
+msgstr ""
+
+#: includes/class-spam-score.php:195
+msgid "Clean"
+msgstr ""
+
+#: includes/class-spam-score.php:209
+msgid "no spam signals"
+msgstr ""
+
+#: includes/class-unsubscribe.php:140
+msgid "You can only change notifications on your own comments."
+msgstr ""
+
+#: includes/class-unsubscribe.php:176
+#, php-format
+msgid "Notifications - %s"
+msgstr ""
+
+#: includes/class-unsubscribe.php:190
+msgid "Unsubscribed"
+msgstr ""
+
+#: includes/class-unsubscribe.php:191
+#, php-format
+msgid "You won't get %s on this thread anymore."
+msgstr ""
+
+#: includes/class-unsubscribe.php:192
+msgid ""
+"You can turn notifications back on anytime from the comment form on the post."
+msgstr ""
+
+#: includes/class-unsubscribe.php:194
+msgid "Notifications"
+msgstr ""
+
+#: includes/class-unsubscribe.php:195
+msgid ""
+"This link has expired or the subscription was already removed. You will not "
+"receive further notifications."
+msgstr ""
+
+#: includes/class-unsubscribe.php:197
+msgid "Back to the site"
+msgstr ""
+
+#: templates/comments.php:61
+msgid "Load Comments"
+msgstr ""
+
+#: templates/comments.php:80
+#, php-format
+msgid ""
+"This page has %s comment. Enable JavaScript to view and join the discussion."
+msgid_plural ""
+"This page has %s comments. Enable JavaScript to view and join the discussion."
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/comments.php:88
+msgid "Enable JavaScript to view and join the discussion."
+msgstr ""
+
+#: templates/comments.php:104
+msgid "Newest first"
+msgstr ""
+
+#: templates/comments.php:133
+msgid "Log out"
+msgstr ""
+
+#: templates/comments.php:148
+#, php-format
+msgid "Login to %s"
+msgstr ""
+
+#: templates/comments.php:154
+msgid "Continue with Google"
+msgstr ""
+
+#: templates/comments.php:157
+msgid "or"
+msgstr ""
+
+#: templates/comments.php:172
+msgid "Name"
+msgstr ""
+
+#: templates/comments.php:176
+msgid "Your name"
+msgstr ""
+
+#: templates/comments.php:180
+msgid "Email"
+msgstr ""
+
+#: templates/comments.php:184
+msgid "your@email.com"
+msgstr ""
+
+#: templates/comments.php:191
+msgid "Your comment"
+msgstr ""
+
+#: templates/comments.php:195
+msgid "What do you think?"
+msgstr ""
+
+#: templates/comments.php:209
+msgid "Notify me about replies"
+msgstr ""
+
+#: templates/comments.php:223
+msgid "Email me about replies"
+msgstr ""
+
+#: templates/comments.php:226
+msgid ""
+"You will get an email at the address above when someone replies to your "
+"comment."
+msgstr ""
+
+#: templates/comments.php:232
+msgid "Post Comment"
+msgstr ""
+
+#: templates/comments.php:236
+msgid "Cancel Reply"
+msgstr ""
+
+#: templates/comments.php:243
+msgid "Comments are closed."
+msgstr ""

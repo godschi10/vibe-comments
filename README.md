@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.18.2  
+**Version:** 3.19.0  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later
@@ -126,6 +126,18 @@ A reaction toggle purges the same `vc_load_*` cache via the same function (`purg
 1. Upload the `vibe-comments` folder to `/wp-content/plugins/`
 2. Activate via **Plugins → Installed Plugins**
 3. Plugin hooks into `comments_template` automatically
+
+---
+
+## Migrating to a New Server or Domain
+
+The plugin is fully portable — no hardcoded URLs, paths, or table prefixes (it uses `$wpdb->prefix` throughout). Three things need your attention after a move:
+
+1. **Push subscribers must re-subscribe.** Browser push subscriptions are bound to the *old* origin's service worker, so `_vibe_reply_push` comment-meta from the previous domain goes stale. It's harmless (delivery simply stops) and self-heals when users re-tap the bell — but don't expect old subscribers to keep receiving after a domain change.
+2. **Cloudflare credentials live in `wp-config.php`** (`VIBE_CF_ZONE_ID` / `VIBE_CF_API_TOKEN`) — re-add them on the new server or comment-cache purging silently stops.
+3. **Google OAuth re-entry** — the client credentials in *Settings → Vibe Comments* are environment-specific; re-enter them if the site keeps Google login. (Stored sealed-at-rest since v3.18.2 — a wrong/absent `AUTH_KEY` makes them unreadable, so rotate that constant before importing the database, not after.)
+
+The plugin works on a fresh install with zero manual pre-configuration: it creates its `vibe_comment_likes` table on activation (idempotently) and defaults to WordPress's own `admin_email` for the digest until you choose otherwise.
 
 ---
 

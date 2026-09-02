@@ -15,6 +15,22 @@ Types of changes:
 
 ---
 
+## [3.19.2] — 2026-09-02
+
+### Responsive & Mobile Audit #6 — all 5 findings fixed
+
+Live-audited at 320px/768px (real browser, real measurements) plus full code recon. The audit caught the plugin's most-tapped controls under the WCAG 2.5.8 touch floor.
+
+- **[CRITICAL] Touch floor on the pill family** — reaction summary measured 57×24px, reply trigger 67×38px. Now `min-height: 44px` on all 12 interactive families (reaction, reply, edit, pin, notify, accept, view-replies, read-more, sort, load-more, load-comments). `min-height` beats the fixed `height: 38px` per CSS spec, so search/sort rose to 44px too.
+- **[SHOULD-FIX] Search input iOS zoom** — `.vibe-search-input` computed 14px (theme restyle 15px on tech); iOS Safari zooms on focus <16px. Plugin rule now `font-size: 1rem`; tech theme's toolbar override raised 15→16px in v1.21.32. (The sort button's 12px is inert — it's a text-less SVG button; zoom only fires on text-entry controls.)
+- **[SHOULD-FIX] focus-visible parity** — six button families shipped without a keyboard/touch focus indicator while siblings had one (WCAG 2.4.7): reply, edit, notify, accept, read-more, load-more/load-comments + guest-recall clear. One shared rule restores parity.
+- **[SHOULD-FIX] Admin leaderboards never collapsed** — `.vibe-an-two` 2-col grid had no breakpoint; collapses to 1-col at 782px (WP core's own admin breakpoint).
+- **[NICE-TO-HAVE] Analytics tables unwrapped** — `.vibe-an-table` had zero plugin CSS; all 5 tables now sit in `overflow-x: auto` scroll wrappers with `width: 100%`.
+
+**Live proofs (320px, cache-bypassed)**: reaction pill 57×**44** · reply pill 67×**44** · search font **16px** · search height **44px** · horizontal overflow **false**. Checkbox hit-areas remain the correct 44px-label pattern.
+
+**Laws born**: *the touch-floor law — every interactive control ships at min-height 44px; measured, not assumed* · *the iOS-16px law — every text-entry control computes ≥16px, verified against the theme override cascade, not just the plugin sheet*.
+
 ## [3.19.1] — 2026-09-02
 
 ### i18n completion — independent-review catch (20 more strings converted)

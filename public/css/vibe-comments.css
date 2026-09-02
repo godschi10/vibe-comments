@@ -883,7 +883,9 @@
     border-radius: 8px;
     background: var(--vibe-bg, #fff);
     color: var(--vibe-text, #111);
-    font-size: 0.875rem;
+    /* v3.19.2 Responsive Audit: 16px floor — iOS Safari zooms the viewport
+       on focus when an input's computed font-size is under 16px. */
+    font-size: 1rem;
     line-height: 1;
     outline: none;
     transition: border-color 0.15s ease;
@@ -1335,4 +1337,51 @@
 .vibe-notify-btn:disabled {
     opacity: 0.6;
     cursor: default;
+}
+
+
+/* ── v3.19.2 Responsive Audit #6 — WCAG 2.5.8 touch floor + focus ring ──
+ * Measured live at 320px: reaction summary 57×24, reply trigger 67×38,
+ * sort button 50×38 — every primary comment control sat under the 44px
+ * touch floor. min-height beats the fixed height:38px above (CSS spec:
+ * min-height always wins over height), so the search/sort row rises to
+ * 44px too. The reply-push/email checkboxes keep their separate 44px
+ * label hit-area pattern (.vibe-reply-push-label min-height:44px). */
+.vibe-reaction-summary,
+.comment-reply-link,
+.vibe-reply-trigger,
+.vibe-edit-btn,
+.vibe-pin-btn,
+.vibe-notify-btn,
+.vibe-accept-btn,
+.vibe-view-replies-btn,
+.vibe-read-more,
+.vibe-sort-icon-btn,
+.vibe-btn-load-more,
+.vibe-btn-load-comments {
+    min-height: 44px;
+}
+
+/* The "Not you?" clear button inside the guest-recall notice: an inline
+ * text button where a 44px min-height would distort the paragraph — it
+ * gets generous padding instead (hit area ≈ 34px, WCAG 2.5.8 AA 24px
+ * floor satisfied with margin). */
+.vibe-recall-clear {
+    padding: 0.4rem 0.55rem;
+}
+
+/* v3.19.2: six button families shipped without a keyboard/touch focus
+ * indicator while their siblings (reaction summary, pin, view-replies,
+ * sort, search) had one — WCAG 2.4.7. One shared rule restores parity. */
+.vibe-reply-trigger:focus-visible,
+.comment-reply-link:focus-visible,
+.vibe-edit-btn:focus-visible,
+.vibe-notify-btn:focus-visible,
+.vibe-accept-btn:focus-visible,
+.vibe-read-more:focus-visible,
+.vibe-recall-clear:focus-visible,
+.vibe-btn-load-more:focus-visible,
+.vibe-btn-load-comments:focus-visible {
+    outline: 2px solid var(--vibe-primary, #2563eb);
+    outline-offset: 1px;
 }

@@ -635,7 +635,7 @@ class Vibe_Comments_Analytics {
 		<h2 class="vibe-an-sec"><?php esc_html_e( 'Leaderboards', 'vibe-comments' ); ?></h2>
 		<div class="vibe-an-two">
 			<div>
-				<table class="vibe-an-table">
+				<div class="vibe-an-table-wrap"><table class="vibe-an-table">
 					<thead><tr><th>#</th><th><?php esc_html_e( 'Post', 'vibe-comments' ); ?></th><th style="text-align:right"><?php esc_html_e( 'Comments', 'vibe-comments' ); ?></th></tr></thead>
 					<tbody>
 					<?php if ( empty( $s['top_posts'] ) ) : ?>
@@ -652,10 +652,10 @@ class Vibe_Comments_Analytics {
 						</tr>
 					<?php endforeach; endif; ?>
 					</tbody>
-				</table>
+				</table></div>
 			</div>
 			<div>
-				<table class="vibe-an-table">
+				<div class="vibe-an-table-wrap"><table class="vibe-an-table">
 					<thead><tr><th>#</th><th><?php esc_html_e( 'Commenter', 'vibe-comments' ); ?></th><th style="text-align:right"><?php esc_html_e( 'Comments', 'vibe-comments' ); ?></th></tr></thead>
 					<tbody>
 					<?php if ( empty( $s['top_commenters'] ) ) : ?>
@@ -668,12 +668,12 @@ class Vibe_Comments_Analytics {
 						</tr>
 					<?php endforeach; endif; ?>
 					</tbody>
-				</table>
+				</table></div>
 			</div>
 		</div>
 
 		<h2 class="vibe-an-sec"><?php esc_html_e( 'Most-reacted comments', 'vibe-comments' ); ?></h2>
-		<table class="vibe-an-table">
+		<div class="vibe-an-table-wrap"><table class="vibe-an-table">
 			<thead><tr><th><?php esc_html_e( 'Reactions', 'vibe-comments' ); ?></th><th><?php esc_html_e( 'Comment', 'vibe-comments' ); ?></th><th><?php esc_html_e( 'On post', 'vibe-comments' ); ?></th></tr></thead>
 			<tbody>
 			<?php if ( empty( $s['top_reacted'] ) ) : ?>
@@ -686,21 +686,21 @@ class Vibe_Comments_Analytics {
 				</tr>
 			<?php endforeach; endif; ?>
 			</tbody>
-		</table>
+		</table></div>
 
 		<h2 class="vibe-an-sec"><?php esc_html_e( 'Engagement quality', 'vibe-comments' ); ?></h2>
 		<div class="vibe-an-two">
 			<div>
-				<table class="vibe-an-table">
+				<div class="vibe-an-table-wrap"><table class="vibe-an-table">
 					<tbody>
 					<tr><th><?php esc_html_e( 'Top-level comments answered by a reply', 'vibe-comments' ); ?></th><td class="num"><?php echo esc_html( (string) $s['quality']['replied_pct'] ); ?>%</td></tr>
 					<tr><th><?php esc_html_e( 'Avg time from comment to first reply', 'vibe-comments' ); ?></th><td class="num"><?php echo esc_html( null === $s['quality']['reply_velocity'] ? '—' : human_time_diff( 0, max( 60, (int) $s['quality']['reply_velocity'] ) ) ); ?></td></tr>
 					<tr><th><?php esc_html_e( 'Deepest thread (replies deep)', 'vibe-comments' ); ?></th><td class="num"><?php echo esc_html( number_format_i18n( (int) $s['totals']['max_thread'] ) ); ?></td></tr>
 					</tbody>
-				</table>
+				</table></div>
 			</div>
 			<div>
-				<table class="vibe-an-table">
+				<div class="vibe-an-table-wrap"><table class="vibe-an-table">
 					<tbody>
 					<tr><th><?php esc_html_e( 'Guest vs member comments', 'vibe-comments' ); ?></th><td class="num"><?php echo esc_html( number_format_i18n( (int) $s['totals']['guests'] ) ); ?> / <?php echo esc_html( number_format_i18n( (int) $s['totals']['members'] ) ); ?></td></tr>
 					<tr><th><?php esc_html_e( 'Comments per post (avg, top 10 posts)', 'vibe-comments' ); ?></th><td class="num"><?php
@@ -710,7 +710,7 @@ class Vibe_Comments_Analytics {
 					?></td></tr>
 					<tr><th><?php esc_html_e( 'Push + email subscribers (total rails)', 'vibe-comments' ); ?></th><td class="num"><?php echo esc_html( number_format_i18n( (int) $s['push_subs'] + (int) $s['email_opts'] ) ); ?></td></tr>
 					</tbody>
-				</table>
+				</table></div>
 			</div>
 		</div>
 		<?php

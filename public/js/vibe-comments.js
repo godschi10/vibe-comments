@@ -1048,7 +1048,7 @@
         // v3.18.0 consent law - the Notify toggle: the comment's author can
         // flip reply-email consent anytime, no window. Strangers never see it.
         const notifyBtnHtml = comment.owns
-            ? '<button type="button" class="vibe-notify-btn" data-comment-id="' + cid + '" data-on="' + (comment.notify_on ? '1' : '0') + '" title="Turn reply emails for this thread on or off">'
+            ? '<button type="button" class="vibe-notify-btn" data-comment-id="' + cid + '" data-on="' + (comment.notify_on ? '1' : '0') + '" title="Reply alerts for this thread (emails and browser notifications) - click to switch">'
                 + (comment.notify_on ? '🔔 On' : '🔕 Off')
               + '</button>'
             : '';

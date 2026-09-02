@@ -1011,9 +1011,12 @@ class Vibe_Comments_Ajax_Handler {
         }
 
         // Notify state rides along for the owner only - a stranger's
-        // consent state is nobody's business.
+        // consent state is nobody's business. Dual-rail: the pill lights up
+        // if EITHER rail is on (email OR push) so a push subscriber sees
+        // their bell correctly.
         $c['notify_on'] = $is_owner
-            ? (bool) get_comment_meta($cid, Vibe_Comments_Reply_Email::META_KEY, true)
+            ? ( (bool) get_comment_meta($cid, Vibe_Comments_Reply_Email::META_KEY, true)
+                || (bool) get_comment_meta($cid, Vibe_Comments_Reply_Push::META_KEY, true) )
             : false;
 
         if (!empty($c['children'])) {

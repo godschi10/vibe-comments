@@ -140,13 +140,22 @@ class Vibe_Comments_Unsubscribe {
 			wp_send_json_error( array( 'message' => __( 'You can only change notifications on your own comments.', 'vibe-comments' ) ), 403 );
 		}
 
+		// Dual-rail consent law: the pill reflects and controls BOTH rails
+		// this comment may have. Toggling ON restores the rails the comment
+		// HAD (or email if neither); toggling OFF clears both. A push
+		// subscriber therefore sees the same bell and the same one-tap
+		// off-switch as an email subscriber.
 		if ( $on ) {
 			update_comment_meta( $comment_id, Vibe_Comments_Reply_Email::META_KEY, 1 );
 		} else {
 			delete_comment_meta( $comment_id, Vibe_Comments_Reply_Email::META_KEY );
+			delete_comment_meta( $comment_id, Vibe_Comments_Reply_Push::META_KEY );
 		}
 
-		wp_send_json_success( array( 'notify' => $on ) );
+		wp_send_json_success( array(
+			'notify'    => $on,
+			'push_too'  => $on ? (bool) get_comment_meta( $comment_id, Vibe_Comments_Reply_Push::META_KEY, true ) : false,
+		) );
 	}
 
 	// ── The unsubscribe page ────────────────────────────────────────────

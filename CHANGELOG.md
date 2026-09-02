@@ -15,6 +15,17 @@ Types of changes:
 
 ---
 
+## [3.18.1] — 2026-09-01
+
+### Fixed - push subscribers had no off-switch (King-reported: "can't find the cancel bell for push notifications")
+
+The v3.18.0 unsubscribe system covered email end-to-end but left the push rail half-wired: the unsub_url payload field shipped, yet nothing rendered it (the theme's sw.js never showed notification actions), and the Notify pill toggled email only - a browser-bell subscriber saw no control at all. Two fixes:
+
+1. **sw.js (theme-side, shipped in gwill-tech-theme 1.21.26)** - the push handler now renders a "Stop these alerts" notification action whenever the payload carries `unsub_url`, and `notificationclick` routes that action to the token URL (clears consent server-side) instead of the post. The off-switch rides on the alert itself: one tap, no site visit.
+2. **Dual-rail Notify pill (plugin)** - `notify_on` now lights when EITHER rail is on (email OR push), so push subscribers see their bell state honestly; toggling OFF clears BOTH metas; toggling ON restores email only (the browser permission is the user's to re-grant - the site never re-subscribes a revoked bell). Pill title names both rails.
+
+**Proofs**: dual-rail battery 8/8 (push-only/email-only/both/none pill states, OFF clears both, ON restores email, served sw.js carries action+routing, title updated). Live E2E: a push-only comment planted with real UUID ownership rendered `owns=true notify_on=true` in the payload as its owner; pill-toggle OFF cleared both metas; ON restored email; the served sw.js (auto-republished through the theme's mtime-triggered flow) carries the action code at lines 139-154. Probe cleaned.
+
 ## [3.18.0] — 2026-09-01
 
 ### Added - Unsubscribe for all notification rails (King-reported gap: "people can't unsubscribe from comments alerts")

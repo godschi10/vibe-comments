@@ -326,7 +326,14 @@ Require all denied
 On every singular post, the plugin outputs a `Schema.org` JSON-LD block in `<head>` containing:
 
 - **`commentCount`** on a `WebPage` entity - a direct engagement quality signal Google uses in ranking. Sourced from the same `vibe_comment_count_{post_id}` option used everywhere else - no extra DB query.
-- **Individual `Comment` entities** for each approved comment (up to 100), with `parentItem` links for threaded replies and `author.url` for commenters with a website.
+- **Individual `Comment` entities** for each approved comment, with `parentItem` links for threaded replies and `author.url` for commenters with a website.
+- **`DiscussionPosting` entity** (v3.20.1) - schema.org 23.0's first-class type for comment-sections-as-content, wrapping the whole discussion: `comment[]` carries the full Comment entity array, `commentCount`, `headline` ("Discussion on {post title}"), and the first comment's `datePublished`. Strictly additive to the WebPage + Comment entities (parsers merge children either way). On Q&A-mode posts the block instead emits `QAPage` with accepted/suggested answers - never both.
+
+The entity-list cap (default 100 comments; `commentCount` stays accurate regardless) is adjustable without touching the plugin:
+
+```php
+add_filter( 'vibe_comments_schema_comment_cap', function () { return 200; } );
+```
 
 **Why this is necessary:** Comments load via AJAX behind a click-to-load button. Googlebot does not click buttons - without JSON-LD the entire discussion is invisible to search crawlers. The schema block is present in the initial HTML response and requires no JavaScript.
 

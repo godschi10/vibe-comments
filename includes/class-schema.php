@@ -50,12 +50,15 @@ class Vibe_Comments_Schema {
             return;
         }
 
-        // Fetch approved comments (cap at 100 to keep JSON-LD compact).
-        // WordPress internally caches get_comments() for the request lifetime.
+        // Fetch approved comments (capped to keep JSON-LD compact - the count
+        // stays accurate via commentCount; only the entity list truncates).
+        // v3.20.1 (SEO audit #11): the cap is now filterable so high-discussion
+        // installs can raise it without touching the plugin.
+        $cap = (int) apply_filters( 'vibe_comments_schema_comment_cap', 100 );
         $comments = get_comments( [
             'post_id' => $post_id,
             'status'  => 'approve',
-            'number'  => 100,
+            'number'  => max( 1, $cap ),
             'orderby' => 'comment_date_gmt',
             'order'   => 'ASC',
         ] );
@@ -81,6 +84,7 @@ class Vibe_Comments_Schema {
         }
 
         $graph    = [];
+        $discussion_comments = []; // v3.20.1: collected for the DiscussionPosting entity
 
         // ── WebPage entity with commentCount ──────────────────────────────
         // commentCount is a direct ranking signal for engagement. Google merges
@@ -145,7 +149,30 @@ class Vibe_Comments_Schema {
                 ];
             }
 
-            $graph[] = $entry;
+            $graph[]           = $entry;
+            $discussion_comments[] = $entry; // v3.20.1: DiscussionPosting's comment[]
+        }
+
+        // ── v3.20.1 (SEO audit #11): DiscussionPosting entity ──────────────
+        // schema.org 23.0 (2023) introduced DiscussionPosting as the first-class
+        // type for comment sections-as-content - the modern shape Google's docs
+        // point to for "the discussion is the content". Strictly ADDITIVE: the
+        // Comment entities stay in the graph (parsers merge children either
+        // way); this wraps them in one discussion entity anchored to the post.
+        if ( ! empty( $discussion_comments ) ) {
+            $first_gmt = $discussion_comments[0]['datePublished'] ?? '';
+            $graph[]   = [
+                '@type'         => 'DiscussionPosting',
+                '@id'           => $post_url . '#discussion',
+                'headline'      => get_the_title( $post_id )
+                    ? sprintf( 'Discussion on %s', get_the_title( $post_id ) )
+                    : 'Discussion',
+                'url'           => $post_url,
+                'about'         => $post_url,
+                'datePublished' => $first_gmt,
+                'commentCount'  => $count ?: count( $discussion_comments ),
+                'comment'       => $discussion_comments,
+            ];
         }
 
         $schema = [

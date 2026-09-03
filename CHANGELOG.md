@@ -15,6 +15,17 @@ Types of changes:
 
 ---
 
+## [3.20.1] — 2026-09-03
+
+### SEO Audit #11 — schema modernization (all findings fixed)
+
+- **[SHOULD-FIX] DiscussionPosting entity** (class-schema.php) — schema.org 23.0 (2023) introduced `DiscussionPosting` as the first-class type for comment-sections-as-content; Google retired standalone-Comment enrichment the same year. Strictly ADDITIVE: the WebPage + Comment entities stay (parsers merge either way); a new `DiscussionPosting` wraps the discussion — `@id` = `post#discussion`, `headline` = "Discussion on {post title}", `comment[]` = the full Comment entity array, `commentCount`, `datePublished` = first comment's date, `about` = the post. Q&A mode untouched (QAPage branch verified no-leak).
+- **[NICE-TO-HAVE] Schema cap filterable** — `apply_filters('vibe_comments_schema_comment_cap', 100)` — high-discussion installs can raise the entity-list cap without touching the plugin (commentCount stays accurate regardless).
+
+**Live proofs**: post 98 (9 comments) → DiscussionPosting with `comment[] = 9 members`, `commentCount = 9`, headline "Discussion on Redis object caching on a cheap VPS" · cap=3 filter → 3 Comment nodes (counted within comment[] = 3) · QA post 495 → QAPage PRESENT, DiscussionPosting absent (no branch leak) · php -l clean.
+
+The audit also verified CLEAN: robots.txt (admin-ajax allowed for crawlers) · sitemap (77 URLs, lastmod-only) · canonicals self-referencing · search results noindex,follow · hard 404s · single h1 per page · the plugin's "N Comments" heading is a compliant h2 · no title/meta output (correctly out of that layer) · no SEO-plugin conflicts (merge-by-design architecture) · AJAX comment pagination causes zero URL explosion.
+
 ## [3.20.0] — 2026-09-03
 
 ### Cloudflare Full-Page-Cache Audit #10 — identity reconciliation (the CRITICAL finding)

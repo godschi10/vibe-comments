@@ -15,6 +15,20 @@ Types of changes:
 
 ---
 
+## [3.20.0] — 2026-09-03
+
+### Cloudflare Full-Page-Cache Audit #10 — identity reconciliation (the CRITICAL finding)
+
+The plugin's data layer was already edge-safe (AJAX islands, transient caches, per-request user overlays, granular Cache-Tag purges). The audit's one CRITICAL gap: the localize config bakes `isLoggedIn` / `isAdmin` / `qa.canAccept` into the HTML — under Cache-Everything an anonymous edge copy would silently strip Pin/Accept buttons from moderators and show logged-in users the guest form, with no correction mechanism.
+
+- **New endpoint `vibe_session_state`** (class-ajax-handler.php) — the refreshNonce pattern extended to identity: rate-limited 1/2s per IP (same read-only threat model), returns the live identity tuple `{isLoggedIn, isAdmin, qa:{mode, acceptedId, canAccept, questionUrl}}` for the current session.
+- **`refreshSessionState()` at boot** (vibe-comments.js, wired beside refreshNonce) — fetches the truth, compares against the baked flags, and on drift re-renders the comment list with the corrected flags (Pin/Accept resurrect for moderators; the form state corrects for logged-in users).
+- **README: "Cloudflare Full-Page Cache (Cache Everything) Compatibility"** — the three Cache Rules needed (cookie-bypass on `wordpress_logged_in_`, query-string noise normalization, Cache-Everything TTL guidance) + the note that the plugin's dynamic data needs no exceptions.
+
+**Live proofs**: anonymous HTTP → `{isLoggedIn:false, isAdmin:false, qa:false}` · admin context → `{isLoggedIn:true, isAdmin:true}` · admin on Q&A post 495 → full tuple `{qa:{mode:true, acceptedId:122, canAccept:true}}` · rate-limit 429 on the second rapid call (live HTTP) · temp admin forged + deleted clean.
+
+**Law born**: *identity flags never trust the cached copy — every user-specific flag baked into HTML gets a boot-time reconciliation endpoint (the refreshNonce pattern extends to identity, not just nonces).*
+
 ## [3.19.5] — 2026-09-03
 
 ### Speed & Performance Audit #9 — findings fixed (1 code + 2 config + 1 law)

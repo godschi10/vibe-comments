@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.19.5  
+**Version:** 3.20.0  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later
@@ -152,6 +152,20 @@ define('VIBE_CF_API_TOKEN', 'your-cache-purge-only-token');
 
 The API token needs only the **Cache Purge** permission - minimum scope.  
 Fire-and-forget (`blocking: false`) - never delays comment approval.
+
+---
+
+## Cloudflare Full-Page Cache (Cache Everything) Compatibility
+
+The plugin is **edge-cache-safe by design**: comment content, counts, reactions, and search all load via short-lived AJAX islands (120s transients at the origin) with per-request user overlays — nothing user-specific is baked into any cached payload. Nonces self-heal via `vibe_refresh_nonce` (rate-limited 1/2s), and identity flags (`isLoggedIn` / `isAdmin` / Q&A `canAccept`) self-heal via `vibe_session_state` (v3.20.0): on boot, the client asks the server who *this* session is and reconciles the UI if a cached anonymous copy baked the wrong flags — a moderator served an anonymous edge copy gets Pin/Accept buttons back automatically.
+
+To run Cache-Everything safely, configure **three Cloudflare Cache Rules**:
+
+1. **Bypass cache on cookie** — expression: `(http.cookie contains "wordpress_logged_in_")` — logged-in users (admins, editors, commenters with accounts) always hit origin; their pages are never served from the anonymous edge copy.
+2. **Ignore query-string noise on HTML** — strip `utm_*`, `fbclid`, `cb`, `gclid` (or any param your site ignores) from the cache key, or every shared link becomes its own edge entry.
+3. **Cache Everything on HTML** with an Edge TTL matching your freshness tolerance — comment additions are visible within your purge latency (the plugin fires a per-post CF purge via Cache-Tag `vibe-comments-{post_id}` on every approval, plus single-URL purge on Cache-Everything setups without tag support).
+
+No exceptions are needed for the plugin's dynamic data: `admin-ajax.php` responses carry `Cache-Control: private` where user-specific and short public TTLs where not — the endpoints are safe under a Cache-Everything policy as-is.
 
 ---
 

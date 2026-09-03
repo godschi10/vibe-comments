@@ -164,6 +164,7 @@
         // 2026-09-01 audit fix: nonce refresh for EVERYONE (logged-in users
         // on nginx-cached pages got stale baked nonces → 403s with no recovery).
         refreshNonce();
+        refreshSessionState();
         initReactions();
         initReplies();
         initEditWindow();
@@ -2156,6 +2157,54 @@
             }
         })
         .catch(function() { /* cached nonce still valid for 24h - silently continue */ });
+    }
+
+    /**
+     * v3.20.0 (Cloudflare Full-Cache Audit #10): identity reconciliation for
+     * cached pages. The localize config's isLoggedIn/isAdmin/qa flags were
+     * baked by whatever request generated the cached copy - under an edge
+     * cache that can be an anonymous render. This mirrors refreshNonce():
+     * ask the server who THIS session actually is, and reconcile the UI if
+     * the baked flags lied. Covers the moderator-served-anonymous-copy case
+     * (Pin/Accept buttons resurrect) and the logged-in-served-guest-copy
+     * case (auth bar swaps to user bar; comment form corrects).
+     */
+    function refreshSessionState() {
+        var url = config.ajaxUrl + '?action=vibe_session_state' + (config.postId ? '&post_id=' + config.postId : '');
+        fetchWithTimeout(url, {}, 8000)
+        .then(function(res) { return res.json(); })
+        .then(function(result) {
+            if (!result || !result.success || !result.data) return;
+            var d = result.data;
+            var drifted = false;
+
+            if (typeof d.isLoggedIn === 'boolean' && d.isLoggedIn !== !!config.isLoggedIn) {
+                config.isLoggedIn = d.isLoggedIn;
+                drifted = true;
+            }
+            if (typeof d.isAdmin === 'boolean' && d.isAdmin !== !!config.isAdmin) {
+                config.isAdmin = d.isAdmin;
+                drifted = true;
+            }
+            if (d.qa && config.qa && typeof d.qa.canAccept === 'boolean' && d.qa.canAccept !== !!(config.qa && config.qa.canAccept)) {
+                config.qa.canAccept = d.qa.canAccept;
+                if (typeof d.qa.acceptedId !== 'undefined') config.qa.acceptedId = d.qa.acceptedId;
+                drifted = true;
+            }
+
+            if (drifted) {
+                // The comment list must re-render with the corrected flags:
+                // a fresh load re-applies is_pinned/can_edit/owns/notify_on
+                // overlays AND re-evaluates isAdmin/canAccept per footer.
+                // Comments already rendered stay until the reload lands.
+                var list = document.getElementById('vibe-comment-list');
+                if (list && list.children.length > 0) {
+                    var btn = document.getElementById('vibe-load-comments');
+                    if (btn) { btn.click(); }
+                }
+            }
+        })
+        .catch(function() { /* baked flags stand - most pages match anyway */ });
     }
 
 

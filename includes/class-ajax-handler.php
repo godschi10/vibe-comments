@@ -15,6 +15,8 @@ class Vibe_Comments_Ajax_Handler {
         add_action('wp_ajax_nopriv_vibe_submit_comment',    array($this, 'submit_comment'));
         add_action('wp_ajax_vibe_refresh_nonce',            array($this, 'refresh_nonce'));
         add_action('wp_ajax_nopriv_vibe_refresh_nonce',     array($this, 'refresh_nonce'));
+        add_action('wp_ajax_vibe_session_state',            array($this, 'session_state'));
+        add_action('wp_ajax_nopriv_vibe_session_state',     array($this, 'session_state'));
         add_action('wp_ajax_vibe_load_comments',            array($this, 'load_comments'));
         add_action('wp_ajax_nopriv_vibe_load_comments',     array($this, 'load_comments'));
         add_action('wp_ajax_vibe_sync_likes',               array($this, 'sync_likes'));
@@ -173,6 +175,42 @@ class Vibe_Comments_Ajax_Handler {
 
         set_transient( $rate_key, 1, 2 );
         wp_send_json_success( array( 'nonce' => wp_create_nonce( 'wp_rest' ) ) );
+    }
+
+    /**
+     * v3.20.0 (Cloudflare Full-Cache Audit #10): session-identity state for
+     * cached pages. Under an anonymous edge cache (Cloudflare Cache-Everything
+     * and friends), the localize config's identity flags (isLoggedIn,
+     * isAdmin, qa.canAccept) are baked from WHOEVER'S request generated the
+     * cached copy - a moderator served an anonymous copy loses Pin/Accept
+     * buttons; a logged-in user gets the guest form. This endpoint extends
+     * the refreshNonce() pattern to identity: fetched at boot, reconciled
+     * client-side. Never cached (read + rate-limited; wp_send_json sets
+     * no-cache for admin-ajax anyway), rate-limited 1/2s per IP like
+     * refresh_nonce - the same read-only threat model.
+     */
+    public function session_state() {
+        $ip       = Vibe_Comments_Database::resolve_client_ip();
+        $rate_key = 'vs_' . substr( md5( $ip ), 0, 16 );
+        if ( get_transient( $rate_key ) ) {
+            wp_send_json_error( array( 'message' => __('Too many requests. Please wait a moment.', 'vibe-comments') ), 429 );
+            return;
+        }
+        set_transient( $rate_key, 1, 2 );
+
+        // Per-request identity + the post-scoped Q&A accept capability.
+        // qa.acceptedId rides along so a stale cached copy can also re-sync
+        // the accepted-answer pointer if it drifted mid-thread.
+        $post_id  = isset($_GET['post_id']) ? absint($_GET['post_id']) : 0;
+        $qa_state = false;
+        if ( $post_id && class_exists( 'Vibe_Comments_QA' ) ) {
+            $qa_state = Vibe_Comments_QA::localize_data( $post_id );
+        }
+        wp_send_json_success( array(
+            'isLoggedIn' => is_user_logged_in(),
+            'isAdmin'    => current_user_can( 'moderate_comments' ),
+            'qa'         => $qa_state,
+        ) );
     }
 
     /**

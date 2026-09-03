@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: vibe-comments 3.19.1\n"
+"Project-Id-Version: vibe-comments 3.19.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-02 11:11+0000\n"
+"POT-Creation-Date: 2026-09-03 08:31+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -37,7 +37,7 @@ msgstr ""
 msgid "Loading..."
 msgstr ""
 
-#: vibe-comments.php:287 templates/comments.php:126
+#: vibe-comments.php:287 templates/comments.php:127
 msgid "Load More Comments"
 msgstr ""
 
@@ -69,7 +69,7 @@ msgstr ""
 msgid "Hide Guest Form"
 msgstr ""
 
-#: vibe-comments.php:295 templates/comments.php:165
+#: vibe-comments.php:295 templates/comments.php:166
 msgid "Comment as Guest"
 msgstr ""
 
@@ -262,7 +262,7 @@ msgstr ""
 msgid "This browser does not support notifications."
 msgstr ""
 
-#: vibe-comments.php:343 templates/comments.php:218
+#: vibe-comments.php:343 templates/comments.php:221
 msgid ""
 "You will get a push notification on this device when someone replies to your "
 "comment."
@@ -296,6 +296,51 @@ msgstr ""
 
 #: vibe-comments.php:350
 msgid "Haha"
+msgstr ""
+
+#: vibe-comments.php:351
+msgid "Edit your comment"
+msgstr ""
+
+#: vibe-comments.php:352
+msgid "Edit"
+msgstr ""
+
+#: vibe-comments.php:353
+msgid "Cancel"
+msgstr ""
+
+#: vibe-comments.php:354
+msgid "5-minute window"
+msgstr ""
+
+#: vibe-comments.php:355
+msgid "Write something first."
+msgstr ""
+
+#: vibe-comments.php:356 templates/comments.php:110 templates/comments.php:111
+msgid "Newest first"
+msgstr ""
+
+#: vibe-comments.php:357
+msgid "Oldest first"
+msgstr ""
+
+#: vibe-comments.php:358
+msgid "Top — most reacted"
+msgstr ""
+
+#: vibe-comments.php:359
+#, php-format
+msgid "↑ %s new — load"
+msgstr ""
+
+#: vibe-comments.php:360
+msgid "comment"
+msgstr ""
+
+#: vibe-comments.php:361
+msgid "comments"
 msgstr ""
 
 #: includes/class-admin.php:46
@@ -817,73 +862,69 @@ msgstr[1] ""
 msgid "Enable JavaScript to view and join the discussion."
 msgstr ""
 
-#: templates/comments.php:110
-msgid "Newest first"
-msgstr ""
-
-#: templates/comments.php:139
+#: templates/comments.php:140
 msgid "Log out"
 msgstr ""
 
-#: templates/comments.php:154
+#: templates/comments.php:155
 #, php-format
 msgid "Login to %s"
 msgstr ""
 
-#: templates/comments.php:160
+#: templates/comments.php:161
 msgid "Continue with Google"
 msgstr ""
 
-#: templates/comments.php:163
+#: templates/comments.php:164
 msgid "or"
 msgstr ""
 
-#: templates/comments.php:178
+#: templates/comments.php:179
 msgid "Name"
 msgstr ""
 
-#: templates/comments.php:182
+#: templates/comments.php:184
 msgid "Your name"
 msgstr ""
 
-#: templates/comments.php:186
+#: templates/comments.php:188
 msgid "Email"
 msgstr ""
 
-#: templates/comments.php:190
+#: templates/comments.php:193
 msgid "your@email.com"
 msgstr ""
 
-#: templates/comments.php:197
+#: templates/comments.php:200
 msgid "Your comment"
 msgstr ""
 
-#: templates/comments.php:201
+#: templates/comments.php:204
 msgid "What do you think?"
 msgstr ""
 
-#: templates/comments.php:215
+#: templates/comments.php:218
 msgid "Notify me about replies"
 msgstr ""
 
-#: templates/comments.php:229
+#: templates/comments.php:232
 msgid "Email me about replies"
 msgstr ""
 
-#: templates/comments.php:232
+#: templates/comments.php:235
 msgid ""
 "You will get an email at the address above when someone replies to your "
 "comment."
 msgstr ""
 
-#: templates/comments.php:238
+#: templates/comments.php:241
 msgid "Post Comment"
 msgstr ""
 
-#: templates/comments.php:242
+#: templates/comments.php:245
 msgid "Cancel Reply"
 msgstr ""
 
-#: templates/comments.php:249
+#: templates/comments.php:252
 msgid "Comments are closed."
 msgstr ""

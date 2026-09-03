@@ -509,6 +509,16 @@
         if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest' });
     }
 
+    // v3.19.3 a11y (WCAG 2.3.3): JS-driven smooth scrolling must respect
+    // prefers-reduced-motion the same way the CSS guard governs animations.
+    var motionOK = null;
+    function scrollBehavior() {
+        if (motionOK === null) {
+            motionOK = !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+        }
+        return motionOK ? 'smooth' : 'auto';
+    }
+
     function initMentions() {
         var textarea = document.getElementById('vibe-comment-content');
         if (!textarea) return;
@@ -536,6 +546,19 @@
         // Click anywhere outside closes the dropdown.
         document.addEventListener('click', function(e) {
             if (mentionDrop && !mentionDrop.contains(e.target)) mentionCloseDrop();
+        });
+
+        // v3.19.3 a11y (WCAG 2.1.2): Escape closes any open reaction picker
+        // and returns focus to its trigger — mirrors the mention dropdown's
+        // Escape handling.
+        document.addEventListener('keydown', function(e) {
+            if (e.key !== 'Escape') return;
+            var openPicker = document.querySelector('.vibe-reaction-picker:not([hidden])');
+            if (!openPicker) return;
+            openPicker.hidden = true;
+            var art = openPicker.closest('article.vibe-comment-body');
+            var trig = art && art.querySelector('.vibe-reaction-summary');
+            if (trig) { trig.setAttribute('aria-expanded', 'false'); trig.focus(); }
         });
     }
 
@@ -797,7 +820,7 @@
             hoistPinnedComments();
         });
 
-        list.parentNode.insertBefore(banner, list);
+        list.parentNode.insertBefore(bannerWrap, list);
     }
 
     /**
@@ -892,6 +915,10 @@
                 if (nEl) nEl.textContent = count || '';
             });
             if (closePicker) picker.hidden = true;
+            // v3.19.3 a11y: aria-expanded must mirror the picker's REAL state —
+            // previously reset to "false" unconditionally, reporting collapsed
+            // while the picker stayed open on the success path.
+            if (summary) summary.setAttribute('aria-expanded', String(!picker.hidden));
         }
     }
 
@@ -950,7 +977,7 @@
                     // inside the loop - once per comment - so a 10-comment batch fired
                     // 10 competing smooth-scroll animations that visibly jittered the
                     // page instead of landing cleanly on the new content.
-                    firstNewLi.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    firstNewLi.scrollIntoView({ behavior: scrollBehavior(), block: 'nearest' });
                 }
 
                 hasMorePages = !!result.data.has_more;
@@ -1049,7 +1076,7 @@
             ? (Date.parse(comment.date_gmt.replace(' ', 'T') + 'Z') + 300000)
             : 0;
         const editBtnHtml  = comment.can_edit
-            ? '<button type="button" class="vibe-edit-btn" data-comment-id="' + cid + '" data-deadline="' + editDeadline + '">Edit</button>'
+            ? '<button type="button" class="vibe-edit-btn" data-comment-id="' + cid + '" data-deadline="' + editDeadline + '">' + str('edit', 'Edit') + '</button>'
             : '';
         // v3.18.0 consent law - the Notify toggle: the comment's author can
         // flip reply-email consent anytime, no window. Strangers never see it.
@@ -1135,6 +1162,11 @@
                 if (willOpen) {
                     picker.hidden = false;
                     summary.setAttribute('aria-expanded', 'true');
+                    // v3.19.3 a11y: focus enters the picker so keyboard users
+                    // reach the emoji options (they sit BEFORE the footer in
+                    // DOM order — forward Tab would never arrive).
+                    var firstOpt = picker.querySelector('.vibe-reaction-option');
+                    if (firstOpt) firstOpt.focus();
                 }
                 return;
             }
@@ -1162,13 +1194,18 @@
                 .then(function(res) { return res.json(); })
                 .then(function(result) {
                     if (result.success && result.data) {
-                        updateReactionDisplay(commentId, result.data.reactions, result.data.user_reaction);
+                        updateReactionDisplay(commentId, result.data.reactions, result.data.user_reaction, true);
+                        var backArticle = option.closest('article.vibe-comment-body');
+                        var backSummary = backArticle && backArticle.querySelector('.vibe-reaction-summary');
+                        if (backSummary) backSummary.focus();
                     } else {
                         var msg = (result.data && result.data.message) || str('reactFailed', 'Failed to react.');
                         showError(msg);
                         var a = option.closest('article.vibe-comment-body');
                         var p = a && a.querySelector('.vibe-reaction-picker');
                         if (p) p.hidden = true;
+                        var sm2 = a && a.querySelector('.vibe-reaction-summary');
+                        if (sm2) { sm2.setAttribute('aria-expanded', 'false'); sm2.focus(); }
                     }
                 })
                 .catch(function(err) {
@@ -1176,6 +1213,8 @@
                     var a = option.closest('article.vibe-comment-body');
                     var p = a && a.querySelector('.vibe-reaction-picker');
                     if (p) p.hidden = true;
+                    var sm3 = a && a.querySelector('.vibe-reaction-summary');
+                    if (sm3) { sm3.setAttribute('aria-expanded', 'false'); sm3.focus(); }
                 })
                 .finally(function() { option.disabled = false; });
                 return;
@@ -1247,11 +1286,11 @@
             var box = document.createElement('div');
             box.className = 'vibe-edit-box';
             box.innerHTML =
-                '<textarea class="vibe-edit-textarea" rows="3" maxlength="' + maxLength + '">' + escapeHtml(raw) + '</textarea>' +
+                '<textarea class="vibe-edit-textarea" aria-label="' + str('editComment', 'Edit your comment') + '" rows="3" maxlength="' + maxLength + '">' + escapeHtml(raw) + '</textarea>' +
                 '<div class="vibe-edit-actions">' +
-                    '<button type="button" class="vibe-edit-save">Save</button>' +
-                    '<button type="button" class="vibe-edit-cancel">Cancel</button>' +
-                    '<span class="vibe-edit-note">5-minute window</span>' +
+                    '<button type="button" class="vibe-edit-save">' + str('save', 'Save') + '</button>' +
+                    '<button type="button" class="vibe-edit-cancel">' + str('cancel', 'Cancel') + '</button>' +
+                    '<span class="vibe-edit-note">' + str('editWindow', '5-minute window') + '</span>' +
                 '</div>';
 
             contentEl.style.display = 'none';
@@ -1282,6 +1321,15 @@
                 if (!val) {
                     ta.classList.add('vibe-edit-error');
                     ta.focus();
+                    // v3.19.3 a11y (WCAG 1.4.1 + 4.1.3): the red border was the
+                    // ONLY failure signal — color alone, and silent to screen
+                    // readers. The note adds a text cue and announces it.
+                    var note = box.querySelector('.vibe-edit-note');
+                    if (note) {
+                        note.textContent = '\u26a0 ' + str('editEmpty', 'Write something first.');
+                        note.setAttribute('role', 'alert');
+                        note.setAttribute('aria-live', 'polite');
+                    }
                     return;
                 }
 
@@ -1416,7 +1464,7 @@
         if (textarea) {
             textarea.focus();
             setTimeout(function() {
-                textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                textarea.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
             }, 100);
         }
     }
@@ -1745,7 +1793,7 @@
             // A brand-new top-level comment always sits above any pinned
             // comments visually if we don't re-hoist - pinned must stay on top.
             hoistPinnedComments();
-            if (scroll) li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (scroll) li.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
             return li;
         }
 
@@ -1778,7 +1826,7 @@
             viewBtn.textContent = str('hideReplies', 'Hide replies');
         }
 
-        if (scroll) li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (scroll) li.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
         return li;
     }
 
@@ -1808,6 +1856,7 @@
 
         const div = document.createElement('div');
         div.className = 'vibe-message vibe-message-error';
+        div.setAttribute('role', 'alert'); // v3.19.3 a11y: WCAG 4.1.3 — the plugin's most important announcement was silent
         div.textContent = message; // textContent safely escapes HTML
 
         const form = document.getElementById('vibe-comment-form');
@@ -1821,6 +1870,7 @@
 
         const div = document.createElement('div');
         div.className = 'vibe-message vibe-message-success';
+        div.setAttribute('role', 'status'); // v3.19.3 a11y: success announced politely
         div.textContent = message;
 
         const form = document.getElementById('vibe-comment-form');
@@ -2270,10 +2320,13 @@
         const fields = document.getElementById('vibe-guest-fields');
         if (!toggle || !fields) return;
 
+        toggle.setAttribute('aria-controls', 'vibe-guest-fields');
+        toggle.setAttribute('aria-expanded', 'false');
         toggle.addEventListener('click', function() {
             const isHidden = fields.style.display === 'none' || !fields.style.display;
             fields.style.display = isHidden ? 'grid' : 'none';
             this.textContent = isHidden ? str('hideGuestForm', 'Hide Guest Form') : str('commentAsGuest', 'Comment as Guest');
+            this.setAttribute('aria-expanded', String(isHidden));
         });
     }
 
@@ -2394,9 +2447,9 @@
         // newest-first as the tiebreaker. Supersedes the v3.4 "liked ♥" mode:
         // likes are included in the total, so nothing ranked before is lost.
         const modes = [
-            { id: 'newest', label: '\u2193', title: 'Newest first' },
-            { id: 'oldest', label: '\u2191', title: 'Oldest first' },
-            { id: 'top',    label: '\u2b50', title: 'Top — most reacted' },
+            { id: 'newest', label: '\u2193', title: str('sortNewest', 'Newest first') },
+            { id: 'oldest', label: '\u2191', title: str('sortOldest', 'Oldest first') },
+            { id: 'top',    label: '\u2b50', title: str('sortTop', 'Top — most reacted') },
         ];
         let idx = 0;  // current mode index - reassigned on each click
 
@@ -2406,6 +2459,10 @@
             const label = btn.querySelector('.vibe-sort-label');
             if (label) label.textContent = mode.label;
             btn.title = mode.title;
+            // v3.19.3 a11y: the accessible NAME (not just the hover title) —
+            // the arrow glyph alone is not a name; screen readers announce
+            // the aria-label in full.
+            btn.setAttribute('aria-label', mode.title);
             btn.setAttribute('data-mode', mode.id);
             applySort(mode.id);
             // Fix for Load More + Sort interaction: loadMoreComments() fetches

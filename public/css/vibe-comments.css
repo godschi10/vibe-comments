@@ -1064,6 +1064,10 @@
 }
 
 .vibe-new-banner {
+    margin-bottom: 1rem;
+    width: fit-content;
+}
+.vibe-new-banner-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1072,15 +1076,21 @@
     font-size: 0.85rem;
     font-weight: 500;
     padding: 0.5rem 1.25rem;
+    border: none;
     border-radius: 999px;
-    margin-bottom: 1rem;
     cursor: pointer;
     user-select: none;
     transition: background 0.2s ease;
-    width: fit-content;
+    min-height: 44px;
+    font-family: inherit;
+    line-height: 1.2;
 }
-.vibe-new-banner:hover {
+.vibe-new-banner-btn:hover {
     background: #1d4ed8;
+}
+.vibe-new-banner-btn:focus-visible {
+    outline: 2px solid var(--vibe-primary, #2563eb);
+    outline-offset: 2px;
 }
 
 /* ── Collapse long comments ────────────────────────────────────────────── */

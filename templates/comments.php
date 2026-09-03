@@ -108,6 +108,7 @@ if ($vibe_count === 0) {
         <div class="vibe-comments-toolbar" id="vibe-comments-toolbar" style="display:none;">
             <button type="button" id="vibe-sort-toggle" class="vibe-sort-icon-btn"
                     title="<?php esc_attr_e('Newest first', 'vibe-comments'); ?>"
+                    aria-label="<?php esc_attr_e('Newest first', 'vibe-comments'); ?>"
                     data-mode="newest">
                 <svg viewBox="0 0 16 16" width="13" height="13" fill="none"
                      stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -179,7 +180,8 @@ if ($vibe_count === 0) {
                                     <span aria-hidden="true" style="color:#ef4444"> *</span>
                                 </label>
                                 <input type="text" id="vibe-author" name="author"
-                                       required placeholder="<?php esc_attr_e('Your name', 'vibe-comments'); ?>" />
+                                       required autocomplete="name"
+                                       placeholder="<?php esc_attr_e('Your name', 'vibe-comments'); ?>" />
                             </div>
                             <div class="vibe-field">
                                 <label for="vibe-email">
@@ -187,7 +189,8 @@ if ($vibe_count === 0) {
                                     <span aria-hidden="true" style="color:#ef4444"> *</span>
                                 </label>
                                 <input type="email" id="vibe-email" name="email"
-                                       required placeholder="<?php esc_attr_e('your@email.com', 'vibe-comments'); ?>" />
+                                       required autocomplete="email"
+                                       placeholder="<?php esc_attr_e('your@email.com', 'vibe-comments'); ?>" />
                             </div>
                         </div>
                     <?php endif; ?>

@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.19.2
+ * Version:           3.19.3
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.19.2');
+define('VIBE_COMMENTS_VERSION', '3.19.3');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -348,6 +348,17 @@ class Vibe_Comments {
                     'reactLove'          => __('Love', 'vibe-comments'),
                     'reactFire'          => __('Fire', 'vibe-comments'),
                     'reactHaha'          => __('Haha', 'vibe-comments'),
+                    'editComment'       => __('Edit your comment', 'vibe-comments'),
+                    'edit'              => __('Edit', 'vibe-comments'),
+                    'cancel'            => __('Cancel', 'vibe-comments'),
+                    'editWindow'        => __('5-minute window', 'vibe-comments'),
+                    'editEmpty'         => __('Write something first.', 'vibe-comments'),
+                    'sortNewest'        => __('Newest first', 'vibe-comments'),
+                    'sortOldest'        => __('Oldest first', 'vibe-comments'),
+                    'sortTop'           => __('Top — most reacted', 'vibe-comments'),
+                    'bannerNew'         => __('↑ %s new — load', 'vibe-comments'),
+                    'bannerComment'     => __('comment', 'vibe-comments'),
+                    'bannerComments'    => __('comments', 'vibe-comments'),
                 ),
             ));
         }

@@ -15,6 +15,27 @@ Types of changes:
 
 ---
 
+## [3.19.3] — 2026-09-02
+
+### Accessibility Audit #7 (WCAG 2.2 AA) — all 10 findings fixed
+
+Live-audited against the rendered output plus full code recon across all 9 sections.
+
+- **[CRITICAL, 2.1.1] New-comments banner was keyboard-dead** — a `<div role=status>` that announced "click to load" with no way to reach or activate it by keyboard. Now a real `<button>` inside the status wrapper, label reworded to "↑ N new — load" (no pointer-specific wording), 44px touch floor + focus ring.
+- **[AA, 1.3.5] Autocomplete tokens** — `autocomplete="name"` / `autocomplete="email"` on the guest fields (WCAG 2.2 AA requires identifying input purpose).
+- **[4.1.3] showError/showSuccess announce** — `role="alert"` / `role="status"` on the plugin's most important (previously silent) messages.
+- **[4.1.2] Edit textarea accessible name** — `aria-label` (i18n'd).
+- **[2.1.1/2.1.2] Reaction picker focus flow** — focus enters the first option on open, returns to the trigger on pick/fail/Escape (document-level Escape handler, mirroring the mention dropdown).
+- **[4.1.2] Sort button accessible name** — `aria-label` in the template AND on every mode click; mode titles now flow through i18n (killed 3 English stragglers).
+- **[4.1.2] aria-expanded state truth** — `updateReactionDisplay` now mirrors the picker's real state instead of unconditionally reporting collapsed.
+- **[2.3.3] Reduced-motion scrolling** — all 5 `scrollIntoView({behavior:'smooth'})` sites now consult `prefers-reduced-motion` (the CSS guard never governed JS scrolling).
+- **[4.1.2] Guest toggle** — `aria-expanded` (toggled live, verified) + `aria-controls`.
+- **[1.4.1 + 4.1.3] Edit-empty failure** — was color-only (red border) and silent; now a "⚠ Write something first." alert note.
+
+**i18n stragglers swept with the fixes**: Edit/Save/Cancel/5-minute-window templates, sort mode titles, banner plural labels, editEmpty — 11 new keys (.pot 206→216).
+
+**Live proofs**: autocomplete tokens rendered · sort aria-label "Newest first" · guest toggle aria-controls + aria-expanded flipping true on click, fields to grid · banner-btn + scrollBehavior + role=alert patterns in served bytes · 3 comments loading clean.
+
 ## [3.19.2] — 2026-09-02
 
 ### Responsive & Mobile Audit #6 — all 5 findings fixed

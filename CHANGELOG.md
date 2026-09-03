@@ -15,6 +15,20 @@ Types of changes:
 
 ---
 
+## [3.20.3] — 2026-09-03
+
+### Reviewer-completion follow-up: canonical fallback unification (the last loose thread of the audit series)
+
+The v3.20.2 review (interrupted at call 39; cold-start completed by the primary) surfaced a PRE-EXISTING inconsistency the design audit missed: 6 tokens carried divergent fallbacks dating to the v3.5.7-era CSS restore and v3.13.0 — `--vibe-primary` fell back to `#2563eb` (the HOVER value) on some refs while others used `#3b82f6`; `--vibe-border` had three fallbacks (`#e2e8f0`/`#e5e7eb`/rgba); `--vibe-bg` used `#fff`; `--vibe-text` used `#111`; `--vibe-surface` and border carried translucent rgba fallbacks; one nested-var fallback was unresolvable in the exact token-less scenario fallbacks exist for. Invisible on both live sites (both define all tokens), but a token-less theme would have rendered two blues and two border-grays.
+
+- **42 fallback references unified** to the `:root` canonical values across all 11 tokens. Every `var()` call now carries its token's exact `:root` definition — the fallback IS the default, provably.
+- The nested `var(--vibe-primary-hover, var(--vibe-primary, ...))` flattened to a canonical `#2563eb`.
+- **Self-caught corruption, fixed before ship**: the mechanical pass initially produced 7 double-close-paren lines (regex couldn't span inner parens in rgba/calc fallbacks); all restored by hand; integrity sweep verified (0 corrupt patterns outside rgba's legitimate `))`, per-line paren balance on all code lines, brace balance 0).
+
+**Live proofs**: comments render · theme token overrides intact (muted/border/pill colors all theme-brand values — fallbacks inert for token-defining themes) · served bytes carry ZERO divergent fallbacks · 44 canonical primary fallbacks · diff = exactly 39 substitution lines.
+
+**Laws born**: *a regex that rewrites CSS must be paren-aware — `[^)]+` cannot span rgba/calc fallbacks; verify with a per-line paren-balance sweep before shipping* · *the fallback must be the token's exact `:root` definition — the two drift together or the token-less theme gets two colors*.
+
 ## [3.20.2] — 2026-09-03
 
 ### Design Consistency & Premium UX Audit #14 (final audit of the series) — all findings fixed

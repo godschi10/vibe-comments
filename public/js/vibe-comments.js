@@ -1592,7 +1592,7 @@
         var btn   = document.createElement('button');
         btn.type        = 'button';
         btn.className   = 'vibe-draft-clear';
-        btn.textContent = str('discard', 'discard');
+        btn.textContent = str('discard', 'Discard');
 
         btn.addEventListener('click', function () {
             try { localStorage.removeItem(draftKey); } catch (e) {}

@@ -15,6 +15,22 @@ Types of changes:
 
 ---
 
+## [3.20.2] — 2026-09-03
+
+### Design Consistency & Premium UX Audit #14 (final audit of the series) — all findings fixed
+
+Scores going in: consistency 8.5/10, ease-of-use 9/10. The state system was near-complete; the audit closed the last gaps:
+
+- **[SHOULD-FIX] Auth buttons focus rings** — the three auth-bar buttons (Google / Guest / WP login) were the only interactive family without a designed focus-visible ring; now joined to the shared rule.
+- **[NICE-TO-HAVE] Legacy gray unified** — 14 `#888` fallback references → the canonical `--vibe-text-muted` value `#64748b` (one muted gray, not two). Fallback-only: token-defining themes see zero change (live-verified — both sites' computed colors unchanged).
+- **[NICE-TO-HAVE] Every bare var() call given an inline fallback** — all 77 bare `var(--vibe-*)` references now carry canonical fallbacks, so a theme defining *some* tokens but not others never gets a silently broken mix.
+- **[NICE-TO-HAVE] Hover taxonomy documented** — CSS comment declaring the three deliberate hover languages (FILL-INVERT for neutral actions, TINT for stateful, BORDER-ONLY for quiet toggles) so the next maintainer keeps new pills in-lane.
+- **[NICE-TO-HAVE] Microcopy casing** — the lone lowercase "discard" → "Discard" (JS fallback + i18n dict), matching every sibling button label's Title Case.
+
+**Live proofs**: comments render post-change · `#888` zero matches in served bytes · auth focus-visible rule served · theme token overrides intact (computed colors = brand values, proving fallbacks are inert for token-defining themes) · brace balance 0 · php -l + node --check clean.
+
+**Sections verified CLEAN**: spacing rhythm (consistent rem ladder), layout measure (800px), mobile (audit #6's 44px floor holds), ease-of-use (3-field guest form, progressive disclosure), conversion (dominant single CTA), brand alignment (the token system IS the brand mechanism — both live sites re-map --vibe-primary to their greens).
+
 ## [3.20.1] — 2026-09-03
 
 ### SEO Audit #11 — schema modernization (all findings fixed)

@@ -7,6 +7,18 @@
     'use strict';
 
     const config = window.vibeComments || {};
+
+    // ── v3.19.4 Cross-Browser Audit #8 ─────────────────────────────────
+    // NodeList.prototype.forEach ponyfill. The whole file is a deliberate
+    // ES5.5 deliverable (zero arrows, zero async/await, zero template
+    // literals) EXCEPT these direct .forEach() calls on querySelectorAll()
+    // results — NodeList iteration shipped Safari 10 / Chrome 51 / FF 50,
+    // so Safari <=9.x and legacy Android WebViews died at 24 call sites.
+    // One prototype patch fixes every site; modern engines never hit it.
+    if (window.NodeList && window.NodeList.prototype && !NodeList.prototype.forEach) {
+        NodeList.prototype.forEach = Array.prototype.forEach;
+    }
+
     function str(key, fallback) {
         var i18n = config && config.i18n ? config.i18n : {};
         return (typeof i18n[key] === 'string' && i18n[key] !== '') ? i18n[key] : (fallback || '');
@@ -698,6 +710,15 @@
      * Prevents zombie requests hanging indefinitely on slow/dead servers.
      */
     function fetchWithTimeout(url, options, ms) {
+        // v3.19.4 Cross-Browser Audit #8: AbortController shipped Safari
+        // 11.1 / Chrome 66 — on older engines the constructor threw and
+        // killed all 14 call sites at construction. Degrade to a plain
+        // fetch (no timeout) there; modern engines are unchanged. Same
+        // feature-detect discipline the push checkbox already uses for
+        // 'PushManager' in window.
+        if (typeof AbortController === 'undefined') {
+            return fetch(url, options || {});
+        }
         var ctrl = new AbortController();
         var tid  = setTimeout(function() { ctrl.abort(); }, ms || 15000);
         var opts = Object.assign({}, options || {}, { signal: ctrl.signal });

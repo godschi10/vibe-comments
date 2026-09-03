@@ -203,6 +203,15 @@
     white-space: nowrap;
     flex-shrink: 0;
 }
+/* v3.19.4 Cross-Browser Audit #8 (documented, no change): the 27 :hover
+ * rules in this sheet are NOT wrapped in @media (hover: hover). On touch
+ * devices the hover state sticks after tap until the next tap elsewhere
+ * (ghost-hover). Accepted deliberately: every hover here is a subtle
+ * bg/border shift on a control that ALREADY carries a distinct active
+ * state (:active, aria-expanded, data-pinned etc.), so the sticky state
+ * never conveys wrong information - and wrapping 27 rules would double
+ * the sheet size for a cosmetic delta. The theme layer may add
+ * @media (hover: hover) guards if it ever restyles these pills. */
 .vibe-reaction-summary:hover {
     background: var(--vibe-bg-alt, #f3f4f6);
     border-color: var(--vibe-text-muted, #888);
@@ -1095,6 +1104,12 @@
 
 /* ── Collapse long comments ────────────────────────────────────────────── */
 .vibe-comment-content.vibe-content-collapsed {
+    /* v3.19.4 Cross-Browser Audit #8: -webkit-line-clamp is STILL the only
+     * form of this property in every engine (the unprefixed property does
+     * not exist anywhere) - no @supports needed. Graceful degradation on a
+     * hypothetical engine without it: overflow:hidden applies but no clamp
+     * line count does, so the FULL text shows - the safe failure. The
+     * Read more/Show less toggle still works either way. */
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 4;

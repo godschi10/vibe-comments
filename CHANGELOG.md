@@ -15,6 +15,21 @@ Types of changes:
 
 ---
 
+## [3.19.4] — 2026-09-02
+
+### Cross-Browser Compatibility Audit #8 — all 4 findings fixed
+
+The codebase was already a deliberate ES5.5 deliverable (zero arrows, zero async/await, zero template literals, zero optional chaining). The audit found the two modern-API inconsistencies that broke that claim, plus documented two by-design behaviors.
+
+- **[SHOULD-FIX] NodeList.prototype.forEach ponyfill** — 24 call sites iterate `querySelectorAll()` results directly; NodeList iteration shipped Safari 10 / Chrome 51 / FF 50, so Safari <=9.x and legacy Android WebViews died at every list iteration. One 3-line prototype patch at the IIFE top (`if (window.NodeList && !NodeList.prototype.forEach) NodeList.prototype.forEach = Array.prototype.forEach`) fixes every site; modern engines never execute it.
+- **[SHOULD-FIX] AbortController guard** — `fetchWithTimeout` constructed `AbortController` unguarded (Safari <11.1 / Chrome <66 throws), killing all 14 call sites at construction. Now degrades to plain `fetch` on ancient engines — the same feature-detect discipline the push checkbox already uses for `'PushManager' in window`.
+- **[NICE-TO-HAVE] line-clamp degradation documented** — CSS comment: `-webkit-line-clamp` is still the only form everywhere (no unprefixed property exists); a hypothetical engine without it shows full text (the safe failure), Read more/Show less still works.
+- **[NICE-TO-HAVE] hover-sticky policy documented** — the 27 `:hover` rules are deliberately NOT wrapped in `@media (hover: hover)`: every sticky state is a subtle bg/border shift on controls that carry distinct active/aria states, so touch ghost-hover never conveys wrong information; wrapping would double the sheet for a cosmetic delta. Documented where the next auditor will look.
+
+**Verified clean**: localStorage all-in-try/catch (Safari private mode degrades as designed) · zero userAgent sniffing · `e.key` standard values only (no keyCode) · CSS var fallbacks inline · flex/grid `gap` universal-current · no backdrop-filter/:has()/@layer/sticky/vh · accent-color universal · progressive enhancement (server-rendered reading without JS).
+
+**Live proofs**: ponyfill + guard patterns grep-proven in served bytes (4 matches) · comments render (forEach path) · sort cycles all 3 modes · reaction bars mount.
+
 ## [3.19.3] — 2026-09-02
 
 ### Accessibility Audit #7 (WCAG 2.2 AA) — all 10 findings fixed

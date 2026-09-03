@@ -15,6 +15,18 @@ Types of changes:
 
 ---
 
+## [3.19.5] — 2026-09-03
+
+### Speed & Performance Audit #9 — findings fixed (1 code + 2 config + 1 law)
+
+- **[PERF] initRelativeTime background skip** — the 60s timestamp sweep ran its querySelectorAll().forEach on every fire even while backgrounded; now bails on `document.hidden` (matches the 30s poll's existing visibilitychange discipline).
+- **[CONFIG] nginx split-TTL asset caching** (gwill-wp vhost) — versioned asset URLs (`?ver=`) now serve `1y, immutable`; bare URLs keep the incident-protective `10m, must-revalidate`. The four-carrier law bumps `?ver=` on every release, so deploys stay visible within one refresh while every post-load asset re-request disappears for a year. Honors the v1.18.80→v1.19.63 incident history (30d blanket TTL made deploys invisible; the split avoids repeating it).
+- **[RETRACTED] stale-while-revalidate** — `fastcgi_cache_use_stale ... updating` already present in optimization.conf:12; finding was already satisfied.
+- **[RETRACTED] 2.4s cold TTFB** — measurement artifact: the audit's `?cb=` cache-buster tripped nginx's `query_string != ""` skip rule, measuring raw PHP renders. Real visitor path: 5ms warm / 0.55s first-hit / 0.2s QA post (all measured clean after).
+- **[LAW] JS size budget** — vibe-comments.js crosses 200KB raw → split features into per-feature files. Current: 139KB raw / 33.6KB br (fine; documented threshold).
+
+**Live proofs**: `?ver=3.19.4` asset → `max-age=31536000, immutable` · bare asset → `max-age=600, must-revalidate` (unchanged) · uploads → 30d (untouched) · HTML page → `x-cache: HIT` (untouched) · nginx -t clean + reloaded.
+
 ## [3.19.4] — 2026-09-02
 
 ### Cross-Browser Compatibility Audit #8 — all 4 findings fixed

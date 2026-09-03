@@ -2873,6 +2873,12 @@
     }
     function initRelativeTime() {
         setInterval(function() {
+            // v3.19.5 perf audit #9: skip the DOM sweep while the tab is
+            // backgrounded (timers throttle to ~1/min anyway, but the
+            // querySelectorAll().forEach over every timestamp still ran on
+            // each fire and again on focus-return catch-up). The 30s poll
+            // already has this discipline via visibilitychange.
+            if (document.hidden) return;
             document.querySelectorAll('time.vibe-comment-time[datetime]').forEach(function(el) {
                 var dt = el.getAttribute('datetime');
                 if (dt) el.textContent = timeAgo(new Date(dt));

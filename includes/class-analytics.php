@@ -430,7 +430,7 @@ class Vibe_Comments_Analytics {
 				<?php
 				printf(
 					/* translators: %s = number of minutes. */
-					esc_html__( 'Live from the comments tables  -  cached %d min. Reactions, push/email opt-ins, threading and velocity in one place.', 'vibe-comments' ),
+					esc_html__( 'Live from the comments tables - cached %d min. Reactions, push/email opt-ins, threading and velocity in one place.', 'vibe-comments' ),
 					(int) ( self::CACHE_TTL / 60 )
 				);
 				?>

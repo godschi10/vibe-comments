@@ -130,7 +130,7 @@ class Vibe_Comments_Digest {
 		if ( ( $counts['approved'] + $counts['pending'] ) === 0 ) {
 			return array(
 				'empty'   => true,
-				'subject' => '[' . $site_name . '] Daily digest  -  a quiet day',
+				'subject' => '[' . $site_name . '] Daily digest - a quiet day',
 				'html'    => self::empty_day_html( $site_name ),
 			);
 		}
@@ -201,7 +201,7 @@ class Vibe_Comments_Digest {
 		// Pending section first - the actionable morning list.
 		if ( $counts['pending'] > 0 ) {
 			$rows .= '<tr><td style="padding:18px 0 0 0;">'
-				. '<h2 style="margin:0 0 10px 0;font-size:16px;color:#1f2937;">⚠️ Awaiting moderation  -  ' . (int) $counts['pending'] . '</h2>';
+				. '<h2 style="margin:0 0 10px 0;font-size:16px;color:#1f2937;">⚠️ Awaiting moderation - ' . (int) $counts['pending'] . '</h2>';
 			foreach ( $comments as $c ) {
 				if ( '0' !== (string) $c['comment_approved'] ) continue;
 				$cid = (int) $c['comment_ID'];
@@ -210,7 +210,7 @@ class Vibe_Comments_Digest {
 				$rows .= '<div style="margin:0 0 8px 0;padding:10px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;">'
 					. '<div style="font-size:13px;color:#374151;"><strong>' . esc_html( $c['comment_author'] ) . '</strong>'
 					. ' <span style="color:' . esc_attr( $color ) . ';font-weight:600;">' . esc_html( $sc['label'] . ' ' . $sc['score'] . '%' ) . '</span>'
-					. '  -  <a href="' . esc_url( admin_url( 'comment.php?action=editcomment&c=' . $cid ) ) . '" style="color:#2563eb;">review</a></div>'
+					. ' - <a href="' . esc_url( admin_url( 'comment.php?action=editcomment&c=' . $cid ) ) . '" style="color:#2563eb;">review</a></div>'
 					. '<div style="font-size:13px;color:#4b5563;margin-top:4px;">' . esc_html( wp_html_excerpt( wp_strip_all_tags( $c['comment_content'] ), 140 ) ) . '</div>'
 					. '</div>';
 			}
@@ -258,7 +258,7 @@ class Vibe_Comments_Digest {
 				. '</div></td></tr>';
 		}
 
-		$subject = sprintf( '[%s] Daily digest  -  %d comments, %d pending', $site_name, $counts['approved'], $counts['pending'] );
+		$subject = sprintf( '[%s] Daily digest - %d comments, %d pending', $site_name, $counts['approved'], $counts['pending'] );
 		$html    = self::wrap_html( $site_name, $day_label, $counts, $rows, $admin_url );
 
 		return array(
@@ -272,7 +272,7 @@ class Vibe_Comments_Digest {
 	private static function empty_day_html( $site_name ) {
 		return self::wrap_html( $site_name, gmdate( 'l j F', strtotime( self::window_start() ) ),
 			array( 'approved' => 0, 'pending' => 0, 'top_level' => 0, 'replies' => 0 ),
-			'<tr><td style="padding:18px 0;"><div style="font-size:14px;color:#4b5563;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:16px;">A quiet day  -  no new comments yesterday. Nothing awaiting moderation. 🌤️</div></td></tr>',
+			'<tr><td style="padding:18px 0;"><div style="font-size:14px;color:#4b5563;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:16px;">A quiet day - no new comments yesterday. Nothing awaiting moderation. 🌤️</div></td></tr>',
 			admin_url( 'edit-comments.php' ) );
 	}
 
@@ -316,7 +316,7 @@ class Vibe_Comments_Digest {
 		);
 
 		if ( ! $sent ) {
-			error_log( 'Vibe digest: wp_mail returned false for ' . $to . ' (SMTP constants / transport  -  see wp-config GWILL_SMTP_*).' );
+			error_log( 'Vibe digest: wp_mail returned false for ' . $to . ' (SMTP constants / transport - see wp-config GWILL_SMTP_*).' );
 		}
 		return $sent;
 	}
@@ -349,7 +349,7 @@ class Vibe_Comments_Digest {
 	}
 
 	public static function render_section_intro() {
-		echo '<p>' . esc_html__( 'One email each morning (08:00 WAT): yesterday\'s comment activity  -  counts, pending queue with spam scores, most-reacted, top posts and voices. Preview renders the exact email.', 'vibe-comments' ) . '</p>';
+		echo '<p>' . esc_html__( 'One email each morning (08:00 WAT): yesterday\'s comment activity - counts, pending queue with spam scores, most-reacted, top posts and voices. Preview renders the exact email.', 'vibe-comments' ) . '</p>';
 	}
 
 	public static function render_enabled_field() {

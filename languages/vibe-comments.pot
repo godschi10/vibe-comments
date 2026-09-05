@@ -175,7 +175,7 @@ msgid "Edit failed."
 msgstr ""
 
 #: vibe-comments.php:321
-msgid "Draft restored  -  "
+msgid "Draft restored - "
 msgstr ""
 
 #: vibe-comments.php:322
@@ -327,12 +327,12 @@ msgid "Oldest first"
 msgstr ""
 
 #: vibe-comments.php:358
-msgid "Top  -  most reacted"
+msgid "Top - most reacted"
 msgstr ""
 
 #: vibe-comments.php:359
 #, php-format
-msgid "↑ %s new  -  load"
+msgid "↑ %s new - load"
 msgstr ""
 
 #: vibe-comments.php:360
@@ -488,7 +488,7 @@ msgstr ""
 #: includes/class-analytics.php:433
 #, php-format
 msgid ""
-"Live from the comments tables  -  cached %d min. Reactions, push/email opt-"
+"Live from the comments tables - cached %d min. Reactions, push/email opt-"
 "ins, threading and velocity in one place."
 msgstr ""
 
@@ -662,7 +662,7 @@ msgstr ""
 
 #: includes/class-digest.php:352
 msgid ""
-"One email each morning (08:00 WAT): yesterday's comment activity  -  counts, "
+"One email each morning (08:00 WAT): yesterday's comment activity - counts, "
 "pending queue with spam scores, most-reacted, top posts and voices. Preview "
 "renders the exact email."
 msgstr ""

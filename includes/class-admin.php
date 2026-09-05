@@ -212,7 +212,7 @@ class Vibe_Comments_Admin {
                 ?>
                 <hr />
                 <h3>Digest Preview</h3>
-                <p class="description">Renders the exact digest email for yesterday  -  the same build path the morning cron uses. Sends nothing.</p>
+                <p class="description">Renders the exact digest email for yesterday - the same build path the morning cron uses. Sends nothing.</p>
                 <p>
                     <button type="button" class="button button-secondary" id="vibe-digest-preview-btn"
                             data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"

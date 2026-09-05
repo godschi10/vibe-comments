@@ -12,7 +12,7 @@
     // NodeList.prototype.forEach ponyfill. The whole file is a deliberate
     // ES5.5 deliverable (zero arrows, zero async/await, zero template
     // literals) EXCEPT these direct .forEach() calls on querySelectorAll()
-    // results  -  NodeList iteration shipped Safari 10 / Chrome 51 / FF 50,
+    // results - NodeList iteration shipped Safari 10 / Chrome 51 / FF 50,
     // so Safari <=9.x and legacy Android WebViews died at 24 call sites.
     // One prototype patch fixes every site; modern engines never hit it.
     if (window.NodeList && window.NodeList.prototype && !NodeList.prototype.forEach) {
@@ -113,7 +113,7 @@
                    ' data-comment-id="' + cid + '"' +
                    ' data-type="' + def.type + '"' +
                    ' title="' + escapeHtml(def.label) + '"' +
-                   ' aria-label="' + escapeHtml(def.label) + '  -  ' + count + '">' +
+                   ' aria-label="' + escapeHtml(def.label) + ' - ' + count + '">' +
                    '<span class="vibe-rx-picker-emoji">' + def.emoji + '</span>' +
                    '<span class="vibe-rx-picker-n">' + (count || '') + '</span>' +
                    '</button>';
@@ -257,7 +257,7 @@
                     if (note) {
                         note.textContent = permission === 'denied'
                             ? str('pushBlocked', 'Notifications are blocked for this site in your browser settings.')
-                            : 'Permission not granted  -  the checkbox stays off.';
+                            : 'Permission not granted - the checkbox stays off.';
                         note.hidden = false;
                     }
                     return;
@@ -562,7 +562,7 @@
         });
 
         // v3.19.3 a11y (WCAG 2.1.2): Escape closes any open reaction picker
-        // and returns focus to its trigger  -  mirrors the mention dropdown's
+        // and returns focus to its trigger - mirrors the mention dropdown's
         // Escape handling.
         document.addEventListener('keydown', function(e) {
             if (e.key !== 'Escape') return;
@@ -712,7 +712,7 @@
      */
     function fetchWithTimeout(url, options, ms) {
         // v3.19.4 Cross-Browser Audit #8: AbortController shipped Safari
-        // 11.1 / Chrome 66  -  on older engines the constructor threw and
+        // 11.1 / Chrome 66 - on older engines the constructor threw and
         // killed all 14 call sites at construction. Degrade to a plain
         // fetch (no timeout) there; modern engines are unchanged. Same
         // feature-detect discipline the push checkbox already uses for
@@ -808,7 +808,7 @@
             existing._pendingComments = pending.concat(comments);
             var total = existing._pendingComments.length;
             var label = existing.querySelector('.vibe-banner-label');
-            if (label) label.textContent = '\u2191 ' + total + ' new comment' + (total !== 1 ? 's' : '') + '  -  click to load';
+            if (label) label.textContent = '\u2191 ' + total + ' new comment' + (total !== 1 ? 's' : '') + ' - click to load';
             return;
         }
 
@@ -830,7 +830,7 @@
         var label = document.createElement('span');
         label.className = 'vibe-banner-label';
         var n = comments.length;
-        label.textContent = '\u2191 ' + n + ' new comment' + (n !== 1 ? 's' : '') + '  -  click to load';
+        label.textContent = '\u2191 ' + n + ' new comment' + (n !== 1 ? 's' : '') + ' - click to load';
         banner.appendChild(label);
 
         banner.addEventListener('click', function() {
@@ -1186,7 +1186,7 @@
                     summary.setAttribute('aria-expanded', 'true');
                     // v3.19.3 a11y: focus enters the picker so keyboard users
                     // reach the emoji options (they sit BEFORE the footer in
-                    // DOM order  -  forward Tab would never arrive).
+                    // DOM order - forward Tab would never arrive).
                     var firstOpt = picker.querySelector('.vibe-reaction-option');
                     if (firstOpt) firstOpt.focus();
                 }
@@ -1344,7 +1344,7 @@
                     ta.classList.add('vibe-edit-error');
                     ta.focus();
                     // v3.19.3 a11y (WCAG 1.4.1 + 4.1.3): the red border was the
-                    // ONLY failure signal  -  color alone, and silent to screen
+                    // ONLY failure signal - color alone, and silent to screen
                     // readers. The note adds a text cue and announces it.
                     var note = box.querySelector('.vibe-edit-note');
                     if (note) {
@@ -1878,7 +1878,7 @@
 
         const div = document.createElement('div');
         div.className = 'vibe-message vibe-message-error';
-        div.setAttribute('role', 'alert'); // v3.19.3 a11y: WCAG 4.1.3  -  the plugin's most important announcement was silent
+        div.setAttribute('role', 'alert'); // v3.19.3 a11y: WCAG 4.1.3 - the plugin's most important announcement was silent
         div.textContent = message; // textContent safely escapes HTML
 
         const form = document.getElementById('vibe-comment-form');
@@ -2519,7 +2519,7 @@
         const modes = [
             { id: 'newest', label: '\u2193', title: str('sortNewest', 'Newest first') },
             { id: 'oldest', label: '\u2191', title: str('sortOldest', 'Oldest first') },
-            { id: 'top',    label: '\u2b50', title: str('sortTop', 'Top  -  most reacted') },
+            { id: 'top',    label: '\u2b50', title: str('sortTop', 'Top - most reacted') },
         ];
         let idx = 0;  // current mode index - reassigned on each click
 

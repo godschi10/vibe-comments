@@ -55,10 +55,10 @@ class Vibe_Comments_Spam_Score {
 	 * @return array            array( 'score' => int 0-100, 'label' => string, 'reasons' => string[] )
 	 */
 	public static function score( $c ) {
-		$author  = is_object( $c ) ? (string) $c->comment_author        : (string) ( $c['author']  ?? '' );
-		$email   = is_object( $c ) ? (string) $c->comment_author_email  : (string) ( $c['email']   ?? '' );
-		$url     = is_object( $c ) ? (string) $c->comment_author_url    : (string) ( $c['url']     ?? '' );
-		$content = is_object( $c ) ? (string) $c->comment_content       : (string) ( $c['content'] ?? '' );
+		$author  = is_object( $c ) ? (string) ( $c->comment_author       ?? '' ) : (string) ( $c['author']  ?? '' );
+		$email   = is_object( $c ) ? (string) ( $c->comment_author_email ?? '' ) : (string) ( $c['email']   ?? '' );
+		$url     = is_object( $c ) ? (string) ( $c->comment_author_url    ?? '' ) : (string) ( $c['url']     ?? '' );
+		$content = is_object( $c ) ? (string) ( $c->comment_content      ?? '' ) : (string) ( $c['content'] ?? '' );
 
 		$points  = 0;
 		$reasons = array();

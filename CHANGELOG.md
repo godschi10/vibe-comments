@@ -15,6 +15,14 @@ Types of changes:
 
 ---
 
+## [3.20.4] — 2026-09-04
+
+**FIX — undefined-property warnings in the spam scorer (conflict-audit finding, reviewer-verified).**
+
+`Vibe_Comments_Spam_Score::score()` read `comment_author`, `comment_author_email`, `comment_author_url`, and `comment_content` off incoming objects with bare property access. A comment stdClass missing any of those (guest-submission paths — 3 warnings in production debug.log on 2026-09-01 08:44/08:48 UTC) emitted `Undefined property` warnings on every score call. All four reads are now null-coalesced on the object branch, mirroring the array branch that already did it.
+
+- Battery (standalone, ABSPATH + apply_filters shims): sparse object → 0/clean, array path → 0/clean, spam object → 70/likely-spam with 3 reasons, zero warnings. Regression: scoring behavior unchanged.
+
 ## [3.20.3] — 2026-09-03
 
 ### Reviewer-completion follow-up: canonical fallback unification (the last loose thread of the audit series)

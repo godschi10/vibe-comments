@@ -17,7 +17,7 @@ Types of changes:
 
 ## [3.20.5] — 2026-09-05
 
-**WRITING-VOICE — em-dash pass completed (fleet-wide humanize decree).**
+**WRITING-VOICE - hyphen pass completed (fleet-wide humanize decree).**
 
 The King decreed zero em-dashes across the entire fleet (theme, plugin, finance, starter). This plugin had 182 remaining in comments, docblocks, and docs after its v3.17.3 pass (new code since then re-introduced some). Tokenizer-grade pass (PHP via token_get_all, line-based comment-aware for JS) removed all 182; user-facing strings included per the fleet-wide scope (this plugin's strings carry no em-dash voice, verified).
 

@@ -15,7 +15,7 @@ Types of changes:
 
 ---
 
-## [3.20.5] — 2026-09-05
+## [3.20.5]  -  2026-09-05
 
 **WRITING-VOICE - hyphen pass completed (fleet-wide humanize decree).**
 

@@ -39,14 +39,14 @@
 .vibe-an-chart h3 { margin:0 0 10px 0; font-size:13px; color:#3c434a; font-weight:600; }
 .vibe-an-chart svg { width:100%; height:auto; display:block; }
 
-/* ── v3.19.2 Responsive Audit #6 — admin narrow-screen handling ──
- * .vibe-an-two (leaderboards 2-col grid) never collapsed — cramped under
+/* ── v3.19.2 Responsive Audit #6  -  admin narrow-screen handling ──
+ * .vibe-an-two (leaderboards 2-col grid) never collapsed  -  cramped under
  * ~600px. 782px is WordPress core's own admin responsive breakpoint. */
 @media (max-width: 782px) {
     .vibe-an-two { grid-template-columns: 1fr; }
 }
 
-/* Analytics tables had zero plugin CSS — WP core table styles are fine,
+/* Analytics tables had zero plugin CSS  -  WP core table styles are fine,
  * but a scroll wrapper guarantees no crush on narrow admin viewports. */
 .vibe-an-table-wrap { overflow-x: auto; }
 .vibe-an-table { width: 100%; }

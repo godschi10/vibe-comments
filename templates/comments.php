@@ -6,7 +6,7 @@
  * Architecture:
  *   - Comment count is read from wp_options (written on every approval, zero live DB query).
  *   - Everything (toolbar, list, form) is hidden until the user clicks "Load Comments".
- *   - The page is fully static and cache-safe — no PHP count functions on the hot path.
+ *   - The page is fully static and cache-safe  -  no PHP count functions on the hot path.
  */
 
 if (!class_exists('Vibe_Comments_Database')) {
@@ -20,14 +20,14 @@ if (!comments_open() && !have_comments()) {
 // ── Persistent comment count ─────────────────────────────────────────────────
 //
 // get_option() reads from WP's in-memory options cache (or Redis/Memcached).
-// Zero live DB query on every render — the option is updated by on_comment_approved()
+// Zero live DB query on every render  -  the option is updated by on_comment_approved()
 // before the page cache is purged, so the value is always accurate when the
 // cache rebuilds.
 //
 // On first render (option not yet seeded), fall back to get_comments_number()
 // and seed the option so future renders are free.
 //
-// Portability note (v3.19.0, audit N4): this is a SINGLE bounded write — one
+// Portability note (v3.19.0, audit N4): this is a SINGLE bounded write  -  one
 // tiny per-post option, autoload=false, seeded once per post then read-only.
 // Not the "option updates inside loops / unbounded transients" anti-pattern;
 // bounded by post count, cleaned by uninstall.php's LIKE sweep, travels fine
@@ -55,26 +55,26 @@ if ($vibe_count === 0) {
 <section id="vibe-comments" class="vibe-comments-section">
 
     <!--
-        Heading text comes from wp_options — not from a live DB query.
+        Heading text comes from wp_options  -  not from a live DB query.
         Empty when count = 0 so CSS :empty hides it automatically.
         JS overwrites the text with the accurate live total after Load is clicked.
     -->
     <h2 class="vibe-comments-title" id="vibe-comments-title"><?php echo $vibe_heading; ?></h2>
 
-    <!-- Static trigger — no count, cached forever, zero staleness risk -->
+    <!-- Static trigger  -  no count, cached forever, zero staleness risk -->
     <div id="vibe-comments-trigger">
         <button type="button" id="vibe-load-comments-btn" class="vibe-btn vibe-btn-load-comments">
             <?php _e('Load Comments', 'vibe-comments'); ?>
         </button>
     </div>
 
-    <?php /* A1 fix: this entire comment system — list, form, reactions, everything
-             — is AJAX-driven with no server-rendered fallback content anywhere in
+    <?php /* A1 fix: this entire comment system  -  list, form, reactions, everything
+              -  is AJAX-driven with no server-rendered fallback content anywhere in
              this template. Without this, a visitor with JavaScript disabled sees
              a "Load Comments" button that does nothing when clicked, with zero
              indication of why. This doesn't attempt a full non-JS posting path
              (that would mean rebuilding a parallel submission system this plugin
-             deliberately moved away from) — just an honest explanation, plus the
+             deliberately moved away from)  -  just an honest explanation, plus the
              existing comment count so at least that much is visible either way. */ ?>
     <noscript>
         <p class="vibe-noscript-notice">
@@ -104,7 +104,7 @@ if ($vibe_count === 0) {
     -->
     <div id="vibe-comments-container" style="display:none;">
 
-        <!-- Sort icon + search — revealed by JS once comments are loaded -->
+        <!-- Sort icon + search  -  revealed by JS once comments are loaded -->
         <div class="vibe-comments-toolbar" id="vibe-comments-toolbar" style="display:none;">
             <button type="button" id="vibe-sort-toggle" class="vibe-sort-icon-btn"
                     title="<?php esc_attr_e('Newest first', 'vibe-comments'); ?>"
@@ -207,7 +207,7 @@ if ($vibe_count === 0) {
                         </div>
                     </div>
 
-                    <?php /* Honeypot — off-screen, bots fill it, humans never see it */ ?>
+                    <?php /* Honeypot  -  off-screen, bots fill it, humans never see it */ ?>
                     <input type="text" name="vibe_hp" value="" class="vibe-hp-field"
                            aria-hidden="true" tabindex="-1" autocomplete="off" />
 
@@ -223,7 +223,7 @@ if ($vibe_count === 0) {
                     </div>
                     <?php endif; ?>
 
-                    <?php /* v3.9.0 — email opt-in: rides wp_mail(), works on any
+                    <?php /* v3.9.0  -  email opt-in: rides wp_mail(), works on any
                            server (server mail or the themes' SMTP rail). Consent
                            flag on the comment; address = the comment's own email. */ ?>
                     <div class="vibe-reply-push-optin vibe-reply-email-optin" id="vibe-reply-email-optin">

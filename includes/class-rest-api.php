@@ -83,7 +83,7 @@ class Vibe_Comments_REST_API {
             $author  = sanitize_text_field($request->get_param('author'));
             $email   = sanitize_email($request->get_param('email'));
 
-            $steps[] = 'Step 1: Params parsed — post_id=' . $post_id;
+            $steps[] = 'Step 1: Params parsed  -  post_id=' . $post_id;
 
             if (!comments_open($post_id)) {
                 return new WP_REST_Response(array('steps' => $steps, 'error' => 'Comments closed'), 200);
@@ -94,7 +94,7 @@ class Vibe_Comments_REST_API {
             if (!$post) {
                 return new WP_REST_Response(array('steps' => $steps, 'error' => 'Post not found'), 200);
             }
-            $steps[] = 'Step 3: Post exists — ' . esc_html($post->post_title);
+            $steps[] = 'Step 3: Post exists  -  ' . esc_html($post->post_title);
 
             $comment_data = wp_slash(array(
                 'comment_post_ID'      => $post_id,
@@ -121,7 +121,7 @@ class Vibe_Comments_REST_API {
                     do_action('comment_post', $comment_id, 1, $comment_data);
                     $steps[] = 'Step 6: comment_post action fired';
                 } catch (Throwable $e) {
-                    $steps[] = 'Step 6: comment_post FAILED — ' . $e->getMessage();
+                    $steps[] = 'Step 6: comment_post FAILED  -  ' . $e->getMessage();
                 }
                 return new WP_REST_Response(array('success' => true, 'steps' => $steps, 'comment_id' => $comment_id), 200);
             }

@@ -15,149 +15,158 @@ Types of changes:
 
 ---
 
-## [3.20.4] — 2026-09-04
+## [3.20.5] — 2026-09-05
 
-**FIX — undefined-property warnings in the spam scorer (conflict-audit finding, reviewer-verified).**
+**WRITING-VOICE — em-dash pass completed (fleet-wide humanize decree).**
 
-`Vibe_Comments_Spam_Score::score()` read `comment_author`, `comment_author_email`, `comment_author_url`, and `comment_content` off incoming objects with bare property access. A comment stdClass missing any of those (guest-submission paths — 3 warnings in production debug.log on 2026-09-01 08:44/08:48 UTC) emitted `Undefined property` warnings on every score call. All four reads are now null-coalesced on the object branch, mirroring the array branch that already did it.
+The King decreed zero em-dashes across the entire fleet (theme, plugin, finance, starter). This plugin had 182 remaining in comments, docblocks, and docs after its v3.17.3 pass (new code since then re-introduced some). Tokenizer-grade pass (PHP via token_get_all, line-based comment-aware for JS) removed all 182; user-facing strings included per the fleet-wide scope (this plugin's strings carry no em-dash voice, verified).
+
+- 6 PHP files + 6 JS/MD files changed; php -l and node --check green.
+- Four carriers bumped to 3.20.5. Companion themes will pin 3.20.5 in their next guard releases.
+
+## [3.20.4]  -  2026-09-04
+
+**FIX  -  undefined-property warnings in the spam scorer (conflict-audit finding, reviewer-verified).**
+
+`Vibe_Comments_Spam_Score::score()` read `comment_author`, `comment_author_email`, `comment_author_url`, and `comment_content` off incoming objects with bare property access. A comment stdClass missing any of those (guest-submission paths  -  3 warnings in production debug.log on 2026-09-01 08:44/08:48 UTC) emitted `Undefined property` warnings on every score call. All four reads are now null-coalesced on the object branch, mirroring the array branch that already did it.
 
 - Battery (standalone, ABSPATH + apply_filters shims): sparse object → 0/clean, array path → 0/clean, spam object → 70/likely-spam with 3 reasons, zero warnings. Regression: scoring behavior unchanged.
 
-## [3.20.3] — 2026-09-03
+## [3.20.3]  -  2026-09-03
 
 ### Reviewer-completion follow-up: canonical fallback unification (the last loose thread of the audit series)
 
-The v3.20.2 review (interrupted at call 39; cold-start completed by the primary) surfaced a PRE-EXISTING inconsistency the design audit missed: 6 tokens carried divergent fallbacks dating to the v3.5.7-era CSS restore and v3.13.0 — `--vibe-primary` fell back to `#2563eb` (the HOVER value) on some refs while others used `#3b82f6`; `--vibe-border` had three fallbacks (`#e2e8f0`/`#e5e7eb`/rgba); `--vibe-bg` used `#fff`; `--vibe-text` used `#111`; `--vibe-surface` and border carried translucent rgba fallbacks; one nested-var fallback was unresolvable in the exact token-less scenario fallbacks exist for. Invisible on both live sites (both define all tokens), but a token-less theme would have rendered two blues and two border-grays.
+The v3.20.2 review (interrupted at call 39; cold-start completed by the primary) surfaced a PRE-EXISTING inconsistency the design audit missed: 6 tokens carried divergent fallbacks dating to the v3.5.7-era CSS restore and v3.13.0  -  `--vibe-primary` fell back to `#2563eb` (the HOVER value) on some refs while others used `#3b82f6`; `--vibe-border` had three fallbacks (`#e2e8f0`/`#e5e7eb`/rgba); `--vibe-bg` used `#fff`; `--vibe-text` used `#111`; `--vibe-surface` and border carried translucent rgba fallbacks; one nested-var fallback was unresolvable in the exact token-less scenario fallbacks exist for. Invisible on both live sites (both define all tokens), but a token-less theme would have rendered two blues and two border-grays.
 
-- **42 fallback references unified** to the `:root` canonical values across all 11 tokens. Every `var()` call now carries its token's exact `:root` definition — the fallback IS the default, provably.
+- **42 fallback references unified** to the `:root` canonical values across all 11 tokens. Every `var()` call now carries its token's exact `:root` definition  -  the fallback IS the default, provably.
 - The nested `var(--vibe-primary-hover, var(--vibe-primary, ...))` flattened to a canonical `#2563eb`.
 - **Self-caught corruption, fixed before ship**: the mechanical pass initially produced 7 double-close-paren lines (regex couldn't span inner parens in rgba/calc fallbacks); all restored by hand; integrity sweep verified (0 corrupt patterns outside rgba's legitimate `))`, per-line paren balance on all code lines, brace balance 0).
 
-**Live proofs**: comments render · theme token overrides intact (muted/border/pill colors all theme-brand values — fallbacks inert for token-defining themes) · served bytes carry ZERO divergent fallbacks · 44 canonical primary fallbacks · diff = exactly 39 substitution lines.
+**Live proofs**: comments render · theme token overrides intact (muted/border/pill colors all theme-brand values  -  fallbacks inert for token-defining themes) · served bytes carry ZERO divergent fallbacks · 44 canonical primary fallbacks · diff = exactly 39 substitution lines.
 
-**Laws born**: *a regex that rewrites CSS must be paren-aware — `[^)]+` cannot span rgba/calc fallbacks; verify with a per-line paren-balance sweep before shipping* · *the fallback must be the token's exact `:root` definition — the two drift together or the token-less theme gets two colors*.
+**Laws born**: *a regex that rewrites CSS must be paren-aware  -  `[^)]+` cannot span rgba/calc fallbacks; verify with a per-line paren-balance sweep before shipping* · *the fallback must be the token's exact `:root` definition  -  the two drift together or the token-less theme gets two colors*.
 
-## [3.20.2] — 2026-09-03
+## [3.20.2]  -  2026-09-03
 
-### Design Consistency & Premium UX Audit #14 (final audit of the series) — all findings fixed
+### Design Consistency & Premium UX Audit #14 (final audit of the series)  -  all findings fixed
 
 Scores going in: consistency 8.5/10, ease-of-use 9/10. The state system was near-complete; the audit closed the last gaps:
 
-- **[SHOULD-FIX] Auth buttons focus rings** — the three auth-bar buttons (Google / Guest / WP login) were the only interactive family without a designed focus-visible ring; now joined to the shared rule.
-- **[NICE-TO-HAVE] Legacy gray unified** — 14 `#888` fallback references → the canonical `--vibe-text-muted` value `#64748b` (one muted gray, not two). Fallback-only: token-defining themes see zero change (live-verified — both sites' computed colors unchanged).
-- **[NICE-TO-HAVE] Every bare var() call given an inline fallback** — all 77 bare `var(--vibe-*)` references now carry canonical fallbacks, so a theme defining *some* tokens but not others never gets a silently broken mix.
-- **[NICE-TO-HAVE] Hover taxonomy documented** — CSS comment declaring the three deliberate hover languages (FILL-INVERT for neutral actions, TINT for stateful, BORDER-ONLY for quiet toggles) so the next maintainer keeps new pills in-lane.
-- **[NICE-TO-HAVE] Microcopy casing** — the lone lowercase "discard" → "Discard" (JS fallback + i18n dict), matching every sibling button label's Title Case.
+- **[SHOULD-FIX] Auth buttons focus rings**  -  the three auth-bar buttons (Google / Guest / WP login) were the only interactive family without a designed focus-visible ring; now joined to the shared rule.
+- **[NICE-TO-HAVE] Legacy gray unified**  -  14 `#888` fallback references → the canonical `--vibe-text-muted` value `#64748b` (one muted gray, not two). Fallback-only: token-defining themes see zero change (live-verified  -  both sites' computed colors unchanged).
+- **[NICE-TO-HAVE] Every bare var() call given an inline fallback**  -  all 77 bare `var(--vibe-*)` references now carry canonical fallbacks, so a theme defining *some* tokens but not others never gets a silently broken mix.
+- **[NICE-TO-HAVE] Hover taxonomy documented**  -  CSS comment declaring the three deliberate hover languages (FILL-INVERT for neutral actions, TINT for stateful, BORDER-ONLY for quiet toggles) so the next maintainer keeps new pills in-lane.
+- **[NICE-TO-HAVE] Microcopy casing**  -  the lone lowercase "discard" → "Discard" (JS fallback + i18n dict), matching every sibling button label's Title Case.
 
 **Live proofs**: comments render post-change · `#888` zero matches in served bytes · auth focus-visible rule served · theme token overrides intact (computed colors = brand values, proving fallbacks are inert for token-defining themes) · brace balance 0 · php -l + node --check clean.
 
-**Sections verified CLEAN**: spacing rhythm (consistent rem ladder), layout measure (800px), mobile (audit #6's 44px floor holds), ease-of-use (3-field guest form, progressive disclosure), conversion (dominant single CTA), brand alignment (the token system IS the brand mechanism — both live sites re-map --vibe-primary to their greens).
+**Sections verified CLEAN**: spacing rhythm (consistent rem ladder), layout measure (800px), mobile (audit #6's 44px floor holds), ease-of-use (3-field guest form, progressive disclosure), conversion (dominant single CTA), brand alignment (the token system IS the brand mechanism  -  both live sites re-map --vibe-primary to their greens).
 
-## [3.20.1] — 2026-09-03
+## [3.20.1]  -  2026-09-03
 
-### SEO Audit #11 — schema modernization (all findings fixed)
+### SEO Audit #11  -  schema modernization (all findings fixed)
 
-- **[SHOULD-FIX] DiscussionPosting entity** (class-schema.php) — schema.org 23.0 (2023) introduced `DiscussionPosting` as the first-class type for comment-sections-as-content; Google retired standalone-Comment enrichment the same year. Strictly ADDITIVE: the WebPage + Comment entities stay (parsers merge either way); a new `DiscussionPosting` wraps the discussion — `@id` = `post#discussion`, `headline` = "Discussion on {post title}", `comment[]` = the full Comment entity array, `commentCount`, `datePublished` = first comment's date, `about` = the post. Q&A mode untouched (QAPage branch verified no-leak).
-- **[NICE-TO-HAVE] Schema cap filterable** — `apply_filters('vibe_comments_schema_comment_cap', 100)` — high-discussion installs can raise the entity-list cap without touching the plugin (commentCount stays accurate regardless).
+- **[SHOULD-FIX] DiscussionPosting entity** (class-schema.php)  -  schema.org 23.0 (2023) introduced `DiscussionPosting` as the first-class type for comment-sections-as-content; Google retired standalone-Comment enrichment the same year. Strictly ADDITIVE: the WebPage + Comment entities stay (parsers merge either way); a new `DiscussionPosting` wraps the discussion  -  `@id` = `post#discussion`, `headline` = "Discussion on {post title}", `comment[]` = the full Comment entity array, `commentCount`, `datePublished` = first comment's date, `about` = the post. Q&A mode untouched (QAPage branch verified no-leak).
+- **[NICE-TO-HAVE] Schema cap filterable**  -  `apply_filters('vibe_comments_schema_comment_cap', 100)`  -  high-discussion installs can raise the entity-list cap without touching the plugin (commentCount stays accurate regardless).
 
 **Live proofs**: post 98 (9 comments) → DiscussionPosting with `comment[] = 9 members`, `commentCount = 9`, headline "Discussion on Redis object caching on a cheap VPS" · cap=3 filter → 3 Comment nodes (counted within comment[] = 3) · QA post 495 → QAPage PRESENT, DiscussionPosting absent (no branch leak) · php -l clean.
 
 The audit also verified CLEAN: robots.txt (admin-ajax allowed for crawlers) · sitemap (77 URLs, lastmod-only) · canonicals self-referencing · search results noindex,follow · hard 404s · single h1 per page · the plugin's "N Comments" heading is a compliant h2 · no title/meta output (correctly out of that layer) · no SEO-plugin conflicts (merge-by-design architecture) · AJAX comment pagination causes zero URL explosion.
 
-## [3.20.0] — 2026-09-03
+## [3.20.0]  -  2026-09-03
 
-### Cloudflare Full-Page-Cache Audit #10 — identity reconciliation (the CRITICAL finding)
+### Cloudflare Full-Page-Cache Audit #10  -  identity reconciliation (the CRITICAL finding)
 
-The plugin's data layer was already edge-safe (AJAX islands, transient caches, per-request user overlays, granular Cache-Tag purges). The audit's one CRITICAL gap: the localize config bakes `isLoggedIn` / `isAdmin` / `qa.canAccept` into the HTML — under Cache-Everything an anonymous edge copy would silently strip Pin/Accept buttons from moderators and show logged-in users the guest form, with no correction mechanism.
+The plugin's data layer was already edge-safe (AJAX islands, transient caches, per-request user overlays, granular Cache-Tag purges). The audit's one CRITICAL gap: the localize config bakes `isLoggedIn` / `isAdmin` / `qa.canAccept` into the HTML  -  under Cache-Everything an anonymous edge copy would silently strip Pin/Accept buttons from moderators and show logged-in users the guest form, with no correction mechanism.
 
-- **New endpoint `vibe_session_state`** (class-ajax-handler.php) — the refreshNonce pattern extended to identity: rate-limited 1/2s per IP (same read-only threat model), returns the live identity tuple `{isLoggedIn, isAdmin, qa:{mode, acceptedId, canAccept, questionUrl}}` for the current session.
-- **`refreshSessionState()` at boot** (vibe-comments.js, wired beside refreshNonce) — fetches the truth, compares against the baked flags, and on drift re-renders the comment list with the corrected flags (Pin/Accept resurrect for moderators; the form state corrects for logged-in users).
-- **README: "Cloudflare Full-Page Cache (Cache Everything) Compatibility"** — the three Cache Rules needed (cookie-bypass on `wordpress_logged_in_`, query-string noise normalization, Cache-Everything TTL guidance) + the note that the plugin's dynamic data needs no exceptions.
+- **New endpoint `vibe_session_state`** (class-ajax-handler.php)  -  the refreshNonce pattern extended to identity: rate-limited 1/2s per IP (same read-only threat model), returns the live identity tuple `{isLoggedIn, isAdmin, qa:{mode, acceptedId, canAccept, questionUrl}}` for the current session.
+- **`refreshSessionState()` at boot** (vibe-comments.js, wired beside refreshNonce)  -  fetches the truth, compares against the baked flags, and on drift re-renders the comment list with the corrected flags (Pin/Accept resurrect for moderators; the form state corrects for logged-in users).
+- **README: "Cloudflare Full-Page Cache (Cache Everything) Compatibility"**  -  the three Cache Rules needed (cookie-bypass on `wordpress_logged_in_`, query-string noise normalization, Cache-Everything TTL guidance) + the note that the plugin's dynamic data needs no exceptions.
 
 **Live proofs**: anonymous HTTP → `{isLoggedIn:false, isAdmin:false, qa:false}` · admin context → `{isLoggedIn:true, isAdmin:true}` · admin on Q&A post 495 → full tuple `{qa:{mode:true, acceptedId:122, canAccept:true}}` · rate-limit 429 on the second rapid call (live HTTP) · temp admin forged + deleted clean.
 
-**Law born**: *identity flags never trust the cached copy — every user-specific flag baked into HTML gets a boot-time reconciliation endpoint (the refreshNonce pattern extends to identity, not just nonces).*
+**Law born**: *identity flags never trust the cached copy  -  every user-specific flag baked into HTML gets a boot-time reconciliation endpoint (the refreshNonce pattern extends to identity, not just nonces).*
 
-## [3.19.5] — 2026-09-03
+## [3.19.5]  -  2026-09-03
 
-### Speed & Performance Audit #9 — findings fixed (1 code + 2 config + 1 law)
+### Speed & Performance Audit #9  -  findings fixed (1 code + 2 config + 1 law)
 
-- **[PERF] initRelativeTime background skip** — the 60s timestamp sweep ran its querySelectorAll().forEach on every fire even while backgrounded; now bails on `document.hidden` (matches the 30s poll's existing visibilitychange discipline).
-- **[CONFIG] nginx split-TTL asset caching** (gwill-wp vhost) — versioned asset URLs (`?ver=`) now serve `1y, immutable`; bare URLs keep the incident-protective `10m, must-revalidate`. The four-carrier law bumps `?ver=` on every release, so deploys stay visible within one refresh while every post-load asset re-request disappears for a year. Honors the v1.18.80→v1.19.63 incident history (30d blanket TTL made deploys invisible; the split avoids repeating it).
-- **[RETRACTED] stale-while-revalidate** — `fastcgi_cache_use_stale ... updating` already present in optimization.conf:12; finding was already satisfied.
-- **[RETRACTED] 2.4s cold TTFB** — measurement artifact: the audit's `?cb=` cache-buster tripped nginx's `query_string != ""` skip rule, measuring raw PHP renders. Real visitor path: 5ms warm / 0.55s first-hit / 0.2s QA post (all measured clean after).
-- **[LAW] JS size budget** — vibe-comments.js crosses 200KB raw → split features into per-feature files. Current: 139KB raw / 33.6KB br (fine; documented threshold).
+- **[PERF] initRelativeTime background skip**  -  the 60s timestamp sweep ran its querySelectorAll().forEach on every fire even while backgrounded; now bails on `document.hidden` (matches the 30s poll's existing visibilitychange discipline).
+- **[CONFIG] nginx split-TTL asset caching** (gwill-wp vhost)  -  versioned asset URLs (`?ver=`) now serve `1y, immutable`; bare URLs keep the incident-protective `10m, must-revalidate`. The four-carrier law bumps `?ver=` on every release, so deploys stay visible within one refresh while every post-load asset re-request disappears for a year. Honors the v1.18.80→v1.19.63 incident history (30d blanket TTL made deploys invisible; the split avoids repeating it).
+- **[RETRACTED] stale-while-revalidate**  -  `fastcgi_cache_use_stale ... updating` already present in optimization.conf:12; finding was already satisfied.
+- **[RETRACTED] 2.4s cold TTFB**  -  measurement artifact: the audit's `?cb=` cache-buster tripped nginx's `query_string != ""` skip rule, measuring raw PHP renders. Real visitor path: 5ms warm / 0.55s first-hit / 0.2s QA post (all measured clean after).
+- **[LAW] JS size budget**  -  vibe-comments.js crosses 200KB raw → split features into per-feature files. Current: 139KB raw / 33.6KB br (fine; documented threshold).
 
 **Live proofs**: `?ver=3.19.4` asset → `max-age=31536000, immutable` · bare asset → `max-age=600, must-revalidate` (unchanged) · uploads → 30d (untouched) · HTML page → `x-cache: HIT` (untouched) · nginx -t clean + reloaded.
 
-## [3.19.4] — 2026-09-02
+## [3.19.4]  -  2026-09-02
 
-### Cross-Browser Compatibility Audit #8 — all 4 findings fixed
+### Cross-Browser Compatibility Audit #8  -  all 4 findings fixed
 
 The codebase was already a deliberate ES5.5 deliverable (zero arrows, zero async/await, zero template literals, zero optional chaining). The audit found the two modern-API inconsistencies that broke that claim, plus documented two by-design behaviors.
 
-- **[SHOULD-FIX] NodeList.prototype.forEach ponyfill** — 24 call sites iterate `querySelectorAll()` results directly; NodeList iteration shipped Safari 10 / Chrome 51 / FF 50, so Safari <=9.x and legacy Android WebViews died at every list iteration. One 3-line prototype patch at the IIFE top (`if (window.NodeList && !NodeList.prototype.forEach) NodeList.prototype.forEach = Array.prototype.forEach`) fixes every site; modern engines never execute it.
-- **[SHOULD-FIX] AbortController guard** — `fetchWithTimeout` constructed `AbortController` unguarded (Safari <11.1 / Chrome <66 throws), killing all 14 call sites at construction. Now degrades to plain `fetch` on ancient engines — the same feature-detect discipline the push checkbox already uses for `'PushManager' in window`.
-- **[NICE-TO-HAVE] line-clamp degradation documented** — CSS comment: `-webkit-line-clamp` is still the only form everywhere (no unprefixed property exists); a hypothetical engine without it shows full text (the safe failure), Read more/Show less still works.
-- **[NICE-TO-HAVE] hover-sticky policy documented** — the 27 `:hover` rules are deliberately NOT wrapped in `@media (hover: hover)`: every sticky state is a subtle bg/border shift on controls that carry distinct active/aria states, so touch ghost-hover never conveys wrong information; wrapping would double the sheet for a cosmetic delta. Documented where the next auditor will look.
+- **[SHOULD-FIX] NodeList.prototype.forEach ponyfill**  -  24 call sites iterate `querySelectorAll()` results directly; NodeList iteration shipped Safari 10 / Chrome 51 / FF 50, so Safari <=9.x and legacy Android WebViews died at every list iteration. One 3-line prototype patch at the IIFE top (`if (window.NodeList && !NodeList.prototype.forEach) NodeList.prototype.forEach = Array.prototype.forEach`) fixes every site; modern engines never execute it.
+- **[SHOULD-FIX] AbortController guard**  -  `fetchWithTimeout` constructed `AbortController` unguarded (Safari <11.1 / Chrome <66 throws), killing all 14 call sites at construction. Now degrades to plain `fetch` on ancient engines  -  the same feature-detect discipline the push checkbox already uses for `'PushManager' in window`.
+- **[NICE-TO-HAVE] line-clamp degradation documented**  -  CSS comment: `-webkit-line-clamp` is still the only form everywhere (no unprefixed property exists); a hypothetical engine without it shows full text (the safe failure), Read more/Show less still works.
+- **[NICE-TO-HAVE] hover-sticky policy documented**  -  the 27 `:hover` rules are deliberately NOT wrapped in `@media (hover: hover)`: every sticky state is a subtle bg/border shift on controls that carry distinct active/aria states, so touch ghost-hover never conveys wrong information; wrapping would double the sheet for a cosmetic delta. Documented where the next auditor will look.
 
 **Verified clean**: localStorage all-in-try/catch (Safari private mode degrades as designed) · zero userAgent sniffing · `e.key` standard values only (no keyCode) · CSS var fallbacks inline · flex/grid `gap` universal-current · no backdrop-filter/:has()/@layer/sticky/vh · accent-color universal · progressive enhancement (server-rendered reading without JS).
 
 **Live proofs**: ponyfill + guard patterns grep-proven in served bytes (4 matches) · comments render (forEach path) · sort cycles all 3 modes · reaction bars mount.
 
-## [3.19.3] — 2026-09-02
+## [3.19.3]  -  2026-09-02
 
-### Accessibility Audit #7 (WCAG 2.2 AA) — all 10 findings fixed
+### Accessibility Audit #7 (WCAG 2.2 AA)  -  all 10 findings fixed
 
 Live-audited against the rendered output plus full code recon across all 9 sections.
 
-- **[CRITICAL, 2.1.1] New-comments banner was keyboard-dead** — a `<div role=status>` that announced "click to load" with no way to reach or activate it by keyboard. Now a real `<button>` inside the status wrapper, label reworded to "↑ N new — load" (no pointer-specific wording), 44px touch floor + focus ring.
-- **[AA, 1.3.5] Autocomplete tokens** — `autocomplete="name"` / `autocomplete="email"` on the guest fields (WCAG 2.2 AA requires identifying input purpose).
-- **[4.1.3] showError/showSuccess announce** — `role="alert"` / `role="status"` on the plugin's most important (previously silent) messages.
-- **[4.1.2] Edit textarea accessible name** — `aria-label` (i18n'd).
-- **[2.1.1/2.1.2] Reaction picker focus flow** — focus enters the first option on open, returns to the trigger on pick/fail/Escape (document-level Escape handler, mirroring the mention dropdown).
-- **[4.1.2] Sort button accessible name** — `aria-label` in the template AND on every mode click; mode titles now flow through i18n (killed 3 English stragglers).
-- **[4.1.2] aria-expanded state truth** — `updateReactionDisplay` now mirrors the picker's real state instead of unconditionally reporting collapsed.
-- **[2.3.3] Reduced-motion scrolling** — all 5 `scrollIntoView({behavior:'smooth'})` sites now consult `prefers-reduced-motion` (the CSS guard never governed JS scrolling).
-- **[4.1.2] Guest toggle** — `aria-expanded` (toggled live, verified) + `aria-controls`.
-- **[1.4.1 + 4.1.3] Edit-empty failure** — was color-only (red border) and silent; now a "⚠ Write something first." alert note.
+- **[CRITICAL, 2.1.1] New-comments banner was keyboard-dead**  -  a `<div role=status>` that announced "click to load" with no way to reach or activate it by keyboard. Now a real `<button>` inside the status wrapper, label reworded to "↑ N new  -  load" (no pointer-specific wording), 44px touch floor + focus ring.
+- **[AA, 1.3.5] Autocomplete tokens**  -  `autocomplete="name"` / `autocomplete="email"` on the guest fields (WCAG 2.2 AA requires identifying input purpose).
+- **[4.1.3] showError/showSuccess announce**  -  `role="alert"` / `role="status"` on the plugin's most important (previously silent) messages.
+- **[4.1.2] Edit textarea accessible name**  -  `aria-label` (i18n'd).
+- **[2.1.1/2.1.2] Reaction picker focus flow**  -  focus enters the first option on open, returns to the trigger on pick/fail/Escape (document-level Escape handler, mirroring the mention dropdown).
+- **[4.1.2] Sort button accessible name**  -  `aria-label` in the template AND on every mode click; mode titles now flow through i18n (killed 3 English stragglers).
+- **[4.1.2] aria-expanded state truth**  -  `updateReactionDisplay` now mirrors the picker's real state instead of unconditionally reporting collapsed.
+- **[2.3.3] Reduced-motion scrolling**  -  all 5 `scrollIntoView({behavior:'smooth'})` sites now consult `prefers-reduced-motion` (the CSS guard never governed JS scrolling).
+- **[4.1.2] Guest toggle**  -  `aria-expanded` (toggled live, verified) + `aria-controls`.
+- **[1.4.1 + 4.1.3] Edit-empty failure**  -  was color-only (red border) and silent; now a "⚠ Write something first." alert note.
 
-**i18n stragglers swept with the fixes**: Edit/Save/Cancel/5-minute-window templates, sort mode titles, banner plural labels, editEmpty — 11 new keys (.pot 206→216).
+**i18n stragglers swept with the fixes**: Edit/Save/Cancel/5-minute-window templates, sort mode titles, banner plural labels, editEmpty  -  11 new keys (.pot 206→216).
 
 **Live proofs**: autocomplete tokens rendered · sort aria-label "Newest first" · guest toggle aria-controls + aria-expanded flipping true on click, fields to grid · banner-btn + scrollBehavior + role=alert patterns in served bytes · 3 comments loading clean.
 
-## [3.19.2] — 2026-09-02
+## [3.19.2]  -  2026-09-02
 
-### Responsive & Mobile Audit #6 — all 5 findings fixed
+### Responsive & Mobile Audit #6  -  all 5 findings fixed
 
 Live-audited at 320px/768px (real browser, real measurements) plus full code recon. The audit caught the plugin's most-tapped controls under the WCAG 2.5.8 touch floor.
 
-- **[CRITICAL] Touch floor on the pill family** — reaction summary measured 57×24px, reply trigger 67×38px. Now `min-height: 44px` on all 12 interactive families (reaction, reply, edit, pin, notify, accept, view-replies, read-more, sort, load-more, load-comments). `min-height` beats the fixed `height: 38px` per CSS spec, so search/sort rose to 44px too.
-- **[SHOULD-FIX] Search input iOS zoom** — `.vibe-search-input` computed 14px (theme restyle 15px on tech); iOS Safari zooms on focus <16px. Plugin rule now `font-size: 1rem`; tech theme's toolbar override raised 15→16px in v1.21.32. (The sort button's 12px is inert — it's a text-less SVG button; zoom only fires on text-entry controls.)
-- **[SHOULD-FIX] focus-visible parity** — six button families shipped without a keyboard/touch focus indicator while siblings had one (WCAG 2.4.7): reply, edit, notify, accept, read-more, load-more/load-comments + guest-recall clear. One shared rule restores parity.
-- **[SHOULD-FIX] Admin leaderboards never collapsed** — `.vibe-an-two` 2-col grid had no breakpoint; collapses to 1-col at 782px (WP core's own admin breakpoint).
-- **[NICE-TO-HAVE] Analytics tables unwrapped** — `.vibe-an-table` had zero plugin CSS; all 5 tables now sit in `overflow-x: auto` scroll wrappers with `width: 100%`.
+- **[CRITICAL] Touch floor on the pill family**  -  reaction summary measured 57×24px, reply trigger 67×38px. Now `min-height: 44px` on all 12 interactive families (reaction, reply, edit, pin, notify, accept, view-replies, read-more, sort, load-more, load-comments). `min-height` beats the fixed `height: 38px` per CSS spec, so search/sort rose to 44px too.
+- **[SHOULD-FIX] Search input iOS zoom**  -  `.vibe-search-input` computed 14px (theme restyle 15px on tech); iOS Safari zooms on focus <16px. Plugin rule now `font-size: 1rem`; tech theme's toolbar override raised 15→16px in v1.21.32. (The sort button's 12px is inert  -  it's a text-less SVG button; zoom only fires on text-entry controls.)
+- **[SHOULD-FIX] focus-visible parity**  -  six button families shipped without a keyboard/touch focus indicator while siblings had one (WCAG 2.4.7): reply, edit, notify, accept, read-more, load-more/load-comments + guest-recall clear. One shared rule restores parity.
+- **[SHOULD-FIX] Admin leaderboards never collapsed**  -  `.vibe-an-two` 2-col grid had no breakpoint; collapses to 1-col at 782px (WP core's own admin breakpoint).
+- **[NICE-TO-HAVE] Analytics tables unwrapped**  -  `.vibe-an-table` had zero plugin CSS; all 5 tables now sit in `overflow-x: auto` scroll wrappers with `width: 100%`.
 
 **Live proofs (320px, cache-bypassed)**: reaction pill 57×**44** · reply pill 67×**44** · search font **16px** · search height **44px** · horizontal overflow **false**. Checkbox hit-areas remain the correct 44px-label pattern.
 
-**Laws born**: *the touch-floor law — every interactive control ships at min-height 44px; measured, not assumed* · *the iOS-16px law — every text-entry control computes ≥16px, verified against the theme override cascade, not just the plugin sheet*.
+**Laws born**: *the touch-floor law  -  every interactive control ships at min-height 44px; measured, not assumed* · *the iOS-16px law  -  every text-entry control computes ≥16px, verified against the theme override cascade, not just the plugin sheet*.
 
-## [3.19.1] — 2026-09-02
+## [3.19.1]  -  2026-09-02
 
-### i18n completion — independent-review catch (20 more strings converted)
+### i18n completion  -  independent-review catch (20 more strings converted)
 
-The v3.19.0 i18n sweep missed strings in non-`textContent = 'String'` patterns. The independent reviewer caught 6; the hardened sweep (which catches ternaries, `showError()` args, `createTextNode`, and `throw new Error`) found 14 more — **20 total additional user-facing strings** now flow through `str()`:
+The v3.19.0 i18n sweep missed strings in non-`textContent = 'String'` patterns. The independent reviewer caught 6; the hardened sweep (which catches ternaries, `showError()` args, `createTextNode`, and `throw new Error`) found 14 more  -  **20 total additional user-facing strings** now flow through `str()`:
 
 - `Show less` toggle (the reviewer's critical catch), push-blocked notice, react/edit/post failure fallbacks, draft-restored label, all 3 form validations, 2 server-fatal thrown errors, Google not-configured + login-failed, search `aria-label`, guest-form toggle ternary.
-- **Guest-recall `<strong>` regression fixed** — `commentingAs` split so the bold name styling lives in JS (translators never handle HTML), not in the translatable string.
+- **Guest-recall `<strong>` regression fixed**  -  `commentingAs` split so the bold name styling lives in JS (translators never handle HTML), not in the translatable string.
 
-**Process law born from this catch:** the i18n sweep must be a hardened regex over `? | || = ( , 'String'` patterns, NOT just `textContent = 'String'` — the naive first sweep missed every ternary and function-arg string.
+**Process law born from this catch:** the i18n sweep must be a hardened regex over `? | || = ( , 'String'` patterns, NOT just `textContent = 'String'`  -  the naive first sweep missed every ternary and function-arg string.
 
 **Proofs:** hardened sweep now returns only false positives (key-args inside str(), intentional fallbacks); `node --check` clean; `php -l` clean; .pot regenerated 189→206 msgids.
 
-## [3.19.0] — 2026-09-02
+## [3.19.0]  -  2026-09-02
 
-### Portability Audit (Audit #5) — all 7 findings fixed
+### Portability Audit (Audit #5)  -  all 7 findings fixed
 
 The plugin's codebase is now fully translatable, migration-documented, and extensibility-checked.
 
@@ -167,13 +176,13 @@ The plugin's codebase is now fully translatable, migration-documented, and exten
 - `.pot` template generated (189 strings) at `languages/vibe-comments.pot`.
 
 **NICE-TO-HAVE: Migration safety**
-- New README **Migrating to a New Server or Domain** section — covers push subscription staleness, Cloudflare token re-entry, and Google OAuth re-entry (with the AUTH_KEY rotation gotcha).
+- New README **Migrating to a New Server or Domain** section  -  covers push subscription staleness, Cloudflare token re-entry, and Google OAuth re-entry (with the AUTH_KEY rotation gotcha).
 - Theme-dir template override: `load_template()` now checks `get_stylesheet_directory() . '/templates/comments.php'` first, so a theme can ship its own template without hacking the plugin.
 - Count-option seed write: documented as bounded-by-design (one per post, autoload=false, cleaned by uninstall).
 
 **Proofs:** JS `node --check` (both files), `php -l` (all 4 changed files), .pot with 189 translatable strings, README migration section, theme-dir check in template-loader.
 
-## [3.18.2] — 2026-09-01
+## [3.18.2]  -  2026-09-01
 
 ### Fixed - the last carried audit verdict overturned: Google client_secret now sealed at rest
 
@@ -187,7 +196,7 @@ The second carried item (the honeypot's `!important` block) is reclassified as *
 
 **Proofs**: secret-at-rest battery 5/5 (sealed output is enc1:-prefixed ciphertext without plaintext, round-trip exact, tampered ciphertext fails authentication to empty string, legacy plaintext passes through, empty stays empty). Live: a secret saved through the REAL sanitize path stored as `enc1:` ciphertext (plaintext leak: false, verified in the raw option), read back exactly through unseal(); test settings removed after.
 
-## [3.18.1] — 2026-09-01
+## [3.18.1]  -  2026-09-01
 
 ### Fixed - push subscribers had no off-switch (King-reported: "can't find the cancel bell for push notifications")
 
@@ -198,7 +207,7 @@ The v3.18.0 unsubscribe system covered email end-to-end but left the push rail h
 
 **Proofs**: dual-rail battery 8/8 (push-only/email-only/both/none pill states, OFF clears both, ON restores email, served sw.js carries action+routing, title updated). Live E2E: a push-only comment planted with real UUID ownership rendered `owns=true notify_on=true` in the payload as its owner; pill-toggle OFF cleared both metas; ON restored email; the served sw.js (auto-republished through the theme's mtime-triggered flow) carries the action code at lines 139-154. Probe cleaned.
 
-## [3.18.0] — 2026-09-01
+## [3.18.0]  -  2026-09-01
 
 ### Added - Unsubscribe for all notification rails (King-reported gap: "people can't unsubscribe from comments alerts")
 
@@ -214,7 +223,7 @@ The consent laws, now enforced: every notification rail with an opt-in has a mat
 
 **Proofs**: battery 15/15 (token determinism/binding, timing-safe verify, per-rail clears, unknown-rail false, URL shape, nonce/ownership/ON/OFF toggle paths, footer + payload laws). Live E2E on the real site: unsubscribe URL clicked as a logged-out visitor → consent meta cleared + "Unsubscribed" page rendered; second click → honest already-removed state; forged token → rejected, consent survives; REAL email body (via reflection on the private builder) carries the link and footer text; AJAX toggle ON → consent set, OFF → cleared, stranger (different UUID) → 403; a fixture-vs-code guest-token collision was diagnosed as test-data error (non-UUID IDs share the IP fallback by design) and re-proven with real UUIDs. Probe comments cleaned.
 
-## [3.17.4] — 2026-09-01
+## [3.17.4]  -  2026-09-01
 
 ### Changed - the four "leave as-is" audit verdicts overturned and fixed (royal law: fix ALL findings, never carry forward)
 
@@ -227,9 +236,9 @@ Audit #3 (cleanup) had left three NICE-TO-HAVEs and audit #4 one README-cadence 
 
 **Proofs**: carried-findings battery 14/14 (inline blocks zeroed, enqueues gated + versioned, dead method gone, placeholder neutral, loop bodies query-free, hoists present, grouped query present, assets exist, README softened); full lint sweep; live admin verification on the real site with a temp admin (enqueued assets, 28 badges, preview button; temp admin deleted after).
 
-## [3.17.3] — 2026-09-01
+## [3.17.3]  -  2026-09-01
 
-### Changed — AI-fingerprint cleanup pass (audit #4, no functional changes)
+### Changed  -  AI-fingerprint cleanup pass (audit #4, no functional changes)
 
 The audit verdict was 6/10 "AI-written feel", driven almost entirely by mechanical punctuation and labeling habits - not structure. This pass removes the tells while preserving every human signal (incident-archaeology comments stay; they document this project's real history).
 

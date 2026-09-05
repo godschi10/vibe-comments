@@ -430,7 +430,7 @@ class Vibe_Comments_Analytics {
 				<?php
 				printf(
 					/* translators: %s = number of minutes. */
-					esc_html__( 'Live from the comments tables — cached %d min. Reactions, push/email opt-ins, threading and velocity in one place.', 'vibe-comments' ),
+					esc_html__( 'Live from the comments tables  -  cached %d min. Reactions, push/email opt-ins, threading and velocity in one place.', 'vibe-comments' ),
 					(int) ( self::CACHE_TTL / 60 )
 				);
 				?>
@@ -465,7 +465,7 @@ class Vibe_Comments_Analytics {
 		);
 		$vel = $s['quality']['reply_velocity'];
 		$cards[] = array(
-			null === $vel ? '—' : human_time_diff( 0, max( 60, $vel ) ),
+			null === $vel ? ' - ' : human_time_diff( 0, max( 60, $vel ) ),
 			__( 'Avg time to first reply', 'vibe-comments' ),
 		);
 		echo '<div class="vibe-an-grid">';
@@ -694,7 +694,7 @@ class Vibe_Comments_Analytics {
 				<div class="vibe-an-table-wrap"><table class="vibe-an-table">
 					<tbody>
 					<tr><th><?php esc_html_e( 'Top-level comments answered by a reply', 'vibe-comments' ); ?></th><td class="num"><?php echo esc_html( (string) $s['quality']['replied_pct'] ); ?>%</td></tr>
-					<tr><th><?php esc_html_e( 'Avg time from comment to first reply', 'vibe-comments' ); ?></th><td class="num"><?php echo esc_html( null === $s['quality']['reply_velocity'] ? '—' : human_time_diff( 0, max( 60, (int) $s['quality']['reply_velocity'] ) ) ); ?></td></tr>
+					<tr><th><?php esc_html_e( 'Avg time from comment to first reply', 'vibe-comments' ); ?></th><td class="num"><?php echo esc_html( null === $s['quality']['reply_velocity'] ? ' - ' : human_time_diff( 0, max( 60, (int) $s['quality']['reply_velocity'] ) ) ); ?></td></tr>
 					<tr><th><?php esc_html_e( 'Deepest thread (replies deep)', 'vibe-comments' ); ?></th><td class="num"><?php echo esc_html( number_format_i18n( (int) $s['totals']['max_thread'] ) ); ?></td></tr>
 					</tbody>
 				</table></div>
@@ -706,7 +706,7 @@ class Vibe_Comments_Analytics {
 					<tr><th><?php esc_html_e( 'Comments per post (avg, top 10 posts)', 'vibe-comments' ); ?></th><td class="num"><?php
 						$sum = 0;
 						foreach ( (array) $s['top_posts'] as $p ) { $sum += (int) $p->cnt; }
-						echo esc_html( empty( $s['top_posts'] ) ? '—' : number_format_i18n( $sum / count( $s['top_posts'] ), 1 ) );
+						echo esc_html( empty( $s['top_posts'] ) ? ' - ' : number_format_i18n( $sum / count( $s['top_posts'] ), 1 ) );
 					?></td></tr>
 					<tr><th><?php esc_html_e( 'Push + email subscribers (total rails)', 'vibe-comments' ); ?></th><td class="num"><?php echo esc_html( number_format_i18n( (int) $s['push_subs'] + (int) $s['email_opts'] ) ); ?></td></tr>
 					</tbody>

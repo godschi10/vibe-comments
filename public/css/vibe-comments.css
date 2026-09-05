@@ -27,7 +27,7 @@
     padding-bottom: 0.75rem;
     border-bottom: 2px solid var(--vibe-border, #e2e8f0);
 }
-/* Auto-hide when empty (0 comments on first render) —
+/* Auto-hide when empty (0 comments on first render)  - 
    JS populates the text after Load is clicked, making it reappear. */
 .vibe-comments-title:empty {
     display: none;
@@ -86,7 +86,7 @@
    the author-name line, the timestamp) was stretched to match the WIDTH OF
    ITS WIDEST SIBLING. On a comment from the post author, the "Author" badge
    sitting next to their name made that line wider than a regular commenter's
-   plain name — and since the pinned badge is a sibling in this SAME
+   plain name  -  and since the pinned badge is a sibling in this SAME
    container, it got stretched to match that wider line too, even though
    "📌 Pinned" itself needs far less space. Regular (non-author) pinned
    comments never showed this because their author-name line was never wide
@@ -163,18 +163,18 @@
     border-top: 1px solid var(--vibe-border, #e2e8f0);
 }
 /* Without flex-wrap above, a comment with all 4 possible footer items
-   (reaction pill, Reply, View/Hide Replies, Pin/Unpin — the combination that
+   (reaction pill, Reply, View/Hide Replies, Pin/Unpin  -  the combination that
    only occurs on a pinned comment that also has replies) had nowhere to go
    on a narrow mobile viewport except get squeezed by flex's default
    flex-shrink:1 behavior. Since none of the buttons had white-space:nowrap,
    the SQUEEZED button's own text wrapped internally instead of the row
    wrapping as a whole ("Hide replies" broke into "Hide" / "replies" on two
-   lines) — which looks broken regardless of whether the row technically
+   lines)  -  which looks broken regardless of whether the row technically
    stayed within the card's bounds. Row gap reduced to 0.5rem (from the
    original 1rem, kept for column gap) so two wrapped rows don't sit too far
    apart vertically. */
 
-/* ── Reactions — Facebook-style compact summary + expandable picker ─────── */
+/* ── Reactions  -  Facebook-style compact summary + expandable picker ─────── */
 
 /* Picker lives outside the footer as a block element between content and footer.
  * This eliminates the mobile layout-blowout where picker was inside the
@@ -186,7 +186,7 @@
     align-items: center;
 }
 
-/* ── Summary pill — always visible in footer ─── */
+/* ── Summary pill  -  always visible in footer ─── */
 .vibe-reaction-summary {
     display: inline-flex;
     align-items: center;
@@ -231,7 +231,7 @@
 
 /* ── Default state: overlapping emoji bubble stack + aggregate total ────── */
 /*
- * Summary is ALWAYS this format — compact, never scatters.
+ * Summary is ALWAYS this format  -  compact, never scatters.
  * Per-type counts appear only in the picker (below each emoji), never here.
  */
 .vibe-rx-stack {
@@ -278,7 +278,7 @@
     animation: vibe-summary-pulse 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-/* ── Picker — block child of <article>, sits between content and footer ─── */
+/* ── Picker  -  block child of <article>, sits between content and footer ─── */
 .vibe-reaction-picker {
     display: flex;
     align-items: center;
@@ -298,7 +298,7 @@
     to   { transform: scale(1);    opacity: 1; }
 }
 
-/* Individual emoji option inside the picker — emoji above, count below */
+/* Individual emoji option inside the picker  -  emoji above, count below */
 .vibe-reaction-option {
     display: flex;
     flex-direction: column;
@@ -332,7 +332,7 @@
     display: block;
 }
 
-/* Count below each emoji — always has space reserved even when empty */
+/* Count below each emoji  -  always has space reserved even when empty */
 .vibe-rx-picker-n {
     font-size: 0.62rem;
     font-weight: 700;
@@ -346,7 +346,7 @@
     color: var(--vibe-primary, #3b82f6);
 }
 
-/* Reply Link — sits beside the reaction summary in the footer row */
+/* Reply Link  -  sits beside the reaction summary in the footer row */
 .vibe-comment-footer .comment-reply-link,
 .vibe-reply-trigger {
     display: inline-flex;
@@ -370,9 +370,9 @@
     color: white;
 }
 
-/* ── v3.13.0 — 5-minute edit window ─────────────────────────────────────
+/* ── v3.13.0  -  5-minute edit window ─────────────────────────────────────
    Edit mirrors the Reply pill exactly (kinship of affordances); the
-   (edited) badge is deliberately quieter — a muted meta-line hint, not a
+   (edited) badge is deliberately quieter  -  a muted meta-line hint, not a
    loud status. The inline editor is compact: textarea + one row of
    actions, styled to match the reply form's field treatment. */
 .vibe-edit-btn {
@@ -483,7 +483,7 @@
 }
 
 
-/* View/Hide Replies — a disclosure toggle, not an action, so it's deliberately
+/* View/Hide Replies  -  a disclosure toggle, not an action, so it's deliberately
    quieter than the Reply button: no border/pill treatment, just a text link
    with an underline-on-hover, matching how Instagram/Reddit-style UIs treat
    "view replies" as a lightweight affordance rather than a primary CTA. */
@@ -614,7 +614,7 @@
 }
 
 /* CSS7 fix: this class was applied to the "Load Comments" button in the
-   template but never defined here — the button rendered with only the
+   template but never defined here  -  the button rendered with only the
    generic .vibe-btn base (no background color), making it visually inert
    as the page's primary engagement CTA. Styled to match .vibe-btn-primary. */
 .vibe-btn-load-comments {
@@ -797,7 +797,7 @@
 /* A6 fix: these two were previously set via inline style.cssText in JS
    (showError()/showSuccess()), which breaks under a strict Content-Security-
    Policy that disallows 'unsafe-inline' styles. Moved here as ordinary
-   classes — same exact color values, just applied via className instead of
+   classes  -  same exact color values, just applied via className instead of
    the style attribute. */
 .vibe-message-error {
     background: #fee2e2;
@@ -820,7 +820,7 @@
 }
 
 /* =============================================
-   HONEYPOT — keep offscreen; never visible.
+   HONEYPOT  -  keep offscreen; never visible.
    Do not remove: this is bot protection.
    ============================================= */
 .vibe-hp-field {
@@ -874,7 +874,7 @@
     line-height: inherit;
 }
 
-/* ── Comments toolbar — sort button + search on one line ───────────────── */
+/* ── Comments toolbar  -  sort button + search on one line ───────────────── */
 .vibe-comments-toolbar {
     display: flex;
     align-items: center;
@@ -892,7 +892,7 @@
     border-radius: 8px;
     background: var(--vibe-bg, #ffffff);
     color: var(--vibe-text, #1e293b);
-    /* v3.19.2 Responsive Audit: 16px floor — iOS Safari zooms the viewport
+    /* v3.19.2 Responsive Audit: 16px floor  -  iOS Safari zooms the viewport
        on focus when an input's computed font-size is under 16px. */
     font-size: 1rem;
     line-height: 1;
@@ -910,7 +910,7 @@
 }
 .vibe-sort-icon-btn:hover { border-color: var(--vibe-primary, #3b82f6); color: var(--vibe-primary, #3b82f6); }
 /* CSS5 fix: outline:none above removed the browser's default focus ring with
-   nothing to replace it — keyboard users had zero visual indicator of focus
+   nothing to replace it  -  keyboard users had zero visual indicator of focus
    on these two controls (WCAG 2.1 SC 2.4.7). :focus-visible only fires for
    keyboard navigation, not mouse clicks, so sighted mouse users see no change. */
 .vibe-sort-icon-btn:focus-visible,
@@ -991,14 +991,14 @@
     padding-left: 0.75rem;
 }
 
-/* ── v3.15.0 Q&A mode — accepted answer + accept button ──────────────── */
+/* ── v3.15.0 Q&A mode  -  accepted answer + accept button ──────────────── */
 .vibe-accepted-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
     font-size: 0.75rem;
     font-weight: 700;
-    color: #15803d;               /* green-700 — verdict color, distinct from */
+    color: #15803d;               /* green-700  -  verdict color, distinct from */
     background: #dcfce7;           /* the amber pinned badge by design        */
     border: 1px solid #86efac;
     border-radius: 4px;
@@ -1006,7 +1006,7 @@
     margin-right: 0.4rem;
 }
 
-/* ── v3.15.0 in-thread search — reply-context chip on flat results ────── */
+/* ── v3.15.0 in-thread search  -  reply-context chip on flat results ────── */
 .vibe-reply-context {
     display: inline-flex;
     align-items: center;
@@ -1020,7 +1020,7 @@
     margin-right: 0.4rem;
 }
 .vibe-search-result .vibe-comment-content {
-    font-size: 0.92rem;   /* slightly tighter than live comments — results are
+    font-size: 0.92rem;   /* slightly tighter than live comments  -  results are
                              for scanning, not conversing */
 }
 #vibe-comment-list li.comment[data-accepted="1"] > article {
@@ -1056,9 +1056,9 @@
 
 /* ── v3.20.2 Design Audit #14: the pill hover taxonomy ───────────────────
  * Three deliberate hover languages, by semantic role (NOT inconsistency):
- *   FILL-INVERT  (Reply, Edit)   — neutral actions: primary bg + white text
- *   TINT         (Pin, Accept)   — stateful actions: soft colored bg wash
- *   BORDER-ONLY  (Notify)        — quiet toggles: border+text shift, no fill
+ *   FILL-INVERT  (Reply, Edit)    -  neutral actions: primary bg + white text
+ *   TINT         (Pin, Accept)    -  stateful actions: soft colored bg wash
+ *   BORDER-ONLY  (Notify)         -  quiet toggles: border+text shift, no fill
  * The reaction summary tints neutral (bg-alt) as the least-committed control.
  * Keep new pills in one of these three lanes. */
 .vibe-pin-btn {
@@ -1205,7 +1205,7 @@
     color: #1d4ed8;
 }
 
-/* Previously an inline style.cssText in moveFormToComment() — see A6 fix. */
+/* Previously an inline style.cssText in moveFormToComment()  -  see A6 fix. */
 .vibe-reply-container {
     margin-top: 1rem;
 }
@@ -1225,7 +1225,7 @@
    universal rule covers every current animation/transition in this file
    (reaction pulse, picker pop, loading spinner, message slide-in, all hover
    transitions) plus every scrollIntoView({behavior:'smooth'}) call in the
-   JS — browsers honor scroll-behavior:auto as an override for that JS option
+   JS  -  browsers honor scroll-behavior:auto as an override for that JS option
    too, per the CSSOM View spec, so no JavaScript changes were needed to make
    the smooth-scroll calls throughout vibe-comments.js respect this as well. */
 /* ── Reply push opt-in (v3.7.0) ─────────────────────────────────────
@@ -1261,7 +1261,7 @@
     color: var(--vibe-text-muted, #64748b);
     line-height: 1.45;
 }
-/* v3.9.0 — email opt-in reuses the push row's layout; tighter when stacked
+/* v3.9.0  -  email opt-in reuses the push row's layout; tighter when stacked
    directly under it so the two options read as a pair. */
 .vibe-reply-email-optin {
     margin-top: -0.35rem;
@@ -1291,8 +1291,8 @@
 }
 .vibe-comment-content code .vibe-mention,
 .vibe-comment-content a .vibe-mention {
-    /* Defensive: pills never render inside code spans or anchors —
-       the JS skips those segments — but if a future bug lets one
+    /* Defensive: pills never render inside code spans or anchors  - 
+       the JS skips those segments  -  but if a future bug lets one
        through, this keeps it from inheriting code/anchor styling. */
     all: unset;
     display: inline;
@@ -1372,9 +1372,9 @@
 }
 
 
-/* ── v3.19.2 Responsive Audit #6 — WCAG 2.5.8 touch floor + focus ring ──
+/* ── v3.19.2 Responsive Audit #6  -  WCAG 2.5.8 touch floor + focus ring ──
  * Measured live at 320px: reaction summary 57×24, reply trigger 67×38,
- * sort button 50×38 — every primary comment control sat under the 44px
+ * sort button 50×38  -  every primary comment control sat under the 44px
  * touch floor. min-height beats the fixed height:38px above (CSS spec:
  * min-height always wins over height), so the search/sort row rises to
  * 44px too. The reply-push/email checkboxes keep their separate 44px
@@ -1395,7 +1395,7 @@
 }
 
 /* The "Not you?" clear button inside the guest-recall notice: an inline
- * text button where a 44px min-height would distort the paragraph — it
+ * text button where a 44px min-height would distort the paragraph  -  it
  * gets generous padding instead (hit area ≈ 34px, WCAG 2.5.8 AA 24px
  * floor satisfied with margin). */
 .vibe-recall-clear {
@@ -1404,7 +1404,7 @@
 
 /* v3.19.2: six button families shipped without a keyboard/touch focus
  * indicator while their siblings (reaction summary, pin, view-replies,
- * sort, search) had one — WCAG 2.4.7. One shared rule restores parity. */
+ * sort, search) had one  -  WCAG 2.4.7. One shared rule restores parity. */
 .vibe-reply-trigger:focus-visible,
 .comment-reply-link:focus-visible,
 .vibe-edit-btn:focus-visible,

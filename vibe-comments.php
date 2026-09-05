@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.20.4
+ * Version:           3.20.5
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.20.4');
+define('VIBE_COMMENTS_VERSION', '3.20.5');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -318,7 +318,7 @@ class Vibe_Comments {
                     'pushBlocked'       => __('Notifications are blocked for this site in your browser settings.', 'vibe-comments'),
                     'reactFailed'       => __('Failed to react.', 'vibe-comments'),
                     'editFailedShort'   => __('Edit failed.', 'vibe-comments'),
-                    'draftRestored'     => __('Draft restored — ', 'vibe-comments'),
+                    'draftRestored'     => __('Draft restored  -  ', 'vibe-comments'),
                     'errWriteComment'   => __('Please write a comment.', 'vibe-comments'),
                     'errNameEmail'      => __('Please enter your name and email to comment.', 'vibe-comments'),
                     'errValidEmail'     => __('Please enter a valid email address.', 'vibe-comments'),
@@ -355,8 +355,8 @@ class Vibe_Comments {
                     'editEmpty'         => __('Write something first.', 'vibe-comments'),
                     'sortNewest'        => __('Newest first', 'vibe-comments'),
                     'sortOldest'        => __('Oldest first', 'vibe-comments'),
-                    'sortTop'           => __('Top — most reacted', 'vibe-comments'),
-                    'bannerNew'         => __('↑ %s new — load', 'vibe-comments'),
+                    'sortTop'           => __('Top  -  most reacted', 'vibe-comments'),
+                    'bannerNew'         => __('↑ %s new  -  load', 'vibe-comments'),
                     'bannerComment'     => __('comment', 'vibe-comments'),
                     'bannerComments'    => __('comments', 'vibe-comments'),
                 ),
@@ -374,7 +374,7 @@ try {
     // This is the single point of total plugin failure - always record it
     // regardless of the debug flag. Without this, the entire plugin can die
     // silently with zero trace anywhere on the server.
-    error_log('[Vibe Comments] FATAL — plugin failed to initialize: ' . $e->getMessage());
+    error_log('[Vibe Comments] FATAL  -  plugin failed to initialize: ' . $e->getMessage());
     if (defined('VIBE_COMMENTS_DEBUG_TOOLS') && VIBE_COMMENTS_DEBUG_TOOLS) {
         vibe_log('Main class ERROR: ' . $e->getMessage());
     }

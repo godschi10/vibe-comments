@@ -3,7 +3,7 @@
 A performance-focused custom comment plugin for WordPress, built for [gwillchijioke.com](https://gwillchijioke.com).
 
 **Author:** [G-will Chijioke](https://gwillchijioke.com)  
-**Version:** 3.20.4  
+**Version:** 3.20.5  
 **Requires WordPress:** 6.0+  
 **Requires PHP:** 7.4+  
 **License:** GPL v2 or later
@@ -131,11 +131,11 @@ A reaction toggle purges the same `vc_load_*` cache via the same function (`purg
 
 ## Migrating to a New Server or Domain
 
-The plugin is fully portable — no hardcoded URLs, paths, or table prefixes (it uses `$wpdb->prefix` throughout). Three things need your attention after a move:
+The plugin is fully portable  -  no hardcoded URLs, paths, or table prefixes (it uses `$wpdb->prefix` throughout). Three things need your attention after a move:
 
-1. **Push subscribers must re-subscribe.** Browser push subscriptions are bound to the *old* origin's service worker, so `_vibe_reply_push` comment-meta from the previous domain goes stale. It's harmless (delivery simply stops) and self-heals when users re-tap the bell — but don't expect old subscribers to keep receiving after a domain change.
-2. **Cloudflare credentials live in `wp-config.php`** (`VIBE_CF_ZONE_ID` / `VIBE_CF_API_TOKEN`) — re-add them on the new server or comment-cache purging silently stops.
-3. **Google OAuth re-entry** — the client credentials in *Settings → Vibe Comments* are environment-specific; re-enter them if the site keeps Google login. (Stored sealed-at-rest since v3.18.2 — a wrong/absent `AUTH_KEY` makes them unreadable, so rotate that constant before importing the database, not after.)
+1. **Push subscribers must re-subscribe.** Browser push subscriptions are bound to the *old* origin's service worker, so `_vibe_reply_push` comment-meta from the previous domain goes stale. It's harmless (delivery simply stops) and self-heals when users re-tap the bell  -  but don't expect old subscribers to keep receiving after a domain change.
+2. **Cloudflare credentials live in `wp-config.php`** (`VIBE_CF_ZONE_ID` / `VIBE_CF_API_TOKEN`)  -  re-add them on the new server or comment-cache purging silently stops.
+3. **Google OAuth re-entry**  -  the client credentials in *Settings → Vibe Comments* are environment-specific; re-enter them if the site keeps Google login. (Stored sealed-at-rest since v3.18.2  -  a wrong/absent `AUTH_KEY` makes them unreadable, so rotate that constant before importing the database, not after.)
 
 The plugin works on a fresh install with zero manual pre-configuration: it creates its `vibe_comment_likes` table on activation (idempotently) and defaults to WordPress's own `admin_email` for the digest until you choose otherwise.
 
@@ -157,15 +157,15 @@ Fire-and-forget (`blocking: false`) - never delays comment approval.
 
 ## Cloudflare Full-Page Cache (Cache Everything) Compatibility
 
-The plugin is **edge-cache-safe by design**: comment content, counts, reactions, and search all load via short-lived AJAX islands (120s transients at the origin) with per-request user overlays — nothing user-specific is baked into any cached payload. Nonces self-heal via `vibe_refresh_nonce` (rate-limited 1/2s), and identity flags (`isLoggedIn` / `isAdmin` / Q&A `canAccept`) self-heal via `vibe_session_state` (v3.20.0): on boot, the client asks the server who *this* session is and reconciles the UI if a cached anonymous copy baked the wrong flags — a moderator served an anonymous edge copy gets Pin/Accept buttons back automatically.
+The plugin is **edge-cache-safe by design**: comment content, counts, reactions, and search all load via short-lived AJAX islands (120s transients at the origin) with per-request user overlays  -  nothing user-specific is baked into any cached payload. Nonces self-heal via `vibe_refresh_nonce` (rate-limited 1/2s), and identity flags (`isLoggedIn` / `isAdmin` / Q&A `canAccept`) self-heal via `vibe_session_state` (v3.20.0): on boot, the client asks the server who *this* session is and reconciles the UI if a cached anonymous copy baked the wrong flags  -  a moderator served an anonymous edge copy gets Pin/Accept buttons back automatically.
 
 To run Cache-Everything safely, configure **three Cloudflare Cache Rules**:
 
-1. **Bypass cache on cookie** — expression: `(http.cookie contains "wordpress_logged_in_")` — logged-in users (admins, editors, commenters with accounts) always hit origin; their pages are never served from the anonymous edge copy.
-2. **Ignore query-string noise on HTML** — strip `utm_*`, `fbclid`, `cb`, `gclid` (or any param your site ignores) from the cache key, or every shared link becomes its own edge entry.
-3. **Cache Everything on HTML** with an Edge TTL matching your freshness tolerance — comment additions are visible within your purge latency (the plugin fires a per-post CF purge via Cache-Tag `vibe-comments-{post_id}` on every approval, plus single-URL purge on Cache-Everything setups without tag support).
+1. **Bypass cache on cookie**  -  expression: `(http.cookie contains "wordpress_logged_in_")`  -  logged-in users (admins, editors, commenters with accounts) always hit origin; their pages are never served from the anonymous edge copy.
+2. **Ignore query-string noise on HTML**  -  strip `utm_*`, `fbclid`, `cb`, `gclid` (or any param your site ignores) from the cache key, or every shared link becomes its own edge entry.
+3. **Cache Everything on HTML** with an Edge TTL matching your freshness tolerance  -  comment additions are visible within your purge latency (the plugin fires a per-post CF purge via Cache-Tag `vibe-comments-{post_id}` on every approval, plus single-URL purge on Cache-Everything setups without tag support).
 
-No exceptions are needed for the plugin's dynamic data: `admin-ajax.php` responses carry `Cache-Control: private` where user-specific and short public TTLs where not — the endpoints are safe under a Cache-Everything policy as-is.
+No exceptions are needed for the plugin's dynamic data: `admin-ajax.php` responses carry `Cache-Control: private` where user-specific and short public TTLs where not  -  the endpoints are safe under a Cache-Everything policy as-is.
 
 ---
 

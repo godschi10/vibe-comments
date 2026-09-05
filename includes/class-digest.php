@@ -89,7 +89,7 @@ class Vibe_Comments_Digest {
 	}
 
 	/**
-	 * Window: yesterday 00:00–24:00 UTC. A digest at 07:00 about the FULL
+	 * Window: yesterday 00:00-24:00 UTC. A digest at 07:00 about the FULL
 	 * previous calendar day - the numbers describe a day, which is what
 	 * "daily digest" means to a human.
 	 */

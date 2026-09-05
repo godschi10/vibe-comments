@@ -4,9 +4,9 @@
  *
  * Pure, stateless, zero-dependency: the score is computed from the comment's
  * own text/author fields alone - no DB reads, no network, no stored drift.
- * Score 0–100 with per-heuristic reasons; label bands:
+ * Score 0-100 with per-heuristic reasons; label bands:
  *   < 30  Clean        (green)
- *   30–59 Suspicious   (amber)
+ *   30-59 Suspicious   (amber)
  *   ≥ 60  Likely spam  (red)
  *
  * DISPLAY-ONLY by design: this class NEVER changes a comment's status. The
@@ -43,8 +43,8 @@ class Vibe_Comments_Spam_Score {
 	 * Label bands. Kept public so the admin column and any future consumer
 	 * (REST, CLI) render identical words for identical scores.
 	 */
-	const CLEAN_MAX       = 29;  // 0–29
-	const SUSPICIOUS_MAX  = 59;  // 30–59
+	const CLEAN_MAX       = 29;  // 0-29
+	const SUSPICIOUS_MAX  = 59;  // 30-59
 
 	/**
 	 * Score a comment. Accepts a WP_Comment object or an array with the
@@ -156,7 +156,7 @@ class Vibe_Comments_Spam_Score {
 
 		/**
 		 * Filter the final spam score (all heuristics already applied).
-		 * Returning a value outside 0–100 is clamped by the caller contract.
+		 * Returning a value outside 0-100 is clamped by the caller contract.
 		 *
 		 * @param int   $score   Computed score.
 		 * @param array $reasons Matched heuristic reasons (by value).
@@ -174,7 +174,7 @@ class Vibe_Comments_Spam_Score {
 	/**
 	 * Band label for a numeric score.
 	 *
-	 * @param  int $score 0–100.
+	 * @param  int $score 0-100.
 	 * @return string      'clean' | 'suspicious' | 'likely-spam'
 	 */
 	public static function label( $score ) {

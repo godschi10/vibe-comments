@@ -17,6 +17,13 @@ Types of changes:
 
 ---
 
+## [3.20.6] - 2026-09-05
+
+### Review-repair round (portability review)
+
+- En-dash (U+2013) pass: 13 removed (code + docs + CHANGELOG history).
+- " -  " spacing normalized. No functional change; four carriers bumped.
+
 ## [3.20.5] - 2026-09-05
 
 **WRITING-VOICE - hyphen pass completed (fleet-wide humanize decree).**
@@ -282,7 +289,7 @@ The audit verdict was 6/10 "AI-written feel", driven almost entirely by mechanic
 
 One branded email per day (08:00 WAT / 07:00 UTC) to the site admin: yesterday's comment activity in a single summary - stat cards (approved / pending / comments / replies), the pending moderation queue with each comment's spam-score badge (v3.14.0 scorer integrated), most-reacted comments, per-post breakdown, top voices. Every entry deep-links to its admin row.
 
-- **New class** `includes/class-digest.php` - single-event self-chaining cron (idempotent arm, never double-schedules; survives re-activation), full-calendar-day window (yesterday 00:00–24:00 UTC), one batched query for counts, one for the comment list, one for reactions, one for post titles; 100-comment cap.
+- **New class** `includes/class-digest.php` - single-event self-chaining cron (idempotent arm, never double-schedules; survives re-activation), full-calendar-day window (yesterday 00:00-24:00 UTC), one batched query for counts, one for the comment list, one for reactions, one for post titles; 100-comment cap.
 - **Settings** - Settings → Vibe Comments: enable toggle + recipient email (defaults to admin_email), with a **Preview button** that renders the exact digest HTML in an iframe via admin-ajax (mod-cap only, wp_rest nonce) - the SMTP-free window: the preview works regardless of mail transport, and shares ONE build path with the cron so preview and inbox can never drift.
 - **Delivery law unchanged**: the plugin never touches SMTP - `wp_mail()` carries it. On this host the transport remains blocked (empty Brevo key); the worker runs, builds, attempts, and honestly error-logs. The moment `GWILL_SMTP_USER`/`GWILL_SMTP_PASS` land in wp-config.php, the already-armed cron lights up with zero further work.
 
@@ -329,7 +336,7 @@ Stack-Overflow-style Q&A on any post, enabled by a per-post **"Enable Q&A mode"*
 
 ### Added - Heuristic spam scorer for the moderation queue (Feature #6)
 
-A **Spam** column in the WP admin comments list & moderation queue scores every comment 0–100 with a colored badge: **Clean** (green, <30) / **Suspicious** (amber, 30–59) / **Likely spam** (red, ≥60). Hovering shows exactly WHY (the matched heuristics).
+A **Spam** column in the WP admin comments list & moderation queue scores every comment 0-100 with a colored badge: **Clean** (green, <30) / **Suspicious** (amber, 30-59) / **Likely spam** (red, ≥60). Hovering shows exactly WHY (the matched heuristics).
 
 - **Pure + stateless**: computed from the comment's own fields on render - zero DB reads, zero writes, zero network, nothing stored, no drift. Score is reproducible forever.
 - **Language-neutral heuristics only** (structural tells, never vocabulary - pidgin and mixed-English comments stay clean): link count (the classic blog-spam tell, 1→5+ weighted), link-to-word ratio (stuffing), ALL-CAPS ratio, repeated-character runs, punctuation-run frequency, 28 known spam phrase families (capped at 2), space-less 60+ char blobs (gibberish/data-URI), author-name signals (all-caps, keyword-stuffed).

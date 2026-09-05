@@ -1079,7 +1079,7 @@ class Vibe_Comments_Ajax_Handler {
             return;
         }
 
-        // Purge transients for pages 1–5 (covers almost all real posts).
+        // Purge transients for pages 1-5 (covers almost all real posts).
         // Deep pages (6+) rarely get cached and regenerate on demand.
         foreach ( array( 10, 20, 50 ) as $per_page ) {
             for ( $p = 1; $p <= 5; $p++ ) {
@@ -1602,7 +1602,7 @@ class Vibe_Comments_Ajax_Handler {
      *      stored at submit time (same rail reactions use)
      *   4. the 5-minute window, anchored to the ORIGINAL comment_date_gmt -
      *      editing never extends it; an edit at 4:59 stays a 4:59 comment
-     *   5. content length (same 1–2000 bounds as submit)
+     *   5. content length (same 1-2000 bounds as submit)
      *
      * The edit does NOT re-run wp_new_comment() filters (it's not a new
      * comment) but wp_update_comment() fires edit_comment + the standard

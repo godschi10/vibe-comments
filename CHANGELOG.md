@@ -17,6 +17,13 @@ Types of changes:
 
 ---
 
+## [3.20.13] - 2026-09-06
+
+### King feedback: neutral-state SVG + own-reaction marking
+
+- Comments WITHOUT reactions showed the 🙂 EMOJI as the React placeholder - emoji glyphs cannot be tinted. Replaced with a neutral-face SVG in the same icon family.
+- The bubble matching the viewer's own reaction now carries vibe-rx-mine at render time (works on nested comments too - the state was always in the data; the theme skin now paints it).
+
 ## [3.20.12] - 2026-09-06
 
 ### Icon legibility pass (King feedback)

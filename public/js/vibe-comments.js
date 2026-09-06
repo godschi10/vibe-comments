@@ -2843,7 +2843,7 @@
                 btn.disabled = false;
                 if (!res || !res.success) return;
                 btn.dataset.on = res.data.notify ? '1' : '0';
-                btn.textContent = res.data.notify ? '\uD83D\uDD14 On' : '\uD83D\uDD15 Off';
+                btn.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14" style="vertical-align:-2px;margin-right:4px">' + '<path d="M15 8a5 5 0 0 0-10 0c0 6-2 7-2 7h14s-2-1-2-7"/><path d="M11.7 18a2 2 0 0 1-3.4 0"/></svg>' + (res.data.notify ? str('bellOn', 'On') : str('bellOff', 'Off'));
             })
             .catch(function(err) {
                 console.error('Notify toggle failed:', err);

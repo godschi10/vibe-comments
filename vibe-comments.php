@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.20.10
+ * Version:           3.20.11
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.20.10');
+define('VIBE_COMMENTS_VERSION', '3.20.11');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -337,8 +337,8 @@ class Vibe_Comments {
                     'author'             => __('Author', 'vibe-comments'),
                     'pinnedBadge'        => __('📌 Pinned', 'vibe-comments'),
                     'notifyTitle'        => __('Reply alerts for this thread (emails and browser notifications) - click to switch', 'vibe-comments'),
-                    'bellOn'             => __('🔔 On', 'vibe-comments'),
-                    'bellOff'            => __('🔕 Off', 'vibe-comments'),
+                    'bellOn'             => __('On', 'vibe-comments'),
+                    'bellOff'            => __('Off', 'vibe-comments'),
                     'noPushSupport'      => __('This browser does not support notifications.', 'vibe-comments'),
                     'pushWillNotify'     => __('You will get a push notification on this device when someone replies to your comment.', 'vibe-comments'),
                     'pushEnableFail'     => __('Could not enable notifications on this device.', 'vibe-comments'),

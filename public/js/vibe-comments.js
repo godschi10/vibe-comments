@@ -37,6 +37,19 @@
         { type: 'laugh', emoji: '😂', label: str('reactHaha', 'Haha')  },
     ];
 
+    // ── v3.20.11 (King): SVG icon set - emoji glyphs ignore CSS color and
+    // cannot follow the brand. All reaction/bell icons are inline SVGs
+    // (stroke = currentColor) so pills, bubbles and the picker paint brand.
+    const REACTION_SVG = {
+        like: '<path d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3zm0 0l4-8a2.4 2.4 0 0 1 2.4 2.4V9h5.2a2 2 0 0 1 2 2.4l-1.2 7A2 2 0 0 1 17.4 20H7"/>',
+        heart: '<path d="M12 20.7C6.4 16.5 3 13.2 3 9.6 3 7 5 5 7.5 5c1.7 0 3.3.9 4.5 2.5C13.2 5.9 14.8 5 16.5 5 19 5 21 7 21 9.6c0 3.6-3.4 6.9-9 11.1z"/>',
+        fire: '<path d="M12 21c-4 0-7-2.9-7-6.8 0-2.6 1.4-4.6 2.9-6.2.9-1 2.6-2.5 3.1-4 .2-.6.9-.7 1.2-.1.7 1.3.8 2.9 1.3 4.3.2.6.8.8 1.2.3.5-.6.8-1.5.8-2.3 0-.7.8-1 1.2-.4C17.9 7.6 19 10 19 12.6c0 4.6-3 8.4-7 8.4z"/>',
+        laugh: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c.8 1.3 2 2 3.5 2s2.7-.7 3.5-2z"/><path d="M9 9.6h.01M15 9.6h.01"/>'
+    };
+    function rxSvg(type) {
+        return '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" style="vertical-align:-3px">' + (REACTION_SVG[type] || '') + '</svg>';
+    }
+
     /**
      * Build the reaction component HTML for a comment.
      *
@@ -71,7 +84,7 @@
         }
         var total   = sorted.reduce(function(t, r) { return t + r.count; }, 0);
         var bubbles = sorted.slice(0, 3).map(function(r) {
-            return '<span class="vibe-rx-bubble">' + r.def.emoji + '</span>';
+            return '<span class="vibe-rx-bubble">' + rxSvg(r.def.type) + '</span>';
         }).join('');
         return '<span class="vibe-rx-stack">' + bubbles + '</span>' +
                '<span class="vibe-rx-total">' + total + '</span>';
@@ -114,7 +127,7 @@
                    ' data-type="' + def.type + '"' +
                    ' title="' + escapeHtml(def.label) + '"' +
                    ' aria-label="' + escapeHtml(def.label) + ' - ' + count + '">' +
-                   '<span class="vibe-rx-picker-emoji">' + def.emoji + '</span>' +
+                   '<span class="vibe-rx-picker-emoji">' + rxSvg(def.type) + '</span>' +
                    '<span class="vibe-rx-picker-n">' + (count || '') + '</span>' +
                    '</button>';
         }).join('');
@@ -1104,7 +1117,7 @@
         // flip reply-email consent anytime, no window. Strangers never see it.
         const notifyBtnHtml = comment.owns
             ? '<button type="button" class="vibe-notify-btn" data-comment-id="' + cid + '" data-on="' + (comment.notify_on ? '1' : '0') + '" title="' + str('notifyTitle', 'Reply alerts for this thread (emails and browser notifications) - click to switch') + '">'
-                + (comment.notify_on ? str('bellOn', '\uD83D\uDD14 On') : str('bellOff', '\uD83D\uDD15 Off'))
+                + '<svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14" style="vertical-align:-2px;margin-right:4px">' + '<path d="M15 8a5 5 0 0 0-10 0c0 6-2 7-2 7h14s-2-1-2-7"/><path d="M11.7 18a2 2 0 0 1-3.4 0"/></svg>' + (comment.notify_on ? str('bellOn', 'On') : str('bellOff', 'Off'))
               + '</button>'
             : '';
 

@@ -17,6 +17,13 @@ Types of changes:
 
 ---
 
+## [3.20.11] - 2026-09-06
+
+### Bell: emoji replaced with brand-following SVG
+
+- The per-comment REACTIONS (like/heart/fire/laugh) are SVG icons now (stroke=currentColor) - summary bubbles and picker options included; emoji glyphs cannot follow CSS color.
+- The 3.20.11 batch ships the CSP-safe work from the theme side; nothing plugin-side was needed for the async swap. - emoji glyphs ignore CSS color, so the pill could never read brand green on dark themes. The renderer now emits an inline SVG bell (stroke=currentColor) + the On/Off text; the bell follows the theme's brand color on every surface.
+
 ## [3.20.10] - 2026-09-06
 
 ### Review deleg_cab320da: claims made honest + carrier gate born

@@ -17,6 +17,12 @@ Types of changes:
 
 ---
 
+## [3.20.14] - 2026-09-06
+
+### Laugh icon v3 (open-mouth laugh) shipped
+
+- The laugh icon is now the open-source-style laughing face: circle outline, two squint eyes, and a big open laughing mouth - reads as the classic 😂 at 18px.
+
 ## [3.20.13] - 2026-09-06
 
 ### King feedback: neutral-state SVG + own-reaction marking

@@ -17,6 +17,13 @@ Types of changes:
 
 ---
 
+## [3.20.10] - 2026-09-06
+
+### Review deleg_cab320da: claims made honest + carrier gate born
+
+- CORRECTION: the 3.20.9 entry claimed the reaction-summary pill no longer sticks on iOS - the pill was never touched (only the card border was). The theme skin now gates the pill hovers with (hover:hover) + an :active tap state.
+- NEW tests/carrier-consistency.sh: byte-checks the four carriers (header Version, VIBE_COMMENTS_VERSION define, README, CHANGELOG head) - the v3.20.8 define miss is now mechanically impossible to repeat.
+
 ## [3.20.9] - 2026-09-06
 
 ### King phone-screenshot bugfix: comments section on mobile

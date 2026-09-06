@@ -27,7 +27,7 @@
     padding-bottom: 0.75rem;
     border-bottom: 2px solid var(--vibe-border, #e2e8f0);
 }
-/* Auto-hide when empty (0 comments on first render)  - 
+/* Auto-hide when empty (0 comments on first render) -
    JS populates the text after Load is clicked, making it reappear. */
 .vibe-comments-title:empty {
     display: none;
@@ -1291,7 +1291,7 @@
 }
 .vibe-comment-content code .vibe-mention,
 .vibe-comment-content a .vibe-mention {
-    /* Defensive: pills never render inside code spans or anchors  - 
+    /* Defensive: pills never render inside code spans or anchors -
        the JS skips those segments - but if a future bug lets one
        through, this keeps it from inheriting code/anchor styling. */
     all: unset;

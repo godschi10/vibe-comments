@@ -937,7 +937,7 @@
                 if (nEl) nEl.textContent = count || '';
             });
             if (closePicker) picker.hidden = true;
-            // v3.19.3 a11y: aria-expanded must mirror the picker's REAL state  - 
+            // v3.19.3 a11y: aria-expanded must mirror the picker's REAL state -
             // previously reset to "false" unconditionally, reporting collapsed
             // while the picker stayed open on the success path.
             if (summary) summary.setAttribute('aria-expanded', String(!picker.hidden));
@@ -2529,7 +2529,7 @@
             const label = btn.querySelector('.vibe-sort-label');
             if (label) label.textContent = mode.label;
             btn.title = mode.title;
-            // v3.19.3 a11y: the accessible NAME (not just the hover title)  - 
+            // v3.19.3 a11y: the accessible NAME (not just the hover title) -
             // the arrow glyph alone is not a name; screen readers announce
             // the aria-label in full.
             btn.setAttribute('aria-label', mode.title);

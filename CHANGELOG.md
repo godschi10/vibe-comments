@@ -17,6 +17,12 @@ Types of changes:
 
 ---
 
+## [3.20.8] - 2026-09-06
+
+### Review deleg_59ab8836 R2 - comment-layer dash artifacts
+
+- Line-end double-space-hyphen artifacts in public/js + public/css comment layers normalized to the house hyphen. No rendered output affected.
+
 ## [3.20.7] - 2026-09-06
 
 ### Entity-dash cleanup (closure sweep v3)

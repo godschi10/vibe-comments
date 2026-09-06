@@ -31,10 +31,10 @@
      * These must match the PHP whitelist (Vibe_Comments_Database::REACTION_TYPES).
      */
     const REACTION_DEFS = [
-        { type: 'like',  emoji: '👍', label: str('reactLike', 'Like')  },
-        { type: 'heart', emoji: '❤️', label: str('reactLove', 'Love')  },
-        { type: 'fire',  emoji: '🔥', label: str('reactFire', 'Fire')  },
-        { type: 'laugh', emoji: '😂', label: str('reactHaha', 'Haha')  },
+        { type: 'like', label: str('reactLike', 'Like')  },
+        { type: 'heart', label: str('reactLove', 'Love')  },
+        { type: 'fire', label: str('reactFire', 'Fire')  },
+        { type: 'laugh', label: str('reactHaha', 'Haha')  },
     ];
 
     // ── v3.20.11 (King): SVG icon set - emoji glyphs ignore CSS color and

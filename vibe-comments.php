@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.20.14
+ * Version:           3.20.15
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.20.14');
+define('VIBE_COMMENTS_VERSION', '3.20.15');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -298,7 +298,7 @@ class Vibe_Comments {
                     'connecting'         => __('Connecting…', 'vibe-comments'),
                     'searchComments'     => __('Search comments…', 'vibe-comments'),
                     'typeAtLeast2'       => __('Type at least 2 characters…', 'vibe-comments'),
-                    'pinned'             => __('📌 Pinned', 'vibe-comments'),
+                    'pinned'             => __('Pinned', 'vibe-comments'),
                     'accepted'           => __('✓ Accepted', 'vibe-comments'),
                     'couldNotLoad'       => __('Could not load comments.', 'vibe-comments'),
                     'tryAgain'           => __('Try again', 'vibe-comments'),
@@ -335,7 +335,7 @@ class Vibe_Comments {
                     'unaccept'           => __('Unaccept', 'vibe-comments'),
                     'accept'             => __('✓ Accept', 'vibe-comments'),
                     'author'             => __('Author', 'vibe-comments'),
-                    'pinnedBadge'        => __('📌 Pinned', 'vibe-comments'),
+                    'pinnedBadge'        => __('Pinned', 'vibe-comments'),
                     'notifyTitle'        => __('Reply alerts for this thread (emails and browser notifications) - click to switch', 'vibe-comments'),
                     'bellOn'             => __('On', 'vibe-comments'),
                     'bellOff'            => __('Off', 'vibe-comments'),

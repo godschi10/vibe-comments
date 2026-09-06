@@ -935,21 +935,37 @@ class Vibe_Comments_Ajax_Handler {
             return;
         }
 
+        // v3.20.15 (review deleg_21439e80 F1): collect ids RECURSIVELY - depth-2+
+        // replies live in children[] and were invisible to the flat walk, so a
+        // guest's own reaction on a nested reply showed no vibe-rx-mine marking
+        // until the 30s poll synced it. Same recursion on the patch pass below.
         $ids = array();
-        foreach ($data[$list_key] as $c) {
-            if (isset($c['id'])) { $ids[] = (int) $c['id']; }
-        }
+        $walk = function (array $comments) use (&$ids, &$walk) {
+            foreach ($comments as $c) {
+                if (isset($c['id'])) { $ids[] = (int) $c['id']; }
+                if (!empty($c['children']) && is_array($c['children'])) {
+                    $walk($c['children']);
+                }
+            }
+        };
+        $walk($data[$list_key]);
         if (empty($ids)) return;
 
         $db = new Vibe_Comments_Database();
         $user_reactions_map = $db->get_user_reactions_batch($ids, $user_id, $guest_token);
 
-        foreach ($data[$list_key] as &$c) {
-            if (isset($c['id']) && isset($user_reactions_map[$c['id']])) {
-                $c['user_reaction'] = $user_reactions_map[$c['id']];
+        $patch = function (array &$comments) use ($user_reactions_map, &$patch) {
+            foreach ($comments as &$c) {
+                if (isset($c['id']) && isset($user_reactions_map[$c['id']])) {
+                    $c['user_reaction'] = $user_reactions_map[$c['id']];
+                }
+                if (!empty($c['children']) && is_array($c['children'])) {
+                    $patch($c['children']);
+                }
             }
-        }
-        unset($c); // break the reference - defensive, prevents accidental reuse below
+            unset($c);
+        };
+        $patch($data[$list_key]);
     }
 
     /**

@@ -17,6 +17,14 @@ Types of changes:
 
 ---
 
+## [3.20.15] - 2026-09-06
+
+### Review deleg_21439e80: 4 findings closed
+
+- F1 [MED]: apply_user_reactions_overlay now RECURSES into children[] - depth-2+ replies echo the requester user_reaction on first paint (the King nested-comment symptom survives only for depth-2; fixed).
+- F2 [MED]: dead emoji: fields deleted from REACTION_DEFS; pinned-badge emoji stripped from i18n strings; honest emoji census now 0 in JS, decorative copy emoji (✨🔎✓) remain by design.
+- F6: guards refreshed (themes expect 3.20.15).
+
 ## [3.20.14] - 2026-09-06
 
 ### Laugh icon v3 (open-mouth laugh) shipped

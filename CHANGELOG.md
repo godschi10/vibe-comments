@@ -17,6 +17,15 @@ Types of changes:
 
 ---
 
+## [3.20.9] - 2026-09-06
+
+### King phone-screenshot bugfix: comments section on mobile
+
+- v3.20.8 carrier miss: VIBE_COMMENTS_VERSION define still said 3.20.7 (spacing differed from the replace target) - the served stylesheet/script handles kept the old cache token. Fix + carrier audit now byte-checks the define line.
+- Touch: reaction/summary pill and comment-body hover paint no longer stick on iOS (theme skin side ships the hover:none neutralizer; plugin pill user-select already set).
+- Mobile meta safety: .vibe-comment-meta gains min-width:0 so the author line cannot force the timestamp to overlap on narrow phones.
+- Dash decree: two \u2014 escapes in JS aria-labels converted to the house hyphen.
+
 ## [3.20.8] - 2026-09-06
 
 ### Review deleg_59ab8836 R2 - comment-layer dash artifacts

@@ -932,7 +932,7 @@
                 if (!opt) return;
                 var count = parseInt((reactions || {})[def.type] || 0, 10);
                 opt.classList.toggle('vibe-active-reaction', userReaction === def.type);
-                opt.setAttribute('aria-label', escapeHtml(def.label) + ' \u2014 ' + count);
+                opt.setAttribute('aria-label', escapeHtml(def.label) + ' - ' + count);
                 var nEl = opt.querySelector('.vibe-rx-picker-n');
                 if (nEl) nEl.textContent = count || '';
             });
@@ -1588,7 +1588,7 @@
         var badge = document.createElement('div');
         badge.className = 'vibe-draft-badge';
 
-        var label = document.createTextNode(str('draftRestored', 'Draft restored\u2009\u2014\u2009'));
+        var label = document.createTextNode(str('draftRestored', 'Draft restored - '));
         var btn   = document.createElement('button');
         btn.type        = 'button';
         btn.className   = 'vibe-draft-clear';

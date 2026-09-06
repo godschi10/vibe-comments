@@ -80,6 +80,7 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 0.15rem;
+    min-width: 0;
 }
 /* align-items:flex-start above overrides the flex default of "stretch" for
    column-direction containers. Without it, every child here (pinned badge,

@@ -41,13 +41,13 @@
     // cannot follow the brand. All reaction/bell icons are inline SVGs
     // (stroke = currentColor) so pills, bubbles and the picker paint brand.
     const REACTION_SVG = {
-        like: '<path d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3zm0 0l4-8a2.4 2.4 0 0 1 2.4 2.4V9h5.2a2 2 0 0 1 2 2.4l-1.2 7A2 2 0 0 1 17.4 20H7"/>',
-        heart: '<path d="M12 20.7C6.4 16.5 3 13.2 3 9.6 3 7 5 5 7.5 5c1.7 0 3.3.9 4.5 2.5C13.2 5.9 14.8 5 16.5 5 19 5 21 7 21 9.6c0 3.6-3.4 6.9-9 11.1z"/>',
-        fire: '<path d="M12 21c-4 0-7-2.9-7-6.8 0-2.6 1.4-4.6 2.9-6.2.9-1 2.6-2.5 3.1-4 .2-.6.9-.7 1.2-.1.7 1.3.8 2.9 1.3 4.3.2.6.8.8 1.2.3.5-.6.8-1.5.8-2.3 0-.7.8-1 1.2-.4C17.9 7.6 19 10 19 12.6c0 4.6-3 8.4-7 8.4z"/>',
-        laugh: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c.8 1.3 2 2 3.5 2s2.7-.7 3.5-2z"/><path d="M9 9.6h.01M15 9.6h.01"/>'
+        like: '<path fill="currentColor" stroke="none" d="M2 10h3.5v10H2a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1zm5.5 10V9.6l3.6-7.1a1.8 1.8 0 0 1 3.4 1v4h4.3a2.3 2.3 0 0 1 2.3 2.7l-1.1 6.2a2.3 2.3 0 0 1-2.3 1.9H8.1a2 2 0 0 1-.6-.3z"/>',
+        heart: '<path fill="currentColor" stroke="none" d="M12 21.3C6.2 17 2.5 13.5 2.5 9.7 2.5 6.9 4.7 4.7 7.4 4.7c1.8 0 3.5 1 4.6 2.6 1.1-1.6 2.8-2.6 4.6-2.6 2.7 0 4.9 2.2 4.9 5 0 3.8-3.7 7.3-9.5 11.6z"/>',
+        fire: '<path fill="currentColor" stroke="none" d="M13.3 2.5c.3-.4 1-.3 1.1.2.8 2.9 3.6 4.7 3.6 9.1 0 4.3-2.9 7.7-6.5 7.7s-6-2.9-6-6.4c0-2.9 1.8-4.7 3-6.2.5-.6 1.4-.4 1.6.3.3 1 .2 2.2.9 3 .3.4.9.2 1-.3.3-1.6-.4-3.9.9-6.4.4-.8 1.1-1.6 1.4-2z"/>',
+        laugh: '<path fill="currentColor" stroke="none" d="M12 2a10 10 0 1 0 .01 20A10 10 0 0 0 12 2zm0 17.6c-2.6 0-4.8-1.5-5.8-3.6h11.6c-1 2.1-3.2 3.6-5.8 3.6zM7 8.5c0-.8.7-1.5 1.5-1.5S10 7.7 10 8.5 9.3 10 8.5 10 7 9.3 7 8.5zm7 0c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5z"/>'
     };
     function rxSvg(type) {
-        return '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" style="vertical-align:-3px">' + (REACTION_SVG[type] || '') + '</svg>';
+        return '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="vertical-align:-4px">' + (REACTION_SVG[type] || '') + '</svg>';
     }
 
     /**

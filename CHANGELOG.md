@@ -17,6 +17,12 @@ Types of changes:
 
 ---
 
+## [3.20.12] - 2026-09-06
+
+### Icon legibility pass (King feedback)
+
+- Reaction icons redrawn: recognizable filled thumbs-up, heart, flame, and a proper laughing face (open-mouth + eyes). Size 15px to 18px.
+
 ## [3.20.11] - 2026-09-06
 
 ### Bell: emoji replaced with brand-following SVG

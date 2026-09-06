@@ -274,7 +274,7 @@ class Vibe_Comments_Admin {
         }
         $comment = get_comment( $comment_id );
         if ( ! $comment ) {
-            echo '&mdash;';
+            echo '-';
             return;
         }
         // phpcs:ignore WordPress.Security.EscapeOutput -- badge_html() escapes internally.

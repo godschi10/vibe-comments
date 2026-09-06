@@ -17,6 +17,12 @@ Types of changes:
 
 ---
 
+## [3.20.7] - 2026-09-06
+
+### Entity-dash cleanup (closure sweep v3)
+
+- class-admin.php rendered &mdash; in the admin UI - converted to the house hyphen (code scope, entity-scan class).
+
 ## [3.20.6] - 2026-09-05
 
 ### Review-repair round (portability review)

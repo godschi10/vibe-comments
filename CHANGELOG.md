@@ -17,6 +17,14 @@ Types of changes:
 
 ---
 
+## [3.20.17] - 2026-09-07
+
+### King decree: emoji-first icons with SVG fallback (plugin feature)
+
+- NEW iconMode config (filter vibe_comments_icon_mode): auto (default, canvas-detects emoji support) | emoji (force device emoji) | svg (force brand set).
+- Reactions + bell default to the DEVICE EMOJI again (familiar, colorful, native to each phone); the brand SVG set is the automatic fallback for engines that cannot render emoji glyphs.
+- The bell: emoji-first too, with the brand-green SVG as fallback; both emission paths (render + toggle) unified through bellIcon().
+
 ## [3.20.16] - 2026-09-06
 
 ### King: bell icon brand-green, laugh icon final

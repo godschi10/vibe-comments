@@ -37,7 +37,44 @@
         { type: 'laugh', label: str('reactHaha', 'Haha')  },
     ];
 
-    // ── v3.20.11 (King): SVG icon set - emoji glyphs ignore CSS color and
+    // ── v3.20.16 (King): EMOJI-FIRST with SVG fallback. Device emoji are the default
+    // (familiar, colorful); the SVG set stays as fallback for engines that cannot
+    // render emoji glyphs (old Android WebViews, some kiosk browsers). Mode:
+    //   auto (default) - canvas-detect: render 👍 offscreen, non-blank pixels = emoji OK
+    //   emoji          - always device emoji (forced)
+    //   svg            - always the brand SVG set (forced)
+    var ICON_MODE = (function() {
+        var wanted = (config && config.iconMode) ? String(config.iconMode) : 'auto';
+        if (wanted === 'emoji' || wanted === 'svg') return wanted;
+        try {
+            var c = document.createElement('canvas');
+            c.width = 16; c.height = 16;
+            var ctx = c.getContext('2d');
+            ctx.textBaseline = 'top';
+            ctx.font = '16px sans-serif';
+            ctx.fillText('\uD83D\uDC4D', 0, 0);
+            var d = ctx.getImageData(0, 0, 16, 16).data;
+            for (var i = 3; i < d.length; i += 4) { if (d[i] > 0) return 'emoji'; }
+            return 'svg';
+        } catch (e) { return 'svg'; }
+    })();
+    var REACTION_EMOJI = { like: '\uD83D\uDC4D', heart: '\u2764\uFE0F', fire: '\uD83D\uDD25', laugh: '\uD83D\uDE06' };
+    function rxIcon(type) {
+        if (ICON_MODE === 'emoji' && REACTION_EMOJI[type]) {
+            return '<span class="vibe-rx-emoji" style="font-size:15px;line-height:1">' + REACTION_EMOJI[type] + '</span>';
+        }
+        return rxSvg(type);
+    }
+
+    function bellIcon(label) {
+        // Emoji-first bell with SVG fallback, same mode resolution as reactions.
+        if (ICON_MODE === 'emoji') {
+            return '<span class="vibe-rx-emoji" style="font-size:14px;line-height:1">' + (label === str('bellOn', 'On') ? '\uD83D\uDD14' : '\uD83D\uDD15') + '</span>';
+        }
+        return '<svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="none" stroke="#00ff91" stroke-width="1.8" width="14" height="14" style="vertical-align:-2px;margin-right:4px"><path d="M15 8a5 5 0 0 0-10 0c0 6-2 7-2 7h14s-2-1-2-7"/><path d="M11.7 18a2 2 0 0 1-3.4 0"/></svg>';
+    }
+
+// ── v3.20.11 (King): SVG icon set - emoji glyphs ignore CSS color and
     // cannot follow the brand. All reaction/bell icons are inline SVGs
     // (stroke = currentColor) so pills, bubbles and the picker paint brand.
     const REACTION_SVG = {
@@ -85,7 +122,7 @@
         }
         var total   = sorted.reduce(function(t, r) { return t + r.count; }, 0);
         var bubbles = sorted.slice(0, 3).map(function(r) {
-            return '<span class="vibe-rx-bubble' + (userReaction === r.def.type ? ' vibe-rx-mine' : '') + '">' + rxSvg(r.def.type) + '</span>';
+            return '<span class="vibe-rx-bubble' + (userReaction === r.def.type ? ' vibe-rx-mine' : '') + '">' + rxIcon(r.def.type) + '</span>';
         }).join('');
         return '<span class="vibe-rx-stack">' + bubbles + '</span>' +
                '<span class="vibe-rx-total">' + total + '</span>';
@@ -128,7 +165,7 @@
                    ' data-type="' + def.type + '"' +
                    ' title="' + escapeHtml(def.label) + '"' +
                    ' aria-label="' + escapeHtml(def.label) + ' - ' + count + '">' +
-                   '<span class="vibe-rx-picker-emoji">' + rxSvg(def.type) + '</span>' +
+                   '<span class="vibe-rx-picker-emoji">' + rxIcon(def.type) + '</span>' +
                    '<span class="vibe-rx-picker-n">' + (count || '') + '</span>' +
                    '</button>';
         }).join('');
@@ -1118,7 +1155,7 @@
         // flip reply-email consent anytime, no window. Strangers never see it.
         const notifyBtnHtml = comment.owns
             ? '<button type="button" class="vibe-notify-btn" data-comment-id="' + cid + '" data-on="' + (comment.notify_on ? '1' : '0') + '" title="' + str('notifyTitle', 'Reply alerts for this thread (emails and browser notifications) - click to switch') + '">'
-                + '<svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="none" stroke="#00ff91" stroke-width="1.8" width="14" height="14" style="vertical-align:-2px;margin-right:4px">' + '<path d="M15 8a5 5 0 0 0-10 0c0 6-2 7-2 7h14s-2-1-2-7"/><path d="M11.7 18a2 2 0 0 1-3.4 0"/></svg>' + (comment.notify_on ? str('bellOn', 'On') : str('bellOff', 'Off'))
+                + bellIcon(comment.notify_on ? str('bellOn', 'On') : str('bellOff', 'Off'))
               + '</button>'
             : '';
 
@@ -2844,7 +2881,7 @@
                 btn.disabled = false;
                 if (!res || !res.success) return;
                 btn.dataset.on = res.data.notify ? '1' : '0';
-                btn.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="none" stroke="#00ff91" stroke-width="1.8" width="14" height="14" style="vertical-align:-2px;margin-right:4px">' + '<path d="M15 8a5 5 0 0 0-10 0c0 6-2 7-2 7h14s-2-1-2-7"/><path d="M11.7 18a2 2 0 0 1-3.4 0"/></svg>' + (res.data.notify ? str('bellOn', 'On') : str('bellOff', 'Off'));
+                btn.innerHTML = bellIcon(res.data.notify ? str('bellOn', 'On') : str('bellOff', 'Off'));
             })
             .catch(function(err) {
                 console.error('Notify toggle failed:', err);

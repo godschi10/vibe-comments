@@ -3,7 +3,7 @@
  * Plugin Name:       Vibe Comments
  * Plugin URI:        https://gwillchijioke.com
  * Description:       A performance-focused custom comment plugin with reactions, threaded replies, Gravatar, Google & WordPress authentication. Built with zero external dependencies and no DB bloat.
- * Version:           3.20.16
+ * Version:           3.20.17
  * Author:            G-will Chijioke
  * Author URI:        https://gwillchijioke.com
  * License:           GPL v2 or later
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VIBE_COMMENTS_VERSION', '3.20.16');
+define('VIBE_COMMENTS_VERSION', '3.20.17');
 define('VIBE_COMMENTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIBE_COMMENTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -245,6 +245,9 @@ class Vibe_Comments {
                 : !empty($vibe_gs['client_id']);
 
             wp_localize_script('vibe-comments', 'vibeComments', array(
+                // v3.20.17 (King): icon mode - device emoji by default, brand SVG as fallback.
+                // 'auto' canvas-detects (default), 'emoji' forces device emoji, 'svg' forces the brand set.
+                'iconMode'         => apply_filters('vibe_comments_icon_mode', 'auto'),
                 'nonce'            => wp_create_nonce('wp_rest'),
                 'ajaxUrl'          => admin_url('admin-ajax.php'),
                 'postId'           => get_the_ID(),

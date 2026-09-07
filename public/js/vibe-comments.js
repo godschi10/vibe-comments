@@ -44,7 +44,7 @@
         like: '<path fill="currentColor" stroke="none" d="M2 10h3.5v10H2a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1zm5.5 10V9.6l3.6-7.1a1.8 1.8 0 0 1 3.4 1v4h4.3a2.3 2.3 0 0 1 2.3 2.7l-1.1 6.2a2.3 2.3 0 0 1-2.3 1.9H8.1a2 2 0 0 1-.6-.3z"/>',
         heart: '<path fill="currentColor" stroke="none" d="M12 21.3C6.2 17 2.5 13.5 2.5 9.7 2.5 6.9 4.7 4.7 7.4 4.7c1.8 0 3.5 1 4.6 2.6 1.1-1.6 2.8-2.6 4.6-2.6 2.7 0 4.9 2.2 4.9 5 0 3.8-3.7 7.3-9.5 11.6z"/>',
         fire: '<path fill="currentColor" stroke="none" d="M13.3 2.5c.3-.4 1-.3 1.1.2.8 2.9 3.6 4.7 3.6 9.1 0 4.3-2.9 7.7-6.5 7.7s-6-2.9-6-6.4c0-2.9 1.8-4.7 3-6.2.5-.6 1.4-.4 1.6.3.3 1 .2 2.2.9 3 .3.4.9.2 1-.3.3-1.6-.4-3.9.9-6.4.4-.8 1.1-1.6 1.4-2z"/>',
-        laugh: '<circle cx="12" cy="12" r="9"/><path d="M8 10.5l1.5-1.5 1.5 1.5M10.5 9l1.5 1.5L13.5 9"/><path d="M8 13.5h8c0 2.5-1.8 4-4 4s-4-1.5-4-4z"/>',
+        laugh: '<g stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 9.5c.5-.8 1.4-1.3 2.3-1.3M15.3 8.2c.9 0 1.8.5 2.3 1.3"/><path d="M7 13h10c-.5 3.3-2.5 5.5-5 5.5S7.5 16.3 7 13z" fill="currentColor" stroke="none"/></g>',
         neutral: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5h7"/><path d="M9 9.6h.01M15 9.6h.01"/>'
     };
     function rxSvg(type) {
@@ -1118,7 +1118,7 @@
         // flip reply-email consent anytime, no window. Strangers never see it.
         const notifyBtnHtml = comment.owns
             ? '<button type="button" class="vibe-notify-btn" data-comment-id="' + cid + '" data-on="' + (comment.notify_on ? '1' : '0') + '" title="' + str('notifyTitle', 'Reply alerts for this thread (emails and browser notifications) - click to switch') + '">'
-                + '<svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14" style="vertical-align:-2px;margin-right:4px">' + '<path d="M15 8a5 5 0 0 0-10 0c0 6-2 7-2 7h14s-2-1-2-7"/><path d="M11.7 18a2 2 0 0 1-3.4 0"/></svg>' + (comment.notify_on ? str('bellOn', 'On') : str('bellOff', 'Off'))
+                + '<svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="none" stroke="#00ff91" stroke-width="1.8" width="14" height="14" style="vertical-align:-2px;margin-right:4px">' + '<path d="M15 8a5 5 0 0 0-10 0c0 6-2 7-2 7h14s-2-1-2-7"/><path d="M11.7 18a2 2 0 0 1-3.4 0"/></svg>' + (comment.notify_on ? str('bellOn', 'On') : str('bellOff', 'Off'))
               + '</button>'
             : '';
 
@@ -2844,7 +2844,7 @@
                 btn.disabled = false;
                 if (!res || !res.success) return;
                 btn.dataset.on = res.data.notify ? '1' : '0';
-                btn.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14" style="vertical-align:-2px;margin-right:4px">' + '<path d="M15 8a5 5 0 0 0-10 0c0 6-2 7-2 7h14s-2-1-2-7"/><path d="M11.7 18a2 2 0 0 1-3.4 0"/></svg>' + (res.data.notify ? str('bellOn', 'On') : str('bellOff', 'Off'));
+                btn.innerHTML = '<svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="none" stroke="#00ff91" stroke-width="1.8" width="14" height="14" style="vertical-align:-2px;margin-right:4px">' + '<path d="M15 8a5 5 0 0 0-10 0c0 6-2 7-2 7h14s-2-1-2-7"/><path d="M11.7 18a2 2 0 0 1-3.4 0"/></svg>' + (res.data.notify ? str('bellOn', 'On') : str('bellOff', 'Off'));
             })
             .catch(function(err) {
                 console.error('Notify toggle failed:', err);

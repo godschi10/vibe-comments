@@ -17,6 +17,13 @@ Types of changes:
 
 ---
 
+## [3.20.16] - 2026-09-06
+
+### King: bell icon brand-green, laugh icon final
+
+- The bell glyph now strokes #00ff91 directly (was currentColor, which picked up the white text and rendered white).
+- Laugh icon final: emoji-anatomy laughing face - circle, upswept happy eye arcs, big filled open mouth.
+
 ## [3.20.15] - 2026-09-06
 
 ### Review deleg_21439e80: 4 findings closed

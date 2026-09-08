@@ -17,6 +17,13 @@ Types of changes:
 
 ---
 
+## [3.20.19] - 2026-09-08
+
+### Fixed - Load More button polluted empty search results (King: "empty search results with load more button also brought a result in empty search, isn't that a bug")
+
+- Yes, a real bug: the search `renderResults()` replaces the CONTENTS of `#vibe-comment-list`, but the Load More button lives in a separate `#vibe-load-more-wrap` OUTSIDE the list - it stayed visible during search, and tapping it ran `loadMoreComments()`, which appended UNFILTERED thread pages straight into the results view. An empty search could suddenly show comments that didn't match the query.
+- FIX: new `searchFilterActive` module flag - set when a search runs, cleared when the input empties. The input handler hides `#vibe-load-more-wrap` for the whole search session (restores it on clear, only if `hasMorePages`), and `loadMoreComments()` hard-guards on the flag as defense-in-depth against click races.
+
 ## [3.20.18] - 2026-09-08
 
 ### Fixed - mobile-only search input height inflation (King: "same size but alignment sucks on mobile")

@@ -191,6 +191,12 @@
     // appended as-is. See initSortToggle() (sets this on every click) and
     // loadMoreComments() (reads it after appending a new page).
     let currentSortMode = 'newest'; // matches load_comments()'s server-side default order
+    // v3.20.19 (King: "empty search results with load more button also brought
+    // a result in empty search"): true while the list shows SEARCH results or a
+    // local filter - loadMoreComments() appends UNFILTERED thread pages, which
+    // polluted the results view. Guarded everywhere, and the load-more wrap is
+    // hidden for the whole search session.
+    let searchFilterActive = false;
 
     document.addEventListener('DOMContentLoaded', function() {
         // Display OAuth redirect-back errors (L4 fix - oauth_error() redirects
@@ -1009,6 +1015,8 @@
     }
 
     function loadMoreComments() {
+        // v3.20.19: never append unfiltered pages while search results are shown.
+        if (searchFilterActive) return;
         isLoadingMore = true;
         var btn = document.getElementById('vibe-load-more');
         if (btn) { btn.disabled = true; btn.textContent = str('loadingDots', 'Loading...'); }
@@ -2734,12 +2742,21 @@
                 searchSeq++;
                 restoreThread();
                 status.textContent = '';
+                // v3.20.19: thread restored - let Load More work again.
+                searchFilterActive = false;
+                var mw0 = document.getElementById('vibe-load-more-wrap');
+                if (mw0 && hasMorePages) mw0.style.display = '';
                 return;
             }
             if (q.length < 2) {
                 status.textContent = str('typeAtLeast2', 'Type at least 2 characters\u2026');
                 return;
             }
+            // v3.20.19: a search is running - hide Load More; it appends
+            // UNFILTERED pages into the results view otherwise.
+            searchFilterActive = true;
+            var mw1 = document.getElementById('vibe-load-more-wrap');
+            if (mw1) mw1.style.display = 'none';
             searchTimer = setTimeout(function() { runServerSearch(q); }, 300);
         });
     }

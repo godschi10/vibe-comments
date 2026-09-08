@@ -17,6 +17,13 @@ Types of changes:
 
 ---
 
+## [3.20.18] - 2026-09-08
+
+### Fixed - mobile-only search input height inflation (King: "same size but alignment sucks on mobile")
+
+- The filter box ballooned to ~132px tall on iOS while the sort button stayed 44px. Root cause: `input type="search"` renders a native inflated search field on Safari/WebKit that IGNORES the height:44px override, so the input never aligned with the 44px sort square. Headless desktop proofs could not reproduce it (the engine difference the King hit on every browser/cache-clear).
+- FIX: the search input is now `type="text"` (a plain text field obeys its height on every engine) with `inputmode="search"` + `enterkeyhint="search"` to keep the search keyboard, plus `autocomplete="off"` and `spellcheck="false"` for a clean filter field.
+
 ## [3.20.17] - 2026-09-07
 
 ### King decree: emoji-first icons with SVG fallback (plugin feature)

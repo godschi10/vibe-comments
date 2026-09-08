@@ -2606,8 +2606,18 @@
         wrap.className = 'vibe-search-wrap';
 
         const input  = document.createElement('input');
-        input.type = 'search';
+        input.type = 'text';
         input.className   = 'vibe-search-input';
+        // v3.20.18 (King: mobile-only misalignment): `type="search"` makes iOS
+        // Safari render a native inflated search field (~132px) that ignores the
+        // height:44px override - the sort square stayed 44px, the input ballooned.
+        // A plain text input obeys height on every engine; inputmode/enterkeyhint
+        // keep the search keyboard affordance, spellcheck off avoids red squiggles
+        // on a filter field.
+        input.setAttribute('inputmode', 'search');
+        input.setAttribute('enterkeyhint', 'search');
+        input.setAttribute('autocomplete', 'off');
+        input.setAttribute('spellcheck', 'false');
         input.placeholder = str('searchComments', 'Search comments\u2026');
         input.setAttribute('aria-label', str('searchAria', 'Search comments'));
 

@@ -17,6 +17,19 @@ Types of changes:
 
 ---
 
+## [3.20.27] - 2026-09-08
+
+### Fixed - like glyph optically centered in its face circle (King: "Good but center the SVG inside the circle")
+
+- TRUE path bbox walked from the served `d` (x7.10..25.00, cx16.05 / y3.20..25.50, cy14.35 - the earlier estimate missed the relative `m` moveto). Exact centering transform `translate(9.57 10.59)` puts the glyph's mass dead-on the face center; then +0.7y optical seat (top-heavy thumb reads better seated slightly low).
+- Live-measured gaps: horizontal 12px/12px (perfect), vertical optically seated. Vision score 8/10, King approved.
+
+## [3.20.26] - 2026-09-08
+
+### Fixed - like glyph horizontally centered in its face circle (King: "Good but center the SVG inside the circle")
+
+- Containment (3.20.25) left the thumb sitting LEFT of center: the path's mass spans x5.6..17.2 (center 11.4, not 12). FIX: path re-drawn shifted +1.2 units (cuff now x8.1..11.1+1, hand x12.8..17.2) so the glyph's mass center lands on x=12 - vertically still 0.6 down for the top-heavy thumb. Shape unchanged, pure re-center.
+
 ## [3.20.25] - 2026-09-08
 
 ### Fixed - like glyph bleeding out of its face circle (King: "Like pop-up is not contained properly in its circle")

@@ -81,7 +81,13 @@
         like: '<path fill="currentColor" stroke="none" d="M2 10h3.5v10H2a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1zm5.5 10V9.6l3.6-7.1a1.8 1.8 0 0 1 3.4 1v4h4.3a2.3 2.3 0 0 1 2.3 2.7l-1.1 6.2a2.3 2.3 0 0 1-2.3 1.9H8.1a2 2 0 0 1-.6-.3z"/>',
         heart: '<path fill="currentColor" stroke="none" d="M12 21.3C6.2 17 2.5 13.5 2.5 9.7 2.5 6.9 4.7 4.7 7.4 4.7c1.8 0 3.5 1 4.6 2.6 1.1-1.6 2.8-2.6 4.6-2.6 2.7 0 4.9 2.2 4.9 5 0 3.8-3.7 7.3-9.5 11.6z"/>',
         fire: '<path fill="currentColor" stroke="none" d="M13.3 2.5c.3-.4 1-.3 1.1.2.8 2.9 3.6 4.7 3.6 9.1 0 4.3-2.9 7.7-6.5 7.7s-6-2.9-6-6.4c0-2.9 1.8-4.7 3-6.2.5-.6 1.4-.4 1.6.3.3 1 .2 2.2.9 3 .3.4.9.2 1-.3.3-1.6-.4-3.9.9-6.4.4-.8 1.1-1.6 1.4-2z"/>',
-        laugh: '<g stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 9.5c.5-.8 1.4-1.3 2.3-1.3M15.3 8.2c.9 0 1.8.5 2.3 1.3"/><path d="M7 13h10c-.5 3.3-2.5 5.5-5 5.5S7.5 16.3 7 13z" fill="currentColor" stroke="none"/></g>',
+        // laugh v2 (King: "make it look like the laughing emoji 😂"): closed
+        // happy arc eyes + open grin in brand ink, plus BLUE TEARS OF JOY
+        // spraying from both eyes - the yellow disc IS the face. Explicit
+        // path colors (not currentColor) so the skin's white-glyph rule
+        // can't flatten the multi-color emoji; everything inside the safe
+        // box (x3.9..20.1) so nothing bleeds past the disc clip.
+        laugh: '<g fill="none" stroke="#131720" stroke-width="1.8" stroke-linecap="round"><path d="M7.7 10.3c.5-1 1.7-1 2.2 0M14.1 10.3c.5-1 1.7-1 2.2 0"/></g><path fill="#131720" stroke="none" d="M7.9 12.6c.4 2.7 1.9 4.3 4.1 4.3s3.7-1.6 4.1-4.3H7.9z"/><g fill="#7cc0ff" stroke="none"><path d="M5.3 9.2c-.9 1.6-1.3 2.7-1.3 3.5a1.35 1.35 0 0 0 2.7 0c0-.8-.5-1.9-1.4-3.5z"/><path d="M18.7 9.2c.9 1.6 1.3 2.7 1.3 3.5a1.35 1.35 0 0 1-2.7 0c0-.8.5-1.9 1.4-3.5z"/></g>',
         neutral: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5h7"/><path d="M9 9.6h.01M15 9.6h.01"/>'
     };
     function rxSvg(type) {
@@ -121,8 +127,13 @@
                    '<span class="vibe-rx-label">React</span>';
         }
         var total   = sorted.reduce(function(t, r) { return t + r.count; }, 0);
+        // v3.20.20 (King: FB Lite stacked reactions): each bubble carries a
+        // .vibe-rx-t-<type> class so the theme skin paints Facebook's disc
+        // colors (blue/red/gold/yellow). The glyph is ALWAYS the SVG set -
+        // device emoji are intrinsically colored and CSS cannot make them
+        // white-on-disc; the picker keeps emoji-first via rxIcon().
         var bubbles = sorted.slice(0, 3).map(function(r) {
-            return '<span class="vibe-rx-bubble' + (userReaction === r.def.type ? ' vibe-rx-mine' : '') + '">' + rxIcon(r.def.type) + '</span>';
+            return '<span class="vibe-rx-bubble vibe-rx-t-' + r.def.type + (userReaction === r.def.type ? ' vibe-rx-mine' : '') + '">' + rxSvg(r.def.type) + '</span>';
         }).join('');
         return '<span class="vibe-rx-stack">' + bubbles + '</span>' +
                '<span class="vibe-rx-total">' + total + '</span>';
@@ -165,7 +176,7 @@
                    ' data-type="' + def.type + '"' +
                    ' title="' + escapeHtml(def.label) + '"' +
                    ' aria-label="' + escapeHtml(def.label) + ' - ' + count + '">' +
-                   '<span class="vibe-rx-picker-emoji">' + rxIcon(def.type) + '</span>' +
+                   '<span class="vibe-rx-picker-emoji">' + rxSvg(def.type) + '</span>' +
                    '<span class="vibe-rx-picker-n">' + (count || '') + '</span>' +
                    '</button>';
         }).join('');

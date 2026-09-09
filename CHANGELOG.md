@@ -17,6 +17,16 @@ Types of changes:
 
 ---
 
+## [3.20.20] - 2026-09-08
+
+### Added - Facebook-Lite reaction disc stack (King: "I want reactions to stack on each other professionally, just like Facebook does")
+
+- `buildSummaryInner()` now stamps every summary bubble with `.vibe-rx-t-<type>` (like/heart/fire/laugh) so the theme skin can paint Facebook's brand-colored discs (blue/red/gold/yellow) with ring separators. Visuals live in the theme, not the plugin.
+- ALL reaction surfaces are SVG now - summary AND picker (`rxSvg()` everywhere, `rxIcon()` retired from markup): the King ruled SVG looks better than device emoji. The laugh glyph was redrawn for the disc: happy arc eyes + open smile, no face ring (the yellow disc IS the face), everything inside a centered safe box so nothing bleeds past the circle (theme clips at the disc edge too).
+- Green "I reacted" markers fully retired at the King's order: no disc ring, no pill border, no green count tint - the picker pop-up's active wash is the only selected-state highlight.
+- Review fix F1: a dropped quote in the mine-class ternary silently turned `vibe-rx-mine` into a stray ATTRIBUTE (own-reaction highlight dead); class now built inside the class string and re-proven from the served emitter (F1 re-test: mineClassPresent:true).
+- Version carriers bumped 3.20.19 -> 3.20.20.
+
 ## [3.20.19] - 2026-09-08
 
 ### Fixed - Load More button polluted empty search results (King: "empty search results with load more button also brought a result in empty search, isn't that a bug")

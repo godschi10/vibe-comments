@@ -84,9 +84,14 @@
             // discs the face circle merges invisibly (same color); in the picker
             // all four show as colored faces on any surface. Explicit fills can't
             // be flattened by the skin's white-glyph rule.
-            like: '<circle cx="12" cy="12" r="8.4" fill="#2f7de1" stroke="none"/><path fill="#ffffff" stroke="none" d="M6.6 10h3v9H6.6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zm4.6 9V9.6l3.2-6.4a1.6 1.6 0 0 1 3 .9v3.6h3.9a2.1 2.1 0 0 1 2.1 2.4l-1 5.6a2.1 2.1 0 0 1-2.1 1.7H11z"/>',
-            heart: '<circle cx="12" cy="12" r="8.4" fill="#e5484d" stroke="none"/><path fill="#ffffff" stroke="none" d="M12 19.8C7.2 16.3 4 13.3 4 10.1 4 7.7 5.9 5.9 8.2 5.9c1.5 0 2.9.8 3.8 2.1.9-1.3 2.3-2.1 3.8-2.1 2.3 0 4.2 1.8 4.2 4.2 0 3.2-3.2 6.2-8 9.7z"/>',
-            fire: '<circle cx="12" cy="12" r="8.4" fill="#f2711c" stroke="none"/><path fill="#ffffff" stroke="none" d="M13.1 4.2c.3-.35.9-.3 1 .15.7 2.6 3.2 4.2 3.2 8.1 0 3.8-2.6 6.8-5.8 6.8s-5.3-2.6-5.3-5.6c0-2.6 1.6-4.2 2.7-5.5.4-.5 1.2-.35 1.4.25.25.9.2 2 .8 2.7.3.35.8.15.9-.25.25-1.4-.35-3.4.8-5.7.35-.7.95-1.4 1.3-1.85z"/>',
+            // v3.20.23 (King: "the SVG is bleeding out of the circle - make the
+            // 3 circles same size as the laughing SVG radius or larger"):
+            // like/heart/fire use the laugh's geometry EXACTLY - face disc
+            // at the 1.3x scale (r8.4 -> effective 10.9), white glyph scaled
+            // 0.75 about center so its widest point sits INSIDE the face.
+            like: '<g transform="translate(12 12) scale(1.3) translate(-12 -12)"><circle cx="12" cy="12" r="8.4" fill="#2f7de1" stroke="none"/><g transform="translate(12 12) scale(0.75) translate(-12 -12)"><path fill="#ffffff" stroke="none" d="M6.6 10h3v9H6.6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zm4.6 9V9.6l3.2-6.4a1.6 1.6 0 0 1 3 .9v3.6h3.9a2.1 2.1 0 0 1 2.1 2.4l-1 5.6a2.1 2.1 0 0 1-2.1 1.7H11z"/></g></g>',
+            heart: '<g transform="translate(12 12) scale(1.3) translate(-12 -12)"><circle cx="12" cy="12" r="8.4" fill="#e5484d" stroke="none"/><g transform="translate(12 12) scale(0.75) translate(-12 -12)"><path fill="#ffffff" stroke="none" d="M12 19.8C7.2 16.3 4 13.3 4 10.1 4 7.7 5.9 5.9 8.2 5.9c1.5 0 2.9.8 3.8 2.1.9-1.3 2.3-2.1 3.8-2.1 2.3 0 4.2 1.8 4.2 4.2 0 3.2-3.2 6.2-8 9.7z"/></g></g>',
+            fire: '<g transform="translate(12 12) scale(1.3) translate(-12 -12)"><circle cx="12" cy="12" r="8.4" fill="#f2711c" stroke="none"/><g transform="translate(12 12) scale(0.75) translate(-12 -12)"><path fill="#ffffff" stroke="none" d="M13.1 4.2c.3-.35.9-.3 1 .15.7 2.6 3.2 4.2 3.2 8.1 0 3.8-2.6 6.8-5.8 6.8s-5.3-2.6-5.3-5.6c0-2.6 1.6-4.2 2.7-5.5.4-.5 1.2-.35 1.4.25.25.9.2 2 .8 2.7.3.35.8.15.9-.25.25-1.4-.35-3.4.8-5.7.35-.7.95-1.4 1.3-1.85z"/></g></g>',
         // laugh v3 (King: "invisible during pop up, just two tears visible" +
         // "eyes, mouth, inner should be BIGGER, same shape"): the glyph is now
         // SELF-CONTAINED - its own yellow face circle (#f6c445) + ink features

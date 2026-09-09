@@ -17,6 +17,12 @@ Types of changes:
 
 ---
 
+## [3.20.23] - 2026-09-08
+
+### Fixed - picker glyph bleed (King: "the SVG is bleeding out of the circle, make the 3 circles same size as the laughing SVG radius or larger so everything fits perfectly")
+
+- like/heart/fire glyphs adopt the laugh's geometry exactly: face disc wrapped in the same 1.3x scale (effective radius 10.9 vs the old 8.4), and each white glyph scaled 0.75 about center so its widest point sits INSIDE the face circle. Nothing can bleed; all four faces are now identical in size and structure.
+
 ## [3.20.22] - 2026-09-08
 
 ### Changed - picker pop-up: ALL four reaction glyphs self-colored (King: "since the pop-up for the laughing svg is colored, make the other 3 colored too for consistency")

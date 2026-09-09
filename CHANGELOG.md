@@ -17,6 +17,13 @@ Types of changes:
 
 ---
 
+## [3.20.21] - 2026-09-08
+
+### Fixed - laugh glyph invisible in the picker pop-up (King: "Laughing SVG is invisible during pop up. Just two tears are visible" + "eyes, mouth and inner should be bigger")
+
+- Root cause: the laugh art drew its features in ink (#131720) with no face fill - fine on the yellow summary DISC, but the picker renders the same glyph bare on the dark pop-up surface, where dark ink vanished; only the blue tears survived.
+- FIX: the glyph is now SELF-CONTAINED - its own yellow face circle (#f6c445, same as the disc so the summary look is unchanged/merged), ink features, brand-blue tears, all scaled 1.3x about center so eyes/mouth/tears match the visual weight of the filled like/heart/fire glyphs (King: "bigger, same shape, users identify the reaction instantly"). Explicit path colors retained (immune to the theme's white-glyph rule). Scaled extents stay inside the 24-box, so the disc clip never cuts it.
+
 ## [3.20.20] - 2026-09-08
 
 ### Added - Facebook-Lite reaction disc stack (King: "I want reactions to stack on each other professionally, just like Facebook does")

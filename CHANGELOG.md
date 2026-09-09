@@ -17,6 +17,13 @@ Types of changes:
 
 ---
 
+## [3.20.22] - 2026-09-08
+
+### Changed - picker pop-up: ALL four reaction glyphs self-colored (King: "since the pop-up for the laughing svg is colored, make the other 3 colored too for consistency")
+
+- like/heart/fire glyphs now carry their own brand face disc (#2f7de1 / #e5484d / #f2711c) with white features - exactly the pattern laugh already had (#f6c445). In the summary stack the face circle merges invisibly into the same-colored disc; in the picker pop-up all four read as colored faces on any surface. Consistent at last.
+- White features are explicit fills (immune to the skin's white-glyph CSS rule).
+
 ## [3.20.21] - 2026-09-08
 
 ### Fixed - laugh glyph invisible in the picker pop-up (King: "Laughing SVG is invisible during pop up. Just two tears are visible" + "eyes, mouth and inner should be bigger")

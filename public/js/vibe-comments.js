@@ -78,9 +78,15 @@
     // cannot follow the brand. All reaction/bell icons are inline SVGs
     // (stroke = currentColor) so pills, bubbles and the picker paint brand.
     const REACTION_SVG = {
-        like: '<path fill="currentColor" stroke="none" d="M2 10h3.5v10H2a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1zm5.5 10V9.6l3.6-7.1a1.8 1.8 0 0 1 3.4 1v4h4.3a2.3 2.3 0 0 1 2.3 2.7l-1.1 6.2a2.3 2.3 0 0 1-2.3 1.9H8.1a2 2 0 0 1-.6-.3z"/>',
-        heart: '<path fill="currentColor" stroke="none" d="M12 21.3C6.2 17 2.5 13.5 2.5 9.7 2.5 6.9 4.7 4.7 7.4 4.7c1.8 0 3.5 1 4.6 2.6 1.1-1.6 2.8-2.6 4.6-2.6 2.7 0 4.9 2.2 4.9 5 0 3.8-3.7 7.3-9.5 11.6z"/>',
-        fire: '<path fill="currentColor" stroke="none" d="M13.3 2.5c.3-.4 1-.3 1.1.2.8 2.9 3.6 4.7 3.6 9.1 0 4.3-2.9 7.7-6.5 7.7s-6-2.9-6-6.4c0-2.9 1.8-4.7 3-6.2.5-.6 1.4-.4 1.6.3.3 1 .2 2.2.9 3 .3.4.9.2 1-.3.3-1.6-.4-3.9.9-6.4.4-.8 1.1-1.6 1.4-2z"/>',
+            // v3.20.22 (King: picker consistency - "laugh pop-up is colored, make
+            // the other 3 colored too"): every glyph is SELF-COLORED - its own
+            // face disc in the brand disc color + white features. On the summary
+            // discs the face circle merges invisibly (same color); in the picker
+            // all four show as colored faces on any surface. Explicit fills can't
+            // be flattened by the skin's white-glyph rule.
+            like: '<circle cx="12" cy="12" r="8.4" fill="#2f7de1" stroke="none"/><path fill="#ffffff" stroke="none" d="M6.6 10h3v9H6.6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zm4.6 9V9.6l3.2-6.4a1.6 1.6 0 0 1 3 .9v3.6h3.9a2.1 2.1 0 0 1 2.1 2.4l-1 5.6a2.1 2.1 0 0 1-2.1 1.7H11z"/>',
+            heart: '<circle cx="12" cy="12" r="8.4" fill="#e5484d" stroke="none"/><path fill="#ffffff" stroke="none" d="M12 19.8C7.2 16.3 4 13.3 4 10.1 4 7.7 5.9 5.9 8.2 5.9c1.5 0 2.9.8 3.8 2.1.9-1.3 2.3-2.1 3.8-2.1 2.3 0 4.2 1.8 4.2 4.2 0 3.2-3.2 6.2-8 9.7z"/>',
+            fire: '<circle cx="12" cy="12" r="8.4" fill="#f2711c" stroke="none"/><path fill="#ffffff" stroke="none" d="M13.1 4.2c.3-.35.9-.3 1 .15.7 2.6 3.2 4.2 3.2 8.1 0 3.8-2.6 6.8-5.8 6.8s-5.3-2.6-5.3-5.6c0-2.6 1.6-4.2 2.7-5.5.4-.5 1.2-.35 1.4.25.25.9.2 2 .8 2.7.3.35.8.15.9-.25.25-1.4-.35-3.4.8-5.7.35-.7.95-1.4 1.3-1.85z"/>',
         // laugh v3 (King: "invisible during pop up, just two tears visible" +
         // "eyes, mouth, inner should be BIGGER, same shape"): the glyph is now
         // SELF-CONTAINED - its own yellow face circle (#f6c445) + ink features

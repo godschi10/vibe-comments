@@ -17,6 +17,13 @@ Types of changes:
 
 ---
 
+## [3.20.25] - 2026-09-08
+
+### Fixed - like glyph bleeding out of its face circle (King: "Like pop-up is not contained properly in its circle")
+
+- The like thumb is the WIDEST of the four glyphs; at the shared 0.75 inner scale its extent (d≈9.2 pre-scale) still crossed the face circle's edge.
+- FIX: like-only inner scale 0.75 -> 0.6 with a +0.6y optical re-center (the thumb shape is top-heavy), so the white thumb sits fully inside the blue face on every surface. heart/fire/laugh untouched (already contained).
+
 ## [3.20.24] - 2026-09-08
 
 ### Changed - notification bell gets explicit On/Off state (King: "Comments Notification should have a nice on and off text so users know what's up") + Edit button squared (King: "also the edit button is still rounded")

@@ -17,6 +17,13 @@ Types of changes:
 
 ---
 
+## [3.20.24] - 2026-09-08
+
+### Changed - notification bell gets explicit On/Off state (King: "Comments Notification should have a nice on and off text so users know what's up") + Edit button squared (King: "also the edit button is still rounded")
+
+- `bellIcon()` rebuilt: bell glyph + explicit "On"/"Off" text. ON = filled green bell + ringing arcs + green "On" text; OFF = muted outline bell + strike-through + gray "Off" text. State is now readable at a glance (was a lone icon identical in both states).
+- Edit button border-radius 999px (pill) -> 4px, per the house STRAIGHT/clean default - it had escaped the square-edges sweep because it mirrors the Reply pill.
+
 ## [3.20.23] - 2026-09-08
 
 ### Fixed - picker glyph bleed (King: "the SVG is bleeding out of the circle, make the 3 circles same size as the laughing SVG radius or larger so everything fits perfectly")

@@ -67,11 +67,19 @@
     }
 
     function bellIcon(label) {
-        // Emoji-first bell with SVG fallback, same mode resolution as reactions.
-        if (ICON_MODE === 'emoji') {
-            return '<span class="vibe-rx-emoji" style="font-size:14px;line-height:1">' + (label === str('bellOn', 'On') ? '\uD83D\uDD14' : '\uD83D\uDD15') + '</span>';
-        }
-        return '<svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="none" stroke="#00ff91" stroke-width="1.8" width="14" height="14" style="vertical-align:-2px;margin-right:4px"><path d="M15 8a5 5 0 0 0-10 0c0 6-2 7-2 7h14s-2-1-2-7"/><path d="M11.7 18a2 2 0 0 1-3.4 0"/></svg>';
+        // v3.20.24 (King: "notification should have a nice ON/OFF text so
+        // users know what's up"): the bell was an icon with NO state cue -
+        // users couldn't tell if alerts were on or off. Now: bell glyph +
+        // explicit 'On'/'Off' text. On = filled/green + ringing lines; Off =
+        // muted outline + strike-through. Works on every surface (brand
+        // #00ff91 on-state, dim gray off-state), all-SVG per the house law.
+        var on = (label === str('bellOn', 'On'));
+        var ink = on ? '#00ff91' : '#8b96a5';
+        var glyph = on
+            ? '<path d="M15 8a5 5 0 0 0-10 0c0 6-2 7-2 7h14s-2-1-2-7" fill="currentColor" stroke="none"/><path d="M11.7 18a2 2 0 0 1-3.4 0" stroke="currentColor" fill="none"/><path d="M15 2.8c1 .5 1.8 1.2 2.4 2M5 2.8c-1 .5-1.8 1.2-2.4 2" stroke="currentColor" fill="none"/>'
+            : '<path d="M15 8a5 5 0 0 0-10 0c0 6-2 7-2 7h14s-2-1-2-7" fill="none" stroke="currentColor"/><path d="M11.7 18a2 2 0 0 1-3.4 0" stroke="currentColor" fill="none"/><path d="M3.5 3.5l13 13" stroke="currentColor"/>';
+        return '<svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="none" stroke-width="1.8" stroke-linecap="round" width="14" height="14" style="color:' + ink + ';vertical-align:-2px;margin-right:5px">' + glyph + '</svg>'
+             + '<span style="color:' + ink + ';font-weight:600;font-size:12px">' + label + '</span>';
     }
 
 // ── v3.20.11 (King): SVG icon set - emoji glyphs ignore CSS color and

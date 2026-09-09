@@ -384,7 +384,7 @@
     text-decoration: none;
     background: none;
     border: 1px solid var(--vibe-primary, #3b82f6);
-    border-radius: 999px;
+    border-radius: 4px; /* v3.20.24 (King: "the edit button is still rounded") - straight/clean is the house default; was 999px pill */
     padding: 0.35rem 0.75rem;
     cursor: pointer;
     transition: all 0.2s ease;

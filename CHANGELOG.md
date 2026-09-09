@@ -17,6 +17,15 @@ Types of changes:
 
 ---
 
+## [3.20.28] - 2026-09-08
+
+### Changed - NEUTRAL PLUGIN LAW: brand colors leave the plugin JS (King: "Vibe comments design should not stick to one brand... fix something on vibe comments the design should be neutral then an override design should be inside the main theme, so I can use the vibe comments for any other project")
+
+- LAW ESTABLISHED: the plugin renders NEUTRAL by default; every brand flourish lives in each theme's skin as an override. The tech theme's green must never leak into another project's vibe comments.
+- bellIcon(): the hardcoded tech-green (#00ff91) On-state ink replaced with `var(--vibe-primary, #3b82f6)` + muted Off-state via `var(--vibe-text-muted)`. Themes that define --vibe-primary get their brand color automatically; themes that don't get a neutral blue. Zero brand hex remains in plugin JS.
+- Theme-side alignment applied to finance: its skin's amber mine-wash + lit-pill-border overrides REMOVED (the King rebuked selected-marker rings on tech - same law everywhere). The picker pop-up's active wash stays the only selected highlight.
+- Note: reaction DISC colors (like/heart/fire/laugh brand faces) are deliberately self-contained in the glyphs - they are the reaction's identity across all themes (like FB), not theme branding.
+
 ## [3.20.27] - 2026-09-08
 
 ### Fixed - like glyph optically centered in its face circle (King: "Good but center the SVG inside the circle")
